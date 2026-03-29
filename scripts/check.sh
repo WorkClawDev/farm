@@ -1,7 +1,7 @@
 #!/bin/bash
 # =====================================================================
-# 田园物语 - Godot 编译检查脚本
-# 用法: bash scripts/check.sh
+# Pastoral Tales - project check script
+# Usage: bash scripts/check.sh
 # =====================================================================
 
 GODOT="${GODOT:-/home/admin/tools/bin/godot}"
@@ -18,42 +18,37 @@ PASS=0
 FAIL=0
 
 log() { echo -e "${BLUE}[check]${NC} $*"; }
-ok()  { echo -e "${GREEN}  ✓ $*"; PASS=$((PASS+1)); }
-err() { echo -e "${RED}  ✗ $*"; FAIL=$((FAIL+1)); }
-warn(){ echo -e "${YELLOW}  ⚠ $*"; }
+ok()  { echo -e "${GREEN}  OK${NC} $*"; PASS=$((PASS + 1)); }
+err() { echo -e "${RED}  FAIL${NC} $*"; FAIL=$((FAIL + 1)); }
+warn(){ echo -e "${YELLOW}  WARN${NC} $*"; }
 
-# ── 检查 Godot ──────────────────────────────────────────────────────
-log "Godot: $($GODOT --version 2>&1 | head -1)"
-log "项目:  $PROJECT_DIR"
-echo ""
+normalize_log() {
+    local path="$1"
+    local tmp="${path}.normalized"
 
-# ── 运行 Godot（启动后立即退出）───────────────────────────────────
-RUN_LOG="/tmp/godot_check_$$.log"
-$($GODOT --no-window --headless --quit --path "$PROJECT_DIR" > "$RUN_LOG" 2>&1) || true
-
-# ── 检测错误 ──────────────────────────────────────────────────────
-SCRIPT_ERRORS=$(grep -cE "SCRIPT ERROR|Compile Error|Nonexistent function" "$RUN_LOG" 2>/dev/null) || SCRIPT_ERRORS=0
-RUNTIME_ERRORS=$(grep -cE "^ERROR:|FATAL|failed to load" "$RUN_LOG" 2>/dev/null) || RUNTIME_ERRORS=0
-
-if [ "${SCRIPT_ERRORS:-0}" -gt 0 ] || [ "${RUNTIME_ERRORS:-0}" -gt 0 ]; then
-    echo -e "${RED}═══════════════════════════════════════${NC}"
-    echo -e "${RED}  ❌ 检查失败${NC}"
-    echo -e "${RED}═══════════════════════════════════════${NC}"
-    echo ""
-    if [ "$SCRIPT_ERRORS" -gt 0 ]; then
-        echo -e "${RED}脚本/编译错误 ($SCRIPT_ERRORS):${NC}"
-        grep -E "SCRIPT ERROR|Compile Error|Nonexistent" "$RUN_LOG" | sed 's/^/  /' | head -20
-        echo ""
+    if [ ! -f "$path" ]; then
+        return
     fi
-    if [ "$RUNTIME_ERRORS" -gt 0 ]; then
-        echo -e "${RED}运行时错误 ($RUNTIME_ERRORS):${NC}"
-        grep -E "^ERROR:|FATAL|failed to load" "$RUN_LOG" | sed 's/^/  /' | head -10
-    fi
-    rm -f "$RUN_LOG"
-    exit 1
-fi
 
-# ── 检查系统初始化 ────────────────────────────────────────────────
+    # Windows Godot binaries invoked through WSL may emit UTF-16LE/NUL bytes.
+    if LC_ALL=C grep -q $'\000' "$path" 2>/dev/null; then
+        tr -d '\000' < "$path" > "$tmp" && mv "$tmp" "$path"
+    fi
+
+    sed -i 's/\r$//' "$path" 2>/dev/null || true
+}
+
+run_godot() {
+    local log_path="$1"
+    shift
+    if [[ "$GODOT" == *.exe ]]; then
+        "$GODOT" "$@" 2>&1 | tr -d '\000' | sed 's/\r$//' > "$log_path" || true
+    else
+        "$GODOT" "$@" > "$log_path" 2>&1 || true
+        normalize_log "$log_path"
+    fi
+}
+
 REQUIRED_SYSTEMS=(
     "GameManager"
     "TimeManager"
@@ -74,12 +69,45 @@ REQUIRED_SYSTEMS=(
     "AchievementSystem"
 )
 
-echo -e "${CYAN}═══════════════════════════════════════${NC}"
-echo -e "${CYAN}  系统初始化检查${NC}"
-echo -e "${CYAN}═══════════════════════════════════════${NC}"
+VERSION="$("$GODOT" --version 2>&1 | head -1)"
+log "Godot: ${VERSION}"
+log "Project: $PROJECT_DIR"
+echo ""
 
-INIT_COUNT=$(grep -c "Initialized" "$RUN_LOG" 2>/dev/null || echo 0)
-echo -e "  共 $INIT_COUNT 个系统初始化"
+RUN_LOG="/tmp/godot_check_$$.log"
+run_godot "$RUN_LOG" --no-window --headless --quit --path "$PROJECT_DIR"
+
+SCRIPT_ERRORS=$(grep -cE "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function" "$RUN_LOG" 2>/dev/null || true)
+RUNTIME_ERRORS=$(grep -cE "^ERROR:|FATAL|failed to load|Failed to" "$RUN_LOG" 2>/dev/null || true)
+
+if [ "${SCRIPT_ERRORS:-0}" -gt 0 ] || [ "${RUNTIME_ERRORS:-0}" -gt 0 ]; then
+    echo -e "${RED}========================================${NC}"
+    echo -e "${RED}  Startup checks failed${NC}"
+    echo -e "${RED}========================================${NC}"
+    echo ""
+
+    if [ "${SCRIPT_ERRORS:-0}" -gt 0 ]; then
+        echo -e "${RED}Script / compile errors (${SCRIPT_ERRORS}):${NC}"
+        grep -E "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function" "$RUN_LOG" | sed 's/^/  /' | head -20
+        echo ""
+    fi
+
+    if [ "${RUNTIME_ERRORS:-0}" -gt 0 ]; then
+        echo -e "${RED}Runtime errors (${RUNTIME_ERRORS}):${NC}"
+        grep -E "^ERROR:|FATAL|failed to load|Failed to" "$RUN_LOG" | sed 's/^/  /' | head -20
+        echo ""
+    fi
+
+    rm -f "$RUN_LOG"
+    exit 1
+fi
+
+echo -e "${CYAN}========================================${NC}"
+echo -e "${CYAN}  System initialization check${NC}"
+echo -e "${CYAN}========================================${NC}"
+
+INIT_COUNT=$(grep -c "Initialized" "$RUN_LOG" 2>/dev/null || true)
+echo "  Found ${INIT_COUNT} initialization messages"
 echo ""
 
 for sys in "${REQUIRED_SYSTEMS[@]}"; do
@@ -88,55 +116,51 @@ for sys in "${REQUIRED_SYSTEMS[@]}"; do
     elif grep -qE "\[$sys\]" "$RUN_LOG" 2>/dev/null; then
         ok "$sys"
     else
-        # 某些系统名不匹配，打印已知的
-        if grep -q "$sys" "$RUN_LOG" 2>/dev/null; then
-            ok "$sys"
-        else
-            err "$sys (未找到初始化消息)"
-        fi
+        err "$sys (missing init log)"
     fi
 done
 
-# ── 检查 ItemDatabase ──────────────────────────────────────────────
-if grep -q "ItemDatabase\|item.*loaded" "$RUN_LOG" 2>/dev/null; then
-    ITEMS=$(grep -oP "Loaded \K\d+" "$RUN_LOG" | head -1)
+if grep -q "ItemDatabase" "$RUN_LOG" 2>/dev/null; then
+    ITEMS=$(grep -oE "Loaded [0-9]+" "$RUN_LOG" | head -1 | grep -oE "[0-9]+")
     if [ -n "$ITEMS" ]; then
-        ok "ItemDatabase ($ITEMS items)"
+        ok "ItemDatabase (${ITEMS} items)"
     else
         ok "ItemDatabase"
     fi
+else
+    err "ItemDatabase (missing load log)"
 fi
 
-# ── 单元测试 ────────────────────────────────────────────────────
 echo ""
-echo -e "${CYAN}═══════════════════════════════════════${NC}"
-echo -e "${CYAN}  单元测试${NC}"
-echo -e "${CYAN}═══════════════════════════════════════${NC}"
+echo -e "${CYAN}========================================${NC}"
+echo -e "${CYAN}  Unit tests${NC}"
+echo -e "${CYAN}========================================${NC}"
 
 UNIT_TEST_LOG="/tmp/godot_tests_$$.log"
-$GODOT --headless --quit --path "$PROJECT_DIR" --scene tests/unit/test_core.tscn > "$UNIT_TEST_LOG" 2>&1 || true
+run_godot "$UNIT_TEST_LOG" --headless --quit --path "$PROJECT_DIR" --scene tests/unit/test_core.tscn
 
-# 提取测试结果
-if grep -q "ALL TESTS PASSED" "$UNIT_TEST_LOG"; then
+UNIT_SCRIPT_ERRORS=$(grep -cE "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call" "$UNIT_TEST_LOG" 2>/dev/null || true)
+if [ "${UNIT_SCRIPT_ERRORS:-0}" -gt 0 ]; then
+    err "Unit test runtime emitted ${UNIT_SCRIPT_ERRORS} script errors"
+    grep -E "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call" "$UNIT_TEST_LOG" | sed 's/^/    /' | head -20
+elif grep -q "ALL TESTS PASSED" "$UNIT_TEST_LOG"; then
     UNIT_PASSED=$(grep -oP "RESULTS: \K\d+" "$UNIT_TEST_LOG" | head -1)
-    echo -e "${GREEN}  ✅ 单元测试全部通过 ($UNIT_PASSED/$UNIT_PASSED)${NC}"
+    ok "Unit tests passed (${UNIT_PASSED}/${UNIT_PASSED})"
 else
-    UNIT_FAILED=$(grep -oP "FAILED: \K\d+" "$UNIT_TEST_LOG" | head -1)
-    echo -e "${RED}  ❌ 单元测试失败 ($UNIT_FAILED failed)${NC}"
-    grep -E "\[FAIL\]" "$UNIT_TEST_LOG" | sed 's/^/    /' | head -10
+    err "Unit tests failed"
+    grep -E "\[FAIL\]|FAILED:" "$UNIT_TEST_LOG" | sed 's/^/    /' | head -20
 fi
 
-# ── 完成 ──────────────────────────────────────────────────────────
 echo ""
-echo -e "${BLUE}═══════════════════════════════════════${NC}"
+echo -e "${BLUE}========================================${NC}"
 if [ "$FAIL" -eq 0 ]; then
-    echo -e "${GREEN}  ✅ 所有检查通过 ($PASS/$PASS)${NC}"
-    echo -e "${BLUE}═══════════════════════════════════════${NC}"
+    echo -e "${GREEN}  All checks passed (${PASS}/${PASS})${NC}"
+    echo -e "${BLUE}========================================${NC}"
     rm -f "$RUN_LOG" "$UNIT_TEST_LOG"
     exit 0
 else
-    echo -e "${RED}  ❌ $FAIL 个检查失败${NC}"
-    echo -e "${BLUE}═══════════════════════════════════════${NC}"
+    echo -e "${RED}  ${FAIL} checks failed${NC}"
+    echo -e "${BLUE}========================================${NC}"
     rm -f "$RUN_LOG" "$UNIT_TEST_LOG"
     exit 1
 fi

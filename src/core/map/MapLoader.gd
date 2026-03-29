@@ -1,4 +1,5 @@
 extends Node
+class_name MapLoader
 
 ## MapLoader - Autoload script for loading tile maps from JSON files.
 ## Place in Autoload as "MapLoader" (res://src/core/map/MapLoader.gd)
@@ -8,7 +9,7 @@ const TILE_SIZE := 16
 
 ## Load a tile map layout from a JSON file.
 ## Returns a 2D array of tile_ids, or an empty array if file not found/error.
-func load_layout(path: String) -> Array:
+static func load_layout(path: String) -> Array:
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		push_warning("[MapLoader] Could not open: " + path)
@@ -49,7 +50,7 @@ func load_layout(path: String) -> Array:
 
 
 ## Get map metadata from a JSON file (width, height, name, tile_size).
-func load_metadata(path: String) -> Dictionary:
+static func load_metadata(path: String) -> Dictionary:
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		return {}
@@ -71,5 +72,5 @@ func load_metadata(path: String) -> Dictionary:
 
 
 ## Check if a map file exists.
-func map_exists(path: String) -> bool:
+static func map_exists(path: String) -> bool:
 	return FileAccess.file_exists(path)

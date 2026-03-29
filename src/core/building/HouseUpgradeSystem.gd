@@ -62,6 +62,20 @@ func _ready() -> void:
 func get_current_level() -> HouseLevel:
 	return current_level
 
+## 鍏煎 API锛氳幏鍙栨埧灞嬬瓑绾?
+func get_house_level() -> HouseLevel:
+	return current_level
+
+## 鍏煎 API锛氳幏鍙栧凡瑙ｉ攣鎴块棿
+func get_unlocked_rooms() -> Array[String]:
+	var rooms: Array[String] = ["main"]
+	if current_level >= HouseLevel.LEVEL_2:
+		rooms.append("kitchen")
+	if current_level >= HouseLevel.LEVEL_3:
+		rooms.append("bedroom")
+	rooms.append("storage")
+	return rooms
+
 ## 获取当前等级配置
 func get_current_config() -> Dictionary:
 	return UPGRADE_CONFIG.get(current_level, {})

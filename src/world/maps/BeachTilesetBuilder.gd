@@ -63,25 +63,18 @@ static func get_coord(tile_id: int) -> Vector2i:
 
 static func build_tileset() -> TileSet:
 	var tile_set := TileSet.new()
-	tile_set.name = TILESET_NAME
-	tile_set.physics_layer_0.layer = 0x01
+	tile_set.resource_name = TILESET_NAME
 
 	var atlas_source := TileSetAtlasSource.new()
 	atlas_source.texture = load(ATLAS_PATH)
 	atlas_source.texture_region_size = TILE_SIZE
 
 	for tile_id in TileCoord.values():
-		var tile_data := TileSetCellTile.new()
-		tile_data.texture_origin = Vector2i.ZERO
 		var props = TILE_PROPERTIES.get(tile_id, {"passable": true, "layer": 0})
-		if not props.get("passable", true):
-			var physics_layer := TileSetPhysicsLayer.new()
-			physics_layer.layer_mask = 1
-			var shape := RectangleShape2D.new()
-			shape.size = TILE_SIZE
-			physics_layer.add_shape(shape)
-			tile_data.add_physics_layer(physics_layer)
-		atlas_source.set_tile_data(_pack_tile_data(actual_tile_id), tile_data)
+		var actual_tile_id: int = props.get("tile_id", tile_id)
+		var atlas_coords := get_coord(actual_tile_id)
+		if not atlas_source.has_tile(atlas_coords):
+			atlas_source.create_tile(atlas_coords)
 
 	tile_set.add_source(atlas_source)
 	return tile_set

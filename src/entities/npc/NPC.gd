@@ -112,8 +112,10 @@ func _update_schedule() -> void:
 ## 设置交互区域
 func _setup_interaction_area() -> void:
 	if interaction_area:
-		interaction_area.body_entered.connect(_on_interaction_area_body_entered)
-		interaction_area.body_exited.connect(_on_interaction_area_body_exited)
+		if not interaction_area.body_entered.is_connected(_on_interaction_area_body_entered):
+			interaction_area.body_entered.connect(_on_interaction_area_body_entered)
+		if not interaction_area.body_exited.is_connected(_on_interaction_area_body_exited):
+			interaction_area.body_exited.connect(_on_interaction_area_body_exited)
 
 ## 从JSON加载NPC数据
 func _load_npc_data() -> void:
@@ -369,7 +371,8 @@ func _on_hour_changed(_new_hour: int) -> void:
 ## 日程变化回调
 func _on_schedule_changed(new_activity: Dictionary) -> void:
 	var location_id: String = new_activity.get("location_id", "")
-	var position: Vector2 = new_activity.get("position", Vector2.ZERO)
+	var position_data = new_activity.get("position", Vector2.ZERO)
+	var position: Vector2 = position_data if position_data is Vector2 else Vector2(position_data.get("x", 0.0), position_data.get("y", 0.0))
 
 	if position != Vector2.ZERO:
 		move_to(position)

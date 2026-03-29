@@ -1,138 +1,138 @@
 {
   "grid_size": 32,
   "objects": [
-    {
-      "kind": "rect",
-      "name": "GroundTint",
-      "position": {"x": 640, "y": 370},
-      "size": {"x": 1040, "y": 500},
-      "color": {"r": 0.3, "g": 0.55, "b": 0.28, "a": 0.35}
-    },
-    {
-      "kind": "rect",
-      "name": "MainPath",
-      "position": {"x": 530, "y": 304},
-      "size": {"x": 340, "y": 48},
-      "color": {"r": 0.63, "g": 0.52, "b": 0.34, "a": 0.9}
-    },
-    {
-      "kind": "rect",
-      "name": "SouthPath",
-      "position": {"x": 548, "y": 434},
-      "size": {"x": 56, "y": 212},
-      "color": {"r": 0.63, "g": 0.52, "b": 0.34, "a": 0.9}
-    },
-    {
-      "kind": "rect",
-      "name": "PondShore",
-      "position": {"x": 245, "y": 460},
-      "size": {"x": 190, "y": 160},
-      "color": {"r": 0.76, "g": 0.68, "b": 0.45, "a": 0.45}
-    },
-    {
-      "kind": "rect",
-      "name": "Pond",
-      "position": {"x": 245, "y": 460},
-      "size": {"x": 170, "y": 140},
-      "color": {"r": 0.24, "g": 0.55, "b": 0.8, "a": 0.85}
-    },
-    {
-      "kind": "rect",
-      "name": "HousePad",
-      "position": {"x": 885, "y": 215},
-      "size": {"x": 250, "y": 150},
-      "color": {"r": 0.72, "g": 0.64, "b": 0.46, "a": 0.75}
-    },
-    {
-      "kind": "rect",
-      "name": "HouseBody",
-      "position": {"x": 885, "y": 190},
-      "size": {"x": 190, "y": 120},
-      "color": {"r": 0.72, "g": 0.47, "b": 0.29, "a": 0.95}
-    },
-    {
-      "kind": "rect",
-      "name": "HouseRoof",
-      "position": {"x": 885, "y": 122},
-      "size": {"x": 220, "y": 45},
-      "color": {"r": 0.52, "g": 0.18, "b": 0.15, "a": 0.95}
-    },
-    {
-      "kind": "rect",
-      "name": "HouseDoor",
-      "position": {"x": 885, "y": 227},
-      "size": {"x": 30, "y": 45},
-      "color": {"r": 0.28, "g": 0.16, "b": 0.1, "a": 1.0}
-    },
-    {
-      "kind": "rect",
-      "name": "FenceTop",
-      "position": {"x": 560, "y": 364},
-      "size": {"x": 260, "y": 8},
-      "color": {"r": 0.62, "g": 0.43, "b": 0.22, "a": 1.0}
-    },
-    {
-      "kind": "rect",
-      "name": "FenceLeft",
-      "position": {"x": 434, "y": 432},
-      "size": {"x": 8, "y": 145},
-      "color": {"r": 0.62, "g": 0.43, "b": 0.22, "a": 1.0}
-    },
-    {
-      "kind": "rect",
-      "name": "FenceRight",
-      "position": {"x": 694, "y": 432},
-      "size": {"x": 8, "y": 145},
-      "color": {"r": 0.62, "g": 0.43, "b": 0.22, "a": 1.0}
-    },
-    {
-      "kind": "scene",
-      "name": "ShippingBin",
-      "scene_key": "shipping_bin",
-      "position": {"x": 400, "y": 300},
-      "properties": {}
-    },
-    {
-      "kind": "scene",
-      "name": "Workbench",
-      "scene_key": "workbench",
-      "position": {"x": 468, "y": 308},
-      "properties": {}
-    },
-    {
-      "kind": "scene",
-      "name": "FishingSpot",
-      "scene_key": "fishing_spot",
-      "position": {"x": 245, "y": 460},
-      "properties": {"location_type": "pond"}
-    },
-    {
-      "kind": "scene",
-      "name": "Coop",
-      "scene_key": "coop",
-      "position": {"x": 260, "y": 220},
-      "properties": {}
-    },
-    {
-      "kind": "scene",
-      "name": "Barn",
-      "scene_key": "barn",
-      "position": {"x": 1010, "y": 430},
-      "properties": {}
-    },
-    {
-      "kind": "scene",
-      "name": "OreNorth",
-      "scene_key": "ore",
-      "position": {"x": 1080, "y": 180},
-      "properties": {}
-    },
-    {
-      "kind": "scene",
-      "name": "OreSouth",
-      "scene_key": "ore",
-      "position": {"x": 1120, "y": 510},
-      "properties": {}
-    }
+	{
+	  "kind": "rect",
+	  "name": "GroundTint",
+	  "position": {"x": 640, "y": 370},
+	  "size": {"x": 1040, "y": 500},
+	  "color": {"r": 0.3, "g": 0.55, "b": 0.28, "a": 0.35}
+	},
+	{
+	  "kind": "rect",
+	  "name": "MainPath",
+	  "position": {"x": 530, "y": 304},
+	  "size": {"x": 340, "y": 48},
+	  "color": {"r": 0.63, "g": 0.52, "b": 0.34, "a": 0.9}
+	},
+	{
+	  "kind": "rect",
+	  "name": "SouthPath",
+	  "position": {"x": 548, "y": 434},
+	  "size": {"x": 56, "y": 212},
+	  "color": {"r": 0.63, "g": 0.52, "b": 0.34, "a": 0.9}
+	},
+	{
+	  "kind": "rect",
+	  "name": "PondShore",
+	  "position": {"x": 245, "y": 460},
+	  "size": {"x": 190, "y": 160},
+	  "color": {"r": 0.76, "g": 0.68, "b": 0.45, "a": 0.45}
+	},
+	{
+	  "kind": "rect",
+	  "name": "Pond",
+	  "position": {"x": 245, "y": 460},
+	  "size": {"x": 170, "y": 140},
+	  "color": {"r": 0.24, "g": 0.55, "b": 0.8, "a": 0.85}
+	},
+	{
+	  "kind": "rect",
+	  "name": "HousePad",
+	  "position": {"x": 885, "y": 215},
+	  "size": {"x": 250, "y": 150},
+	  "color": {"r": 0.72, "g": 0.64, "b": 0.46, "a": 0.75}
+	},
+	{
+	  "kind": "rect",
+	  "name": "HouseBody",
+	  "position": {"x": 885, "y": 190},
+	  "size": {"x": 190, "y": 120},
+	  "color": {"r": 0.72, "g": 0.47, "b": 0.29, "a": 0.95}
+	},
+	{
+	  "kind": "rect",
+	  "name": "HouseRoof",
+	  "position": {"x": 885, "y": 122},
+	  "size": {"x": 220, "y": 45},
+	  "color": {"r": 0.52, "g": 0.18, "b": 0.15, "a": 0.95}
+	},
+	{
+	  "kind": "rect",
+	  "name": "HouseDoor",
+	  "position": {"x": 885, "y": 227},
+	  "size": {"x": 30, "y": 45},
+	  "color": {"r": 0.28, "g": 0.16, "b": 0.1, "a": 1.0}
+	},
+	{
+	  "kind": "rect",
+	  "name": "FenceTop",
+	  "position": {"x": 560, "y": 364},
+	  "size": {"x": 260, "y": 8},
+	  "color": {"r": 0.62, "g": 0.43, "b": 0.22, "a": 1.0}
+	},
+	{
+	  "kind": "rect",
+	  "name": "FenceLeft",
+	  "position": {"x": 434, "y": 432},
+	  "size": {"x": 8, "y": 145},
+	  "color": {"r": 0.62, "g": 0.43, "b": 0.22, "a": 1.0}
+	},
+	{
+	  "kind": "rect",
+	  "name": "FenceRight",
+	  "position": {"x": 694, "y": 432},
+	  "size": {"x": 8, "y": 145},
+	  "color": {"r": 0.62, "g": 0.43, "b": 0.22, "a": 1.0}
+	},
+	{
+	  "kind": "scene",
+	  "name": "ShippingBin",
+	  "scene_key": "shipping_bin",
+	  "position": {"x": 400, "y": 300},
+	  "properties": {}
+	},
+	{
+	  "kind": "scene",
+	  "name": "Workbench",
+	  "scene_key": "workbench",
+	  "position": {"x": 468, "y": 308},
+	  "properties": {}
+	},
+	{
+	  "kind": "scene",
+	  "name": "FishingSpot",
+	  "scene_key": "fishing_spot",
+	  "position": {"x": 245, "y": 460},
+	  "properties": {"location_type": "pond"}
+	},
+	{
+	  "kind": "scene",
+	  "name": "Coop",
+	  "scene_key": "coop",
+	  "position": {"x": 260, "y": 220},
+	  "properties": {}
+	},
+	{
+	  "kind": "scene",
+	  "name": "Barn",
+	  "scene_key": "barn",
+	  "position": {"x": 1010, "y": 430},
+	  "properties": {}
+	},
+	{
+	  "kind": "scene",
+	  "name": "OreNorth",
+	  "scene_key": "ore",
+	  "position": {"x": 1080, "y": 180},
+	  "properties": {}
+	},
+	{
+	  "kind": "scene",
+	  "name": "OreSouth",
+	  "scene_key": "ore",
+	  "position": {"x": 1120, "y": 510},
+	  "properties": {}
+	}
   ]
 }

@@ -44,6 +44,8 @@ layer_1/navigation_enabled = true
 layer_1/property_names = null
 layer_1/tile_data = PackedInt32Array()
 
+[node name="TilledArea" type="Node2D" parent="."]
+
 [node name="ShippingBin" type="Area2D" parent="."]
 position = Vector2(560, 400)
 

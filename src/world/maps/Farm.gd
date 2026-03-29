@@ -7,6 +7,7 @@ class_name Farm
 const TimeDisplayScene = preload("res://src/ui/hud/TimeDisplay.tscn")
 const ToolDisplayScene = preload("res://src/ui/hud/ToolDisplay.tscn")
 const HoeScene = preload("res://src/entities/tools/Hoe.tscn")
+const MapLoaderScript = preload("res://src/core/map/MapLoader.gd")
 const FARM_LAYOUT_PATH := "res://data/farm_layout.json"
 const EDITOR_MAP_PATH := "res://data/maps/farm_layout.json"
 const LAYOUT_SCENES := {
@@ -32,7 +33,7 @@ var layout_root: Node2D
 func _ready() -> void:
 	print("[Farm] Scene loaded")
 	_setup_tilemap()
-	print("[Farm] Tileset: ", tile_set)
+	print("[Farm] Tileset: ", tile_map.tile_set)
 	_setup_layout_root()
 	_apply_layout_from_file()
 	_setup_ui()
@@ -43,7 +44,7 @@ func _ready() -> void:
 	_connect_event_signals()
 
 func _setup_tilemap() -> void:
-	print("[Farm] Tileset: ", tile_set)
+	print("[Farm] Tileset: ", tile_map.tile_set)
 	# 使用 FarmTilesetBuilder 构建瓦片集
 	if tile_map.tile_set == null:
 		var tile_set: TileSet = FarmTilesetBuilder.build_tileset()
@@ -51,18 +52,28 @@ func _setup_tilemap() -> void:
 		print("[Farm] TileSet built from FarmTilesetBuilder")
 
 	# 尝试从 MapLoader 加载编辑器地图
-	if MapLoader.map_exists(EDITOR_MAP_PATH):
-		var editor_tiles: Array = MapLoader.load_layout(EDITOR_MAP_PATH)
-		if not editor_tiles.is_empty():
+	if MapLoaderScript.map_exists(EDITOR_MAP_PATH):
+		var editor_tiles: Array = MapLoaderScript.load_layout(EDITOR_MAP_PATH)
+		if _has_meaningful_editor_layout(editor_tiles):
 			_paint_editor_layout(editor_tiles)
 			print("[Farm] Loaded map from MapLoader: ", EDITOR_MAP_PATH)
 		else:
 			_paint_default_farm()
-			print("[Farm] MapLoader returned empty, using default farm")
+			print("[Farm] Editor map is empty placeholder data, using default farm")
 	else:
 		_paint_default_farm()
 		print("[Farm] No editor map found, using default farm")
 	print("[Farm] TileMap setup complete")
+
+func _has_meaningful_editor_layout(editor_tiles: Array) -> bool:
+	for row in editor_tiles:
+		if row is Array:
+			for tile_id in row:
+				if tile_id is int and tile_id != 0:
+					return true
+				if tile_id is float and int(tile_id) != 0:
+					return true
+	return false
 
 func _paint_default_farm() -> void:
 	print("[Farm] Painting default farm layout...")
@@ -175,25 +186,25 @@ func _apply_layout_from_file() -> void:
 	for child in layout_root.get_children():
 		child.queue_free()
 
-	var file := FileAccess.open(FARM_LAYOUT_PATH, FileAccess.READ)
+	var file: FileAccess = FileAccess.open(FARM_LAYOUT_PATH, FileAccess.READ)
 	if file == null:
 		print("[Farm] No farm layout file found, using empty layout")
 		return
 
-	var json := JSON.new()
+	var json: JSON = JSON.new()
 	if json.parse(file.get_as_text()) != OK:
 		push_warning("[Farm] Failed to parse farm_layout.json")
 		return
 
 	var data: Dictionary = json.data
 	for object_data in data.get("objects", []):
-		var node := _build_layout_node(object_data)
+		var node: Node2D = _build_layout_node(object_data)
 		if node:
 			layout_root.add_child(node)
 	print("[Farm] Loaded layout objects: ", layout_root.get_child_count())
 
 func _build_layout_node(object_data: Dictionary) -> Node2D:
-	var kind := object_data.get("kind", "")
+	var kind: String = str(object_data.get("kind", ""))
 	if kind == "rect":
 		return _build_rect_node(object_data)
 	if kind == "scene":
@@ -201,11 +212,11 @@ func _build_layout_node(object_data: Dictionary) -> Node2D:
 	return null
 
 func _build_rect_node(object_data: Dictionary) -> Node2D:
-	var node := Node2D.new()
+	var node: Node2D = Node2D.new()
 	node.name = object_data.get("name", "RectObject")
 	var size_dict: Dictionary = object_data.get("size", {})
 	var color_dict: Dictionary = object_data.get("color", {})
-	var rect := ColorRect.new()
+	var rect: ColorRect = ColorRect.new()
 	rect.size = Vector2(size_dict.get("x", 32.0), size_dict.get("y", 32.0))
 	rect.position = -rect.size / 2.0
 	rect.color = Color(
@@ -225,7 +236,10 @@ func _build_scene_node(object_data: Dictionary) -> Node2D:
 	if packed == null:
 		push_warning("[Farm] Unknown scene key: " + scene_key)
 		return null
-	var node := packed.instantiate()
+	var node = packed.instantiate() as Node2D
+	if node == null:
+		push_warning("[Farm] Scene key did not instantiate a Node2D: " + scene_key)
+		return null
 	node.name = object_data.get("name", scene_key)
 	var pos_dict: Dictionary = object_data.get("position", {})
 	node.position = Vector2(pos_dict.get("x", 0.0), pos_dict.get("y", 0.0))

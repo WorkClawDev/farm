@@ -246,6 +246,41 @@ func get_active_quests() -> Array[QuestData]:
 func get_quest(quest_id: String) -> QuestData:
 	return _quest_database.get(quest_id, null)
 
+## 鍏煎 API锛氳幏鍙栦换鍔℃暟鎹?
+func get_quest_data(quest_id: String) -> Dictionary:
+	var quest := get_quest(quest_id)
+	if quest == null:
+		return {}
+	return {
+		"id": quest.id,
+		"title": quest.title,
+		"description": quest.description,
+		"quest_giver": quest.quest_giver,
+		"prerequisites": quest.prerequisites.duplicate(),
+		"objectives": quest.objectives.duplicate(true),
+		"rewards": quest.rewards.duplicate(true),
+		"time_limit": quest.time_limit,
+		"repeatable": quest.repeatable,
+		"priority": quest.priority,
+	}
+
+## 鍏煎 API锛氳幏鍙栨墍鏈変换鍔D
+func get_all_quest_ids() -> Array:
+	return _quest_database.keys()
+
+## 鍏煎 API锛氭寜 NPC 鑾峰彇浠诲姟
+func get_quests_by_npc(npc_id: String) -> Array:
+	var result: Array = []
+	for quest_id in _quest_database.keys():
+		var quest: QuestData = _quest_database[quest_id]
+		if quest.quest_giver == npc_id:
+			result.append(get_quest_data(quest_id))
+	return result
+
+## 鍏煎 API锛氭鏌ヤ换鍔℃槸鍚﹀瓨鍦?
+func has_quest(quest_id: String) -> bool:
+	return _quest_database.has(quest_id)
+
 ## 获取任务状态
 func get_quest_state(quest_id: String) -> QuestState:
 	if _player_progress.has(quest_id):

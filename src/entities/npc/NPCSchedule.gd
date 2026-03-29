@@ -51,7 +51,8 @@ class ScheduleEntry:
 		end_time = data.get("end_time", 22.0)
 		activity = data.get("activity", NPCSchedule.ActivityType.IDLE)
 		location_id = data.get("location_id", "")
-		location_position = data.get("location_position", Vector2.ZERO)
+		var location_data = data.get("location_position", Vector2.ZERO)
+		location_position = location_data if location_data is Vector2 else Vector2(location_data.get("x", 0.0), location_data.get("y", 0.0))
 		facing_direction = data.get("facing_direction", 0)
 		dialog_override = data.get("dialog_override", "")
 		conditions = data.get("conditions", {})
@@ -454,5 +455,5 @@ func deserialize(data: Dictionary) -> void:
 	schedule_entries.clear()
 	for entry_data in entries_data:
 		var pos_data: Dictionary = entry_data.get("location_position", {"x": 0, "y": 0})
-		entry_data["location_position"] = Vector2(pos_data.x, pos_data.y)
+		entry_data["location_position"] = Vector2(pos_data.get("x", 0.0), pos_data.get("y", 0.0))
 		schedule_entries.append(ScheduleEntry.new(entry_data))

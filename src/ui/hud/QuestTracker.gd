@@ -4,9 +4,9 @@ class_name QuestTracker
 ## QuestTracker - 任务追踪器UI
 ## 显示当前活跃任务和进度
 
-@onready var quest_list: VBoxContainer = $Panel/QuestList
-@onready var toggle_button: Button = $ToggleButton
-@onready var panel: Panel = $Panel
+@onready var quest_list: VBoxContainer = $MarginContainer/VBoxContainer/QuestList
+@onready var toggle_button: Button = $MarginContainer/VBoxContainer/ToggleButton
+@onready var panel: MarginContainer = $MarginContainer
 
 var is_visible: bool = true
 var quest_items: Dictionary = {}  # quest_id -> UI节点
