@@ -1,5 +1,5 @@
 extends Node
-class_name StaminaManager
+## StaminaManager - removed class_name to avoid autoload conflict
 
 ## StaminaManager - 体力管理器
 ## 负责玩家的体力值管理

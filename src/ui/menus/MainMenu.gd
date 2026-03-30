@@ -121,7 +121,7 @@ func _play_intro_animation() -> void:
 	menu_container.modulate.a = 0.0
 	var tw2 := create_tween()
 	tw2.set_parallel(true)
-tw2.tween_property(subtitle_label, "modulate:a", 1.0, 0.6)
+	tw2.tween_property(subtitle_label, "modulate:a", 1.0, 0.6)
 	await get_tree().create_timer(0.2).timeout
 	var tw3 := create_tween()
 	tw3.tween_property(menu_container, "modulate:a", 1.0, 0.6)

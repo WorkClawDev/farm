@@ -5,7 +5,7 @@ class_name SnowballFightMinigame
 ## 冬季节日活动
 
 # 配置
-const SNOWBALL_SCENE: PackedScene = preload("res://src/minigames/Snowball.tscn") if FileAccess.file_exists("res://src/minigames/Snowball.tscn") else null
+var SNOWBALL_SCENE: PackedScene = preload("res://src/minigames/Snowball.tscn") if FileAccess.file_exists("res://src/minigames/Snowball.tscn") else null
 const PLAYER_SPEED: float = 200.0
 const SNOWBALL_SPEED: float = 400.0
 const MAX_HEALTH: int = 5

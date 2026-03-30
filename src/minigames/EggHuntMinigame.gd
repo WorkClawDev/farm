@@ -5,7 +5,7 @@ class_name EggHuntMinigame
 ## 春节活动：在限定时间内找到隐藏的彩蛋
 
 # 彩蛋配置
-const EGG_SCENE: PackedScene = preload("res://src/minigames/Egg.tscn") if FileAccess.file_exists("res://src/minigames/Egg.tscn") else null
+var EGG_SCENE: PackedScene = preload("res://src/minigames/Egg.tscn") if FileAccess.file_exists("res://src/minigames/Egg.tscn") else null
 const MAX_EGGS: int = 20
 const EGG_POINTS: Dictionary = {
 	"normal": 10,
