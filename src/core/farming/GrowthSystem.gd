@@ -212,6 +212,10 @@ func get_crop_data(crop_id: String) -> CropData:
 func get_all_crop_ids() -> Array:
 	return _crop_data_cache.keys()
 
+## 妫€鏌ヤ綔鐗╂槸鍚﹀瓨鍦?
+func has_crop(crop_id: String) -> bool:
+	return _crop_data_cache.has(crop_id)
+
 ## 注册作物
 func register_crop(crop: Crop) -> void:
 	if crop == null:

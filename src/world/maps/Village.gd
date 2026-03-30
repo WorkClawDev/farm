@@ -24,7 +24,6 @@ func _ready() -> void:
 
 func _setup_tilemap() -> void:
 	# 确保 TileMap 格式正确
-	tile_map.format = TileMap.FORMAT_2
 	
 	# 确保有 4 层
 	# Layer 0: 地面
@@ -34,7 +33,7 @@ func _setup_tilemap() -> void:
 	
 	if tile_map.tile_set == null:
 		var tile_set: TileSet = TileSet.new()
-		tile_set.name = "VillageTileSet"
+		tile_set.resource_name = "VillageTileSet"
 		tile_map.tile_set = tile_set
 	
 	# 清理旧 atlas sources（如果有的话）
@@ -45,11 +44,10 @@ func _setup_tilemap() -> void:
 	print("[Village] TileMap setup complete, format: ", tile_map.format)
 
 func _setup_npc_manager() -> void:
-	npc_manager = NPCManager.new()
-	npc_manager.name = "NPCManager"
-	add_child(npc_manager)
-	npc_manager.set_current_scene(self)
-	print("[Village] NPC Manager initialized")
+	npc_manager = get_node_or_null("/root/NPCManager")
+	if npc_manager:
+		npc_manager.set_current_scene(self)
+		print("[Village] NPC Manager initialized")
 
 func _setup_ui() -> void:
 	# 创建UI画布层

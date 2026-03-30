@@ -130,14 +130,14 @@ id=15: col=7,row=1, name="farmland",     walkable=true
   "width": 30,
   "height": 20,
   "tiles": [
-    [0,0,0,1,1,0,0,...],  // 第0行，30个tile_id
-    [0,2,2,2,2,2,0,...],  // 第1行
-    ...
+	[0,0,0,1,1,0,0,...],  // 第0行，30个tile_id
+	[0,2,2,2,2,2,0,...],  // 第1行
+	...
   ],
   "tile_size": 16,
   "tile_properties": {
-    "0": {"name": "grass", "walkable": true},
-    ...
+	"0": {"name": "grass", "walkable": true},
+	...
   }
 }
 ```
@@ -147,17 +147,17 @@ id=15: col=7,row=1, name="farmland",     walkable=true
 ```gdscript
 # MapLoader.gd - Autoload
 func load_layout(path: String) -> Array:
-    # 读取 JSON → 返回 tile_id 二维数组
-    pass
+	# 读取 JSON → 返回 tile_id 二维数组
+	pass
 ```
 
 Farm.gd 修改为优先从 `MapLoader` 加载布局：
 ```gdscript
 func _ready():
-    _layout = MapLoader.load_layout("res://data/maps/farm_layout.json")
-    if _layout.is_empty():
-        _layout = _DEFAULT_LAYOUT.duplicate(true)
-    _paint_default_farm()
+	_layout = MapLoader.load_layout("res://data/maps/farm_layout.json")
+	if _layout.is_empty():
+		_layout = _DEFAULT_LAYOUT.duplicate(true)
+	_paint_default_farm()
 ```
 
 ## 文件结构
@@ -165,21 +165,21 @@ func _ready():
 ```
  pastoral-tales/
   data/
-    maps/
-      farm_layout.json    # 主地图（由编辑器生成）
-      village_layout.json
+	maps/
+	  farm_layout.json    # 主地图（由编辑器生成）
+	  village_layout.json
   tools/
-    map_editor/
-      app.py              # Flask 主程序
-      static/
-        editor.js         # 前端编辑器逻辑
-        editor.css        # 样式
-      templates/
-        editor.html       # 主页面
-      requirements.txt    # Python 依赖
+	map_editor/
+	  app.py              # Flask 主程序
+	  static/
+		editor.js         # 前端编辑器逻辑
+		editor.css        # 样式
+	  templates/
+		editor.html       # 主页面
+	  requirements.txt    # Python 依赖
   src/
-    core/
-      MapLoader.gd       # 新增：从 JSON 加载地图
+	core/
+	  MapLoader.gd       # 新增：从 JSON 加载地图
 ```
 
 ## 实现步骤（交给 Codex）

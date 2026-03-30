@@ -147,6 +147,10 @@ func has_item(item_id: String) -> bool:
 func get_all_item_ids() -> Array:
 	return _items.keys()
 
+## 鑾峰彇鎵€鏈夌墿鍝佹暟鎹?
+func get_all_items() -> Array:
+	return _items.values()
+
 ## 按类型获取物品
 func get_items_by_type(type: int) -> Array:
 	var result := []

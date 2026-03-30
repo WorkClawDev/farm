@@ -1,25 +1,32 @@
 extends Control
 class_name SettingsUI
 
-## SettingsUI - 设置界面
-## 游戏设置：音量、按键显示
-
 signal settings_closed()
+
+@onready var close_button: Button = $Panel/VBox/CloseRow/CloseBtn
+@onready var main_volume_slider: HSlider = $Panel/VBox/MainVolumeRow/Slider
+@onready var music_volume_slider: HSlider = $Panel/VBox/MusicVolumeRow/Slider
+@onready var sfx_volume_slider: HSlider = $Panel/VBox/SFXVolumeRow/Slider
 
 func _ready() -> void:
 	hide()
+	if close_button:
+		close_button.pressed.connect(_on_close_pressed)
+	if main_volume_slider:
+		main_volume_slider.value_changed.connect(_on_main_volume_changed)
+	if music_volume_slider:
+		music_volume_slider.value_changed.connect(_on_music_volume_changed)
+	if sfx_volume_slider:
+		sfx_volume_slider.value_changed.connect(_on_sfx_volume_changed)
 	_populate_sliders()
 
 func _populate_sliders() -> void:
-	# 主音量
-	if has_node("VBox/MainVolumeRow/Slider"):
-		$VBox/MainVolumeRow/Slider.value = 1.0 if AudioManager == null else 1.0
-	# 音乐音量
-	if has_node("VBox/MusicVolumeRow/Slider"):
-		$VBox/MusicVolumeRow/Slider.value = 0.8
-	# 音效音量
-	if has_node("VBox/SFXVolumeRow/Slider"):
-		$VBox/SFXVolumeRow/Slider.value = 1.0
+	if main_volume_slider:
+		main_volume_slider.value = 1.0
+	if music_volume_slider:
+		music_volume_slider.value = 0.8
+	if sfx_volume_slider:
+		sfx_volume_slider.value = 1.0
 
 func open() -> void:
 	show()

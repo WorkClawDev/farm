@@ -144,8 +144,9 @@ func _enable_room(room_name: String) -> void:
 
 func _setup_furniture() -> void:
 	# 设置已放置的家具
-	if FurnitureSystem:
-		FurnitureSystem.setup_house_furniture(self)
+	var furniture_system = get_node_or_null("/root/FurnitureSystem")
+	if furniture_system and furniture_system.has_method("setup_house_furniture"):
+		furniture_system.setup_house_furniture(self)
 
 func get_spawn_position() -> Vector2:
 	return player_spawn.global_position

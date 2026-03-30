@@ -359,6 +359,10 @@ func get_preference_preview(npc_id: String, item_id: String) -> String:
 func get_all_npc_ids() -> Array:
 	return _npc_data_cache.keys()
 
+## 妫€鏌?NPC 鏄惁瀛樺湪
+func has_npc(npc_id: String) -> bool:
+	return _npc_data_cache.has(npc_id)
+
 ## 获取NPC数据
 func get_npc_data(npc_id: String) -> Dictionary:
 	return _npc_data_cache.get(npc_id, {})

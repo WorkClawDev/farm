@@ -114,7 +114,7 @@ anims/up_idle = SubResource("Animation_up_idle")
 anims/up_walk = SubResource("Animation_up_walk")
 
 [node name="Camera2D" type="Camera2D" parent="."]
-current = true
+enabled = true
 zoom = Vector2(1, 1)
 
 [node name="InteractionArea" type="Area2D" parent="."]

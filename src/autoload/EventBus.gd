@@ -130,3 +130,24 @@ signal fish_caught(fish_id: String, fish_size: int, quality: int)
 # 社交信号
 signal gift_given(npc_id: String, item_id: String, reaction: int)
 signal friendship_changed(npc_id: String, hearts: int)
+
+# UI / Shop 兼容信号
+signal player_moved(position: Vector2)
+signal player_interacted(target: Node)
+signal energy_changed(current: int, maximum: int)
+signal health_changed(current: int, maximum: int)
+signal combat_started
+signal combat_ended
+signal spawn_point_changed(spawn_point: String)
+signal ui_opened(ui_name: String)
+signal ui_closed(ui_name: String)
+signal notification_shown(message: String, type: int)
+signal shop_opened(shop_id: String)
+
+# Festival 兼容信号
+signal festival_started(festival_id: String, festival_data: Dictionary)
+signal festival_ended(festival_id: String, festival_data: Dictionary)
+signal festival_upcoming(festival_id: String, days_until: int)
+signal festival_activity_completed(festival_id: String, activity_id: String, rewards: Dictionary)
+signal festival_reward_claimed(festival_id: String, reward_id: String)
+signal npc_activity_changed(npc_id: String, activity: Dictionary)

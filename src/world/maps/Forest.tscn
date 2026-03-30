@@ -66,5 +66,3 @@ forage_id = "loose_stone"
 position = Vector2(550, 400)
 forage_id = "wild_flower"
 
-[node name="SceneTransition" type="CanvasLayer" parent="."]
-script = ExtResource("res://src/world/transitions/SceneTransition.gd")

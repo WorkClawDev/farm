@@ -1,6 +1,9 @@
 extends Area2D
 class_name FishingSpot
 
+signal fishing_started(spot: FishingSpot)
+signal fishing_ended(spot: FishingSpot, success: bool, fish_id: String)
+
 ## FishingSpot - 钓鱼点
 ## 玩家可以在这里使用鱼竿钓鱼
 
@@ -69,6 +72,7 @@ func _start_fishing() -> void:
 			var rod = current_tool as FishingRod
 			if rod.current_state == FishingRod.FishingState.IDLE:
 				rod.use(global_position, location_type)
+				fishing_started.emit(self)
 				print("[FishingSpot] Started fishing at ", location_type)
 		else:
 			print("[FishingSpot] Need to equip fishing rod first!")

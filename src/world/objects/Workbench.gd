@@ -135,7 +135,7 @@ func _input(event: InputEvent) -> void:
 		return
 
 	# 检测交互按键（E键）
-	if event.is_action_pressed("ui_accept") or event.is_key_pressed(KEY_E):
+	if event.is_action_pressed("ui_accept") or (event is InputEventKey and event.pressed and event.keycode == KEY_E):
 		_interact()
 		get_viewport().set_input_as_handled()
 
