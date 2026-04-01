@@ -74,6 +74,21 @@ log "Godot: ${VERSION}"
 log "Project: $PROJECT_DIR"
 echo ""
 
+echo -e "${CYAN}========================================${NC}"
+echo -e "${CYAN}  Resource sitemap${NC}"
+echo -e "${CYAN}========================================${NC}"
+
+SITEMAP_LOG="/tmp/resource_sitemap_$$.log"
+SITEMAP_PATH="$PROJECT_DIR/data/resource_sitemap.json"
+if bash "$PROJECT_DIR/scripts/generate_resource_sitemap.sh" "$SITEMAP_PATH" > "$SITEMAP_LOG" 2>&1; then
+    ok "Resource sitemap ($(realpath --relative-to="$PROJECT_DIR" "$SITEMAP_PATH" 2>/dev/null || echo "data/resource_sitemap.json"))"
+else
+    err "Resource sitemap generation failed"
+    sed 's/^/    /' "$SITEMAP_LOG" | head -20
+fi
+
+echo ""
+
 RUN_LOG="/tmp/godot_check_$$.log"
 run_godot "$RUN_LOG" --no-window --headless --quit --path "$PROJECT_DIR"
 
@@ -156,11 +171,11 @@ echo -e "${BLUE}========================================${NC}"
 if [ "$FAIL" -eq 0 ]; then
     echo -e "${GREEN}  All checks passed (${PASS}/${PASS})${NC}"
     echo -e "${BLUE}========================================${NC}"
-    rm -f "$RUN_LOG" "$UNIT_TEST_LOG"
+    rm -f "$RUN_LOG" "$UNIT_TEST_LOG" "$SITEMAP_LOG"
     exit 0
 else
     echo -e "${RED}  ${FAIL} checks failed${NC}"
     echo -e "${BLUE}========================================${NC}"
-    rm -f "$RUN_LOG" "$UNIT_TEST_LOG"
+    rm -f "$RUN_LOG" "$UNIT_TEST_LOG" "$SITEMAP_LOG"
     exit 1
 fi
