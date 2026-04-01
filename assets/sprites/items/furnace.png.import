@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dm2ixalgu2wa5"
-valid=false
+path="res://.godot/imported/furnace.png-d615e92786a8f16833d28ae1245d58b2.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/sprites/items/furnace.png"
+dest_files=["res://.godot/imported/furnace.png-d615e92786a8f16833d28ae1245d58b2.ctex"]
 
 [params]
 

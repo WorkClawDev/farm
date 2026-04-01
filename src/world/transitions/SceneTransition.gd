@@ -61,8 +61,8 @@ func _perform_transition(scene_path: String, spawn_point: String) -> void:
 	is_transitioning = true
 	transition_started.emit()
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus and event_bus.has_signal("scene_transition_started"):
-		event_bus.scene_transition_started.emit(scene_path)
+	if event_bus and event_bus.game:
+		event_bus.game.scene_transition_started.emit(scene_path)
 	
 	# 淡出动画
 	_tween = create_tween()
@@ -96,7 +96,7 @@ func _fade_in() -> void:
 func _on_fade_in_complete() -> void:
 	is_transitioning = false
 	transition_completed.emit()
-	get_node("/root/EventBus").scene_transition_completed.emit()
+	get_node("/root/EventBus").game.scene_transition_completed.emit()
 	print("[SceneTransition] Transition completed")
 
 ## 设置玩家出生点（在新场景中调用）
@@ -104,5 +104,5 @@ static func set_spawn_point(spawn_point: String) -> void:
 	# 通过EventBus通知新场景设置玩家位置
 	if instance:
 		var event_bus = instance.get_node_or_null("/root/EventBus")
-		if event_bus and event_bus.has_signal("spawn_point_changed"):
-			event_bus.spawn_point_changed.emit(spawn_point)
+		if event_bus and event_bus.player:
+			event_bus.player.spawn_point_changed.emit(spawn_point)

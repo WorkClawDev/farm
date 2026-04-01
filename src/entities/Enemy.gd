@@ -67,7 +67,7 @@ func _ready() -> void:
 	_setup_areas()
 	_setup_health_bar()
 	_setup_patrol_points()
-	get_node("/root/EventBus").enemy_spawned.emit(self)
+	get_node("/root/EventBus").combat.enemy_spawned.emit(self)
 	print("[Enemy] %s initialized with %d health" % [enemy_name, max_health])
 
 func _physics_process(delta: float) -> void:
@@ -144,7 +144,7 @@ func _check_for_player() -> void:
 			if distance <= detection_range:
 				target = player
 				change_state(State.CHASE)
-				get_node("/root/EventBus").combat_started.emit()
+				get_node("/root/EventBus").combat.combat_started.emit()
 				return
 
 ## 更新巡逻行为
@@ -176,7 +176,7 @@ func _chase_target() -> void:
 	if distance > detection_range * 1.5:  # 超出追击范围
 		target = null
 		change_state(State.IDLE)
-		get_node("/root/EventBus").combat_ended.emit()
+		get_node("/root/EventBus").combat.combat_ended.emit()
 		return
 
 	if distance <= attack_range:
@@ -232,7 +232,7 @@ func _deal_damage_to_target() -> void:
 
 	if target.has_method("take_damage"):
 		target.take_damage(attack_damage, self)
-		get_node("/root/EventBus").player_attacked.emit(enemy_name, attack_damage)
+		get_node("/root/EventBus").combat.player_attacked.emit(enemy_name, attack_damage)
 
 ## 播放攻击动画
 func _play_attack_animation() -> void:
@@ -315,7 +315,7 @@ func take_damage(damage: int, source: Node = null) -> void:
 
 	current_health = max(0, current_health - damage)
 	health_changed.emit(current_health, max_health)
-	get_node("/root/EventBus").enemy_damaged.emit(self, damage)
+	get_node("/root/EventBus").combat.enemy_damaged.emit(self, damage)
 
 	# 显示血条
 	if health_bar:
@@ -374,7 +374,7 @@ func die() -> void:
 
 	# 生成掉落物
 	var loot = _generate_loot()
-	get_node("/root/EventBus").enemy_died.emit(self, loot)
+	get_node("/root/EventBus").combat.enemy_died.emit(self, loot)
 	died.emit(self)
 
 	# 禁用碰撞和区域
@@ -403,7 +403,7 @@ func _on_detection_area_body_entered(body: Node2D) -> void:
 	if body is Player and current_state != State.DEAD:
 		target = body
 		change_state(State.CHASE)
-		get_node("/root/EventBus").combat_started.emit()
+		get_node("/root/EventBus").combat.combat_started.emit()
 
 func _on_detection_area_body_exited(body: Node2D) -> void:
 	if body == target:

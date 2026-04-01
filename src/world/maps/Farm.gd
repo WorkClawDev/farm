@@ -4,6 +4,8 @@ class_name Farm
 ## Farm - 农场场景
 ## 游戏主场景，玩家农场所在地
 
+const GameConstants = preload("res://src/core/constants/GameConstants.gd")
+const FarmConstants = preload("res://src/core/constants/FarmConstants.gd")
 const TimeDisplayScene = preload("res://src/ui/hud/TimeDisplay.tscn")
 const ToolDisplayScene = preload("res://src/ui/hud/ToolDisplay.tscn")
 const HoeScene = preload("res://src/entities/tools/Hoe.tscn")
@@ -14,10 +16,12 @@ const LAYOUT_SCENES := {
 	"shipping_bin": preload("res://src/world/objects/ShippingBin.tscn"),
 	"workbench": preload("res://src/world/objects/Workbench.tscn"),
 	"fishing_spot": preload("res://src/world/objects/FishingSpot.tscn"),
+	"player_house_exterior": preload("res://src/world/objects/HouseExterior.tscn"),
 	"coop": preload("res://src/world/objects/Coop.tscn"),
 	"barn": preload("res://src/world/objects/Barn.tscn"),
 	"ore": preload("res://src/world/objects/Ore.tscn")
 }
+const SHOW_LAYOUT_DEBUG_RECTS := false
 
 @onready var tile_map: TileMap = $TileMap
 @onready var player_spawn: Marker2D = $PlayerSpawn
@@ -45,6 +49,7 @@ func _ready() -> void:
 
 func _setup_tilemap() -> void:
 	print("[Farm] Tileset: ", tile_map.tile_set)
+	tile_map.scale = Vector2(GameConstants.TILE_RENDER_SCALE, GameConstants.TILE_RENDER_SCALE)
 	# 使用 FarmTilesetBuilder 构建瓦片集
 	if tile_map.tile_set == null:
 		var tile_set: TileSet = FarmTilesetBuilder.build_tileset()
@@ -77,7 +82,7 @@ func _has_meaningful_editor_layout(editor_tiles: Array) -> bool:
 
 func _paint_default_farm() -> void:
 	print("[Farm] Painting default farm layout...")
-	# 地图：50x35 瓦片 @ 64px = 3200x2240 像素
+		# 地图：50x35 瓦片 @ 64px = 3200x2240 像素
 	var GRASS := FarmTilesetBuilder.TileCoord.GRASS_PLAIN
 	var PATH := FarmTilesetBuilder.TileCoord.PATH_DIRT
 	var FENCE_H := FarmTilesetBuilder.TileCoord.FENCE_H
@@ -91,21 +96,21 @@ func _paint_default_farm() -> void:
 	var WOOD := FarmTilesetBuilder.TileCoord.WOOD_PLANKS
 
 	# 填满草地
-	for x in range(50):
-		for y in range(35):
+	for x in range(FarmConstants.MAP_TILES_X):
+		for y in range(FarmConstants.MAP_TILES_Y):
 			tile_map.set_cell(0, Vector2i(x, y), 0, FarmTilesetBuilder.get_coord(GRASS))
 
 	# 主路（中间垂直）
-	for y in range(35):
-		tile_map.set_cell(0, Vector2i(25, y), 0, FarmTilesetBuilder.get_coord(PATH))
+	for y in range(FarmConstants.MAP_TILES_Y):
+		tile_map.set_cell(0, Vector2i(FarmConstants.MAIN_PATH_COLUMN, y), 0, FarmTilesetBuilder.get_coord(PATH))
 
 	# 横向小路
 	for x in range(15, 36):
-		tile_map.set_cell(0, Vector2i(x, 15), 0, FarmTilesetBuilder.get_coord(PATH))
+		tile_map.set_cell(0, Vector2i(x, FarmConstants.CROSSROAD_ROW), 0, FarmTilesetBuilder.get_coord(PATH))
 
 	# 入口路径
 	for x in range(20, 31):
-		tile_map.set_cell(0, Vector2i(x, 25), 0, FarmTilesetBuilder.get_coord(PATH))
+		tile_map.set_cell(0, Vector2i(x, FarmConstants.ENTRY_PATH_ROW), 0, FarmTilesetBuilder.get_coord(PATH))
 
 	# 池塘（右上角）
 	for x in range(38, 45):
@@ -205,7 +210,7 @@ func _apply_layout_from_file() -> void:
 
 func _build_layout_node(object_data: Dictionary) -> Node2D:
 	var kind: String = str(object_data.get("kind", ""))
-	if kind == "rect":
+	if kind == "rect" and SHOW_LAYOUT_DEBUG_RECTS:
 		return _build_rect_node(object_data)
 	if kind == "scene":
 		return _build_scene_node(object_data)
@@ -251,7 +256,7 @@ func _build_scene_node(object_data: Dictionary) -> Node2D:
 func _setup_ui() -> void:
 	# 创建UI画布层
 	ui_canvas = CanvasLayer.new()
-	ui_canvas.layer = 10  # UI层
+	ui_canvas.layer = GameConstants.UI_CANVAS_LAYER  # UI层
 	add_child(ui_canvas)
 
 	# 添加时间显示
@@ -295,11 +300,11 @@ func _connect_time_signals() -> void:
 
 func _connect_event_signals() -> void:
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus:
+	if event_bus and event_bus.player and event_bus.farm:
 		# 连接交互信号
-		event_bus.player_interacted.connect(_on_player_interacted)
+		event_bus.player.player_interacted.connect(_on_player_interacted)
 		# 连接收获信号
-		event_bus.crop_harvested.connect(_on_crop_harvested)
+		event_bus.farm.crop_harvested.connect(_on_crop_harvested)
 		print("[Farm] Connected to EventBus signals")
 
 func _on_hour_changed(new_hour: int) -> void:

@@ -14,11 +14,6 @@ func _ready() -> void:
 	production_interval = -1  # 不产出
 	days_until_production = -1
 	is_outside = true
-	if has_node("Sprite2D"):
-		var tex = load("res://assets/sprites/animals/horse_sheet.png")
-		if tex:
-			$sprite.texture = tex
-			$sprite.hframes = 8
 
 func get_product_id() -> String:
 	return ""

@@ -16,7 +16,7 @@
 			"time_ranges": [{"start": 6, "end": 19}],
 			"weather": ["sunny", "cloudy", "rainy"],
 			"behavior": {"speed": 2.0, "erratic": false, "rest_time": 2.0},
-			"icon": "res://assets/sprites/items/fish/carp.png"
+				"icon": "res://assets/sprites/items/carp.png"
 		},
 		{
 			"id": "bass",
@@ -34,7 +34,7 @@
 			"time_ranges": [{"start": 6, "end": 12}, {"start": 18, "end": 26}],
 			"weather": ["sunny", "cloudy"],
 			"behavior": {"speed": 3.0, "erratic": false, "rest_time": 1.5},
-			"icon": "res://assets/sprites/items/fish/bass.png"
+				"icon": "res://assets/sprites/items/bass.png"
 		},
 		{
 			"id": "salmon",
@@ -52,7 +52,7 @@
 			"time_ranges": [{"start": 6, "end": 19}],
 			"weather": ["sunny", "cloudy", "rainy"],
 			"behavior": {"speed": 4.0, "erratic": true, "rest_time": 1.0},
-			"icon": "res://assets/sprites/items/fish/salmon.png"
+				"icon": "res://assets/sprites/items/salmon.png"
 		},
 		{
 			"id": "tuna",
@@ -70,7 +70,7 @@
 			"time_ranges": [{"start": 6, "end": 19}],
 			"weather": ["sunny", "cloudy"],
 			"behavior": {"speed": 5.0, "erratic": true, "rest_time": 0.8},
-			"icon": "res://assets/sprites/items/fish/tuna.png"
+				"icon": "res://assets/sprites/items/tuna.png"
 		},
 		{
 			"id": "sardine",
@@ -88,7 +88,7 @@
 			"time_ranges": [{"start": 6, "end": 26}],
 			"weather": ["sunny", "cloudy", "rainy"],
 			"behavior": {"speed": 2.5, "erratic": false, "rest_time": 2.5},
-			"icon": "res://assets/sprites/items/fish/sardine.png"
+				"icon": "res://assets/sprites/items/sardine.png"
 		},
 		{
 			"id": "catfish",
@@ -106,7 +106,7 @@
 			"time_ranges": [{"start": 18, "end": 26}],
 			"weather": ["cloudy", "rainy"],
 			"behavior": {"speed": 2.0, "erratic": false, "rest_time": 3.0},
-			"icon": "res://assets/sprites/items/fish/catfish.png"
+				"icon": "res://assets/sprites/items/catfish.png"
 		},
 		{
 			"id": "pufferfish",
@@ -124,7 +124,7 @@
 			"time_ranges": [{"start": 12, "end": 19}],
 			"weather": ["sunny"],
 			"behavior": {"speed": 3.5, "erratic": true, "rest_time": 1.2},
-			"icon": "res://assets/sprites/items/fish/pufferfish.png"
+				"icon": "res://assets/sprites/items/pufferfish.png"
 		},
 		{
 			"id": "anglerfish",
@@ -142,7 +142,7 @@
 			"time_ranges": [{"start": 19, "end": 26}],
 			"weather": ["cloudy", "rainy"],
 			"behavior": {"speed": 4.5, "erratic": true, "rest_time": 0.5},
-			"icon": "res://assets/sprites/items/fish/anglerfish.png"
+				"icon": "res://assets/sprites/items/anglerfish.png"
 		},
 		{
 			"id": "goldfish",
@@ -160,7 +160,7 @@
 			"time_ranges": [{"start": 6, "end": 19}],
 			"weather": ["sunny"],
 			"behavior": {"speed": 1.5, "erratic": false, "rest_time": 3.0},
-			"icon": "res://assets/sprites/items/fish/goldfish.png"
+				"icon": "res://assets/sprites/items/goldfish.png"
 		},
 		{
 			"id": "icefish",
@@ -178,7 +178,7 @@
 			"time_ranges": [{"start": 6, "end": 19}],
 			"weather": ["sunny", "cloudy"],
 			"behavior": {"speed": 3.0, "erratic": true, "rest_time": 1.5},
-			"icon": "res://assets/sprites/items/fish/icefish.png"
+				"icon": "res://assets/sprites/items/icefish.png"
 		},
 		{
 			"id": "eel",
@@ -196,7 +196,7 @@
 			"time_ranges": [{"start": 19, "end": 26}],
 			"weather": ["rainy"],
 			"behavior": {"speed": 3.5, "erratic": true, "rest_time": 1.0},
-			"icon": "res://assets/sprites/items/fish/eel.png"
+				"icon": "res://assets/sprites/items/eel.png"
 		},
 		{
 			"id": "rainbow_trout",
@@ -214,7 +214,7 @@
 			"time_ranges": [{"start": 6, "end": 12}, {"start": 18, "end": 22}],
 			"weather": ["sunny", "cloudy"],
 			"behavior": {"speed": 4.0, "erratic": true, "rest_time": 1.0},
-			"icon": "res://assets/sprites/items/fish/rainbow_trout.png"
+				"icon": "res://assets/sprites/items/rainbow_trout.png"
 		},
 		{
 			"id": "perch",
@@ -232,7 +232,7 @@
 			"time_ranges": [{"start": 6, "end": 19}],
 			"weather": ["sunny", "cloudy"],
 			"behavior": {"speed": 2.5, "erratic": false, "rest_time": 2.0},
-			"icon": "res://assets/sprites/items/fish/perch.png"
+				"icon": "res://assets/sprites/items/perch.png"
 		},
 		{
 			"id": "swordfish",
@@ -250,7 +250,7 @@
 			"time_ranges": [{"start": 6, "end": 19}],
 			"weather": ["sunny"],
 			"behavior": {"speed": 5.5, "erratic": true, "rest_time": 0.5},
-			"icon": "res://assets/sprites/items/fish/swordfish.png"
+				"icon": "res://assets/sprites/items/swordfish.png"
 		},
 		{
 			"id": "crucian_carp",
@@ -268,7 +268,7 @@
 			"time_ranges": [{"start": 6, "end": 26}],
 			"weather": ["sunny", "cloudy", "rainy"],
 			"behavior": {"speed": 1.5, "erratic": false, "rest_time": 3.0},
-			"icon": "res://assets/sprites/items/fish/crucian_carp.png"
+				"icon": "res://assets/sprites/items/crucian_carp.png"
 		},
 		{
 			"id": "squid",
@@ -286,7 +286,7 @@
 			"time_ranges": [{"start": 18, "end": 26}],
 			"weather": ["sunny", "cloudy"],
 			"behavior": {"speed": 3.0, "erratic": true, "rest_time": 1.5},
-			"icon": "res://assets/sprites/items/fish/squid.png"
+				"icon": "res://assets/sprites/items/squid.png"
 		},
 		{
 			"id": "mackerel",
@@ -304,7 +304,7 @@
 			"time_ranges": [{"start": 6, "end": 19}],
 			"weather": ["sunny", "cloudy"],
 			"behavior": {"speed": 3.0, "erratic": false, "rest_time": 1.8},
-			"icon": "res://assets/sprites/items/fish/mackerel.png"
+				"icon": "res://assets/sprites/items/mackerel.png"
 		}
 	],
 	"locations": {

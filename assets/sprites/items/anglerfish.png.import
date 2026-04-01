@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://dajslfm7phncr"
-valid=false
+path="res://.godot/imported/anglerfish.png-a64373671b129817e0518471daebfe94.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/sprites/items/anglerfish.png"
+dest_files=["res://.godot/imported/anglerfish.png-a64373671b129817e0518471daebfe94.ctex"]
 
 [params]
 

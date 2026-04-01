@@ -35,6 +35,7 @@ var _player_in_range: bool = false
 
 ## 采集动画持续时间
 const COLLECT_ANIMATION_DURATION: float = 0.5
+const FORAGE_DISPLAY_SIZE := Vector2(36, 36)
 
 
 func _ready() -> void:
@@ -204,9 +205,18 @@ func _update_visuals() -> void:
 	if _forage_data == null:
 		return
 
-	# 根据类型设置颜色（临时方案，实际应使用精灵）
 	if sprite:
-		sprite.modulate = _get_type_color()
+		var texture := _load_forage_texture()
+		if texture:
+			var texture_size := Vector2(texture.get_size())
+			sprite.texture = texture
+			sprite.scale = Vector2(
+				FORAGE_DISPLAY_SIZE.x / texture_size.x,
+				FORAGE_DISPLAY_SIZE.y / texture_size.y
+			)
+			sprite.modulate = Color.WHITE
+		else:
+			sprite.modulate = _get_type_color()
 
 
 ## 获取类型颜色（临时方案）
@@ -231,6 +241,24 @@ func _get_type_color() -> Color:
 			return Color(1.0, 0.9, 0.8)  # 贝壳色
 		_:
 			return Color.WHITE
+
+func _load_forage_texture() -> Texture2D:
+	if _forage_data == null:
+		return null
+
+	if _forage_data.icon_path != "":
+		var direct_texture := load(_forage_data.icon_path)
+		if direct_texture is Texture2D:
+			return direct_texture
+
+	var item_database = get_node_or_null("/root/ItemDatabase")
+	if item_database and item_database.has_method("load_icon_texture"):
+		var item_id: String = _forage_data.item_id if _forage_data.item_id != "" else forage_id
+		var db_texture = item_database.load_icon_texture(item_id)
+		if db_texture is Texture2D:
+			return db_texture
+
+	return null
 
 
 ## 获取位置名称

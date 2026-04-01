@@ -37,6 +37,12 @@ var current_mode: UIMode = UIMode.BUY
 var selected_item_id: String = ""
 var selected_quantity: int = 1
 
+func _get_inventory():
+	return Inventory if Inventory else get_node_or_null("/root/Inventory")
+
+func _get_money_system():
+	return MoneySystem if MoneySystem else get_node_or_null("/root/MoneySystem")
+
 func _ready() -> void:
 	hide()
 	_connect_signals()
@@ -109,13 +115,14 @@ func _refresh_items_list() -> void:
 			_create_item_button(item_id, true)
 	else:
 		# 显示玩家可出售的物品
-		if GameManager and GameManager.inventory:
-			for slot in GameManager.inventory:
-				if slot and slot.get("item_id", "") != "":
-					var item_id: String = slot["item_id"]
-					var quantity: int = slot.get("quantity", 0)
-					if quantity > 0:
-						_create_item_button(item_id, false, quantity)
+		var inventory = _get_inventory()
+		if inventory:
+			var shown: Dictionary = {}
+			for i in inventory.MAX_SLOTS:
+				var slot = inventory.get_slot(i)
+				if slot and not slot.is_empty() and not shown.has(slot.item_id):
+					shown[slot.item_id] = true
+					_create_item_button(slot.item_id, false, inventory.get_item_count(slot.item_id))
 
 ## 创建物品按钮
 func _create_item_button(item_id: String, is_buy: bool, player_quantity: int = 0) -> void:
@@ -172,22 +179,20 @@ func _update_item_info() -> void:
 			item_stock_label.text = "库存: %d" % stock
 		else:
 			item_stock_label.text = "库存: 无限"
-	else:
-		var price: int = ShopSystem.calculate_sell_price(selected_item_id, 1)
-		item_price_label.text = "出售价格: %dG" % price
+		else:
+			var price: int = ShopSystem.calculate_sell_price(selected_item_id, 1)
+			item_price_label.text = "出售价格: %dG" % price
 
-		# 显示玩家持有数量
-		if GameManager and GameManager.inventory:
+			# 显示玩家持有数量
 			var player_qty: int = _get_player_item_quantity(selected_item_id)
 			item_stock_label.text = "持有: %d" % player_qty
-			quantity_spinbox.max_value = player_qty
+			quantity_spinbox.max_value = maxi(player_qty, 1)
 
 ## 获取玩家物品数量
 func _get_player_item_quantity(item_id: String) -> int:
-	if GameManager and GameManager.inventory:
-		for slot in GameManager.inventory:
-			if slot and slot.get("item_id", "") == item_id:
-				return slot.get("quantity", 0)
+	var inventory = _get_inventory()
+	if inventory:
+		return inventory.get_item_count(item_id)
 	return 0
 
 ## 清除物品信息
@@ -223,8 +228,11 @@ func _update_total_price() -> void:
 
 ## 更新金钱显示
 func _update_money_display() -> void:
-	if GameManager:
-		money_label.text = "金币: %dG" % get_node_or_null("/root/GameManager").money if get_node_or_null("/root/GameManager") else 0
+	var money_system = _get_money_system()
+	if money_system:
+		money_label.text = "金币: %dG" % money_system.get_money()
+	else:
+		money_label.text = "金币: 0G"
 
 ## 显示消息
 func show_message(message: String, is_error: bool = false) -> void:

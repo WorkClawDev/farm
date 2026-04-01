@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://d4blapn02jtjm"
-valid=false
+path="res://.godot/imported/mayonnaise_machine.png-a2c6c549ab94edd3d9372aad6ae53170.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/sprites/items/mayonnaise_machine.png"
+dest_files=["res://.godot/imported/mayonnaise_machine.png-a2c6c549ab94edd3d9372aad6ae53170.ctex"]
 
 [params]
 

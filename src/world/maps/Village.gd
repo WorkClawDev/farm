@@ -4,6 +4,7 @@ class_name Village
 ## Village - 村庄场景
 ## 玩家与NPC交互、购物的主要场所
 
+const GameConstants = preload("res://src/core/constants/GameConstants.gd")
 @onready var tile_map: TileMap = $TileMap
 @onready var player_spawn: Marker2D = $PlayerSpawn
 
@@ -23,6 +24,7 @@ func _ready() -> void:
 	_build_placeholder_map()  # 构建白模地图结构
 
 func _setup_tilemap() -> void:
+	tile_map.scale = Vector2(GameConstants.TILE_RENDER_SCALE, GameConstants.TILE_RENDER_SCALE)
 	# 确保 TileMap 格式正确
 	
 	# 确保有 4 层

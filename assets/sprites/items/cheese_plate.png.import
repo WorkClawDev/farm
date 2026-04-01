@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cku1cmivxt2o7"
-valid=false
+path="res://.godot/imported/cheese_plate.png-b2b1e7db4f53629c30378efebfefbf3f.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/sprites/items/cheese_plate.png"
+dest_files=["res://.godot/imported/cheese_plate.png-b2b1e7db4f53629c30378efebfefbf3f.ctex"]
 
 [params]
 

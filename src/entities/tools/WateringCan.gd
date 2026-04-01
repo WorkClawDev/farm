@@ -68,11 +68,10 @@ func _start_watering(target_position: Vector2) -> void:
 		water_particles.global_position = target_position
 
 	# 发射浇水事件
-	get_node("/root/EventBus").soil_watered.emit(target_position)
-
+	get_node("/root/EventBus").farm.soil_watered.emit(target_position)
+	
 	# 等待浇水完成
-	await get_tree().create_timer(water_duration).timeout
-	_finish_watering()
+	get_tree().create_timer(water_duration).timeout.connect(_finish_watering, CONNECT_ONE_SHOT)
 
 ## 完成浇水
 func _finish_watering() -> void:

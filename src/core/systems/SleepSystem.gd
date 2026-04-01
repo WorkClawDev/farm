@@ -26,13 +26,13 @@ func sleep() -> void:
 	var time_manager = get_node_or_null("/root/TimeManager")
 	if time_manager:
 		# 推进一天
-		time_manager.advance_day()
+		time_manager.advance_to_next_day()
 		var new_day = time_manager.current_day
 		var new_season = time_manager.get_season_name()
 		sleep_ended.emit(new_day, new_season)
 		print("[SleepSystem] Slept until day ", new_day, " (", new_season, ")")
 	else:
-		print("[SleepSystem] TimeManager not found!")
+		push_warning("[SleepSystem] TimeManager not found")
 		sleep_ended.emit(1, "Spring")
 	
 	# 恢复体力/能量
@@ -46,8 +46,8 @@ func sleep() -> void:
 	
 	# 显示睡眠结果通知
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus:
-		event_bus.notification_shown.emit("新的一天开始了！", 2)
+	if event_bus and event_bus.ui:
+		event_bus.ui.notification_shown.emit("新的一天开始了！", 2)
 
 
 ## 恢复体力
@@ -62,7 +62,7 @@ func _restore_energy() -> void:
 		energy_restored.emit(STAMINA_RESTORE_AMOUNT)
 		print("[SleepSystem] Restored ", STAMINA_RESTORE_AMOUNT, " energy")
 	else:
-		print("[SleepSystem] Player node not found, skipping energy restore")
+		push_warning("[SleepSystem] Player node not found, skipping energy restore")
 
 
 ## 获取玩家节点

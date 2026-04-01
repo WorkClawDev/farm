@@ -21,6 +21,7 @@ func _ready() -> void:
 	run_shipping_system_tests()
 	run_gift_system_tests()
 	run_quest_system_tests()
+	run_player_visual_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -303,6 +304,30 @@ func run_quest_system_tests():
 			assert_true(npc_quests.size() > 0, "NPC should have quests")
 	
 	print("  QuestSystem: All tests completed")
+
+func run_player_visual_tests():
+	print("\n[Player Visual Tests]")
+
+	var player_scene: PackedScene = load("res://src/entities/player/Player.tscn")
+	assert_true(player_scene != null, "Player scene should load")
+
+	if player_scene == null:
+		print("  Player visuals: Scene load failed")
+		return
+
+	var player := player_scene.instantiate()
+	var player_sprite := player.get_node_or_null("Sprite2D") as Sprite2D
+
+	assert_true(player_sprite != null, "Player sprite should exist")
+	if player_sprite:
+		var frame_width: int = int(player_sprite.texture.get_width() / player_sprite.hframes)
+		var frame_height: int = int(player_sprite.texture.get_height() / player_sprite.vframes)
+		assert_true(frame_width == 32, "Player sprite frame width should be 32")
+		assert_true(frame_height == 32, "Player sprite frame height should be 32")
+		assert_true(player_sprite.scale == Vector2(2, 2), "Player sprite scale should be 2x")
+
+	player.free()
+	print("  Player visuals: All tests completed")
 
 func assert_true(condition: bool, message: String):
 	total_tests += 1

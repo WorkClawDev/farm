@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cttfaggxle3mv"
-valid=false
+path="res://.godot/imported/catfish.png-889d6f566a87cbd800c9389c4e82ae53.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/sprites/items/catfish.png"
+dest_files=["res://.godot/imported/catfish.png-889d6f566a87cbd800c9389c4e82ae53.ctex"]
 
 [params]
 

@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cwdc610qcl24y"
-valid=false
+path="res://.godot/imported/river_stone.png-e08fd87bf4f677a265bed5d0769ad003.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/sprites/items/river_stone.png"
+dest_files=["res://.godot/imported/river_stone.png-e08fd87bf4f677a265bed5d0769ad003.ctex"]
 
 [params]
 

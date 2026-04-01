@@ -120,8 +120,8 @@ func sell_crop(crop_id: String, crop_name: String, quality: int, base_price: int
 	if add_money(total_price, IncomeSource.CROP_SALE, description):
 		# 发射事件信号
 		var event_bus = get_node_or_null("/root/EventBus")
-		if event_bus and event_bus.has_signal("item_sold"):
-			event_bus.item_sold.emit(crop_id, total_price)
+		if event_bus and event_bus.shop:
+			event_bus.shop.item_sold.emit(crop_id, total_price)
 		return total_price
 
 	return 0

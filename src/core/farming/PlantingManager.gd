@@ -84,7 +84,7 @@ func _create_crop(crop_id: String) -> Crop:
 	
 	var crop_data = growth_system.get_crop_data(crop_id)
 	if crop_data == null:
-		print("[PlantingManager] Crop data not found: ", crop_id)
+		push_warning("[PlantingManager] Crop data not found: " + crop_id)
 		return null
 	
 	# 创建作物节点

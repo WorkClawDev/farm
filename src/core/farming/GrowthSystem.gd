@@ -33,7 +33,7 @@ func _connect_signals() -> void:
 ## 加载作物数据库
 func _load_crop_database() -> void:
 	if not ResourceLoader.exists(CROP_DATA_PATH):
-		print("[GrowthSystem] Crop database not found, creating default...")
+		push_warning("[GrowthSystem] Crop database not found, creating default data")
 		_create_default_crop_database()
 		return
 
@@ -296,7 +296,7 @@ func plant_crop(crop_id: String, position: Vector2, fertilizer: int = 0) -> Crop
 	register_crop(crop)
 
 	# 发射种植事件
-	get_node("/root/EventBus").crop_planted.emit(crop_id, position)
+	get_node("/root/EventBus").farm.crop_planted.emit(crop_id, position)
 
 	return crop
 
@@ -331,7 +331,7 @@ func _add_to_inventory(harvest_result: Dictionary) -> void:
 	var quantity: int = harvest_result.get("quantity", 1)
 
 	# 发射添加物品事件
-	get_node("/root/EventBus").item_added.emit(crop_id, quantity)
+	get_node("/root/EventBus").inventory.item_added.emit(crop_id, quantity)
 
 	print("[GrowthSystem] Added ", quantity, " ", crop_id, " to inventory")
 

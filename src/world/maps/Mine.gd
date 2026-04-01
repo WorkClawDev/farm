@@ -4,6 +4,8 @@ class_name Mine
 ## Mine - 矿洞场景
 ## 多层矿洞系统，包含梯子和矿石资源
 
+const GameConstants = preload("res://src/core/constants/GameConstants.gd")
+const MineConstants = preload("res://src/core/constants/MineConstants.gd")
 const TimeDisplayScene = preload("res://src/ui/hud/TimeDisplay.tscn")
 const PickaxeScene = preload("res://src/entities/tools/Pickaxe.tscn")
 const OreScene = preload("res://src/world/objects/Ore.tscn")
@@ -49,15 +51,35 @@ func _ready() -> void:
 
 
 func _setup_tilemap() -> void:
-	if tile_map.tile_set == null:
-		var tile_set: TileSet = TileSet.new()
-		tile_map.tile_set = tile_set
+	tile_map.scale = Vector2(GameConstants.TILE_RENDER_SCALE, GameConstants.TILE_RENDER_SCALE)
+	if tile_map.tile_set == null or tile_map.tile_set.get_source_count() == 0:
+		tile_map.tile_set = MineTilesetBuilder.build_tileset()
+
+	tile_map.clear()
+	var floor := MineTilesetBuilder.TileCoord.STONE_FLOOR
+	var dirt := MineTilesetBuilder.TileCoord.DIRT_FLOOR
+	var wall := MineTilesetBuilder.TileCoord.STONE_WALL
+	var cracked_wall := MineTilesetBuilder.TileCoord.CRACKED_WALL
+	var rubble := MineTilesetBuilder.TileCoord.RUBBLE
+	var track := MineTilesetBuilder.TileCoord.MINECART_TRACK
+
+	for y in range(MineConstants.MAP_TILES_Y):
+		for x in range(MineConstants.MAP_TILES_X):
+			var tile := floor if (x + y) % 4 else dirt
+			if x < MineConstants.BORDER_THICKNESS or y < MineConstants.BORDER_THICKNESS or x >= MineConstants.MAP_TILES_X - MineConstants.BORDER_THICKNESS or y >= MineConstants.MAP_TILES_Y - MineConstants.BORDER_THICKNESS:
+				tile = wall if (x + y) % 2 == 0 else cracked_wall
+			tile_map.set_cell(0, Vector2i(x, y), 0, MineTilesetBuilder.get_coord(tile))
+
+	for x in range(MineConstants.TRACK_X_MIN, MineConstants.TRACK_X_MAX + 1):
+		tile_map.set_cell(0, Vector2i(x, MineConstants.TRACK_Y), 0, MineTilesetBuilder.get_coord(track))
+	for pos in MineConstants.RUBBLE_POSITIONS:
+		tile_map.set_cell(0, pos, 0, MineTilesetBuilder.get_coord(rubble))
 	print("[Mine] TileMap setup complete")
 
 
 func _setup_ui() -> void:
 	ui_canvas = CanvasLayer.new()
-	ui_canvas.layer = 10
+	ui_canvas.layer = GameConstants.UI_CANVAS_LAYER
 	add_child(ui_canvas)
 
 	time_display = TimeDisplayScene.instantiate()
@@ -147,9 +169,8 @@ func _get_random_ore_position() -> Vector2:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 
-	# 假设矿洞大小为 800x600
-	var x: float = rng.randf_range(100.0, 700.0)
-	var y: float = rng.randf_range(100.0, 500.0)
+	var x: float = rng.randf_range(MineConstants.ORE_SPAWN_X_MIN, MineConstants.ORE_SPAWN_X_MAX)
+	var y: float = rng.randf_range(MineConstants.ORE_SPAWN_Y_MIN, MineConstants.ORE_SPAWN_Y_MAX)
 
 	return Vector2(x, y)
 
@@ -158,7 +179,7 @@ func _connect_signals() -> void:
 	if TimeManager:
 		TimeManager.day_changed.connect(_on_day_changed)
 	if EventBus:
-		get_node("/root/EventBus").player_interacted.connect(_on_player_interacted)
+		get_node("/root/EventBus").player.player_interacted.connect(_on_player_interacted)
 
 
 func _on_ladder_down_entered(body: Node2D) -> void:
@@ -189,7 +210,7 @@ func _go_to_floor(floor: int) -> void:
 	# 重置玩家位置
 	if player_spawn:
 		# 这里应该通知玩家移动到出生点
-		get_node("/root/EventBus").spawn_point_changed.emit("mine_floor_" + str(floor))
+		get_node("/root/EventBus").player.spawn_point_changed.emit("mine_floor_" + str(floor))
 
 	floor_changed.emit(current_floor)
 
@@ -197,7 +218,7 @@ func _go_to_floor(floor: int) -> void:
 func _exit_mine() -> void:
 	print("[Mine] Exiting mine to surface")
 	# 切换到地面场景
-	get_node("/root/EventBus").scene_transition_started.emit("res://src/world/maps/Farm.tscn")
+	get_node("/root/EventBus").game.scene_transition_started.emit("res://src/world/maps/Farm.tscn")
 
 
 func _on_day_changed(new_day: int) -> void:
@@ -235,11 +256,11 @@ func _on_ore_mined(ore_type: String, quantity: int, quality: int) -> void:
 	ore_mined.emit(ore_type, quantity, quality)
 
 	# 通知EventBus
-	get_node("/root/EventBus").item_added.emit(ore_type, quantity)
+	get_node("/root/EventBus").inventory.item_added.emit(ore_type, quantity)
 
 
 func get_player_spawn_position() -> Vector2:
-	return player_spawn.global_position if player_spawn else Vector2(400, 300)
+	return player_spawn.global_position if player_spawn else MineConstants.DEFAULT_PLAYER_FALLBACK_POSITION
 
 
 ## 获取当前层信息

@@ -16,6 +16,9 @@ var is_walking: bool = false
 # NPC交互
 var npc_in_range: NPC = null
 
+# 建筑交互
+var building_in_range: Node = null
+
 # 战斗组件
 var combat: PlayerCombat
 
@@ -142,6 +145,8 @@ func _handle_interaction() -> void:
 		# 优先处理NPC交互
 		if npc_in_range and npc_in_range.interactable:
 			_interact_with_npc()
+		elif building_in_range and building_in_range.has_method("interact"):
+			building_in_range.interact()
 		else:
 			# 使用工具进行交互
 			_use_tool_on_target()
@@ -188,8 +193,8 @@ func _interact_with_npc() -> void:
 
 	# 发送交互信号
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus and event_bus.has_signal("npc_interacted"):
-		event_bus.emit_signal("npc_interacted", npc_in_range)
+	if event_bus and event_bus.social:
+		event_bus.social.npc_interacted.emit(npc_in_range)
 
 ## 初始化战斗系统
 func _setup_combat() -> void:

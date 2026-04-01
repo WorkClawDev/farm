@@ -54,12 +54,17 @@ func use(target: Node) -> bool:
 	# 检查目标是否为Ore
 	var ore: Ore = target as Ore
 	if ore == null:
-		print("[Pickaxe] Invalid target - not an Ore node")
+		push_warning("[Pickaxe] Invalid target - not an Ore node")
 		return false
 
 	# 检查是否可以挖掘
 	if not ore.can_mine():
 		print("[Pickaxe] Cannot mine this ore")
+		return false
+
+	var stamina_manager = get_node_or_null("/root/StaminaManager")
+	if stamina_manager and not stamina_manager.use_stamina(energy_cost):
+		print("[Pickaxe] Not enough stamina")
 		return false
 
 	# 开始挖掘
@@ -74,17 +79,16 @@ func use(target: Node) -> bool:
 	var success := _do_mining(ore)
 
 	if success:
-		# 消耗体力
-		get_node("/root/EventBus").energy_changed.emit(-energy_cost, 0)
 		tool_used.emit(true, ore.global_position)
 
 	# 等待动画完成
-	await get_tree().create_timer(0.3 / mining_speed).timeout
-
-	is_mining = false
-	current_target = null
+	get_tree().create_timer(0.3 / mining_speed).timeout.connect(_reset_mining_state, CONNECT_ONE_SHOT)
 
 	return success
+
+func _reset_mining_state() -> void:
+	is_mining = false
+	current_target = null
 
 
 ## 执行挖掘逻辑
@@ -112,7 +116,7 @@ func _do_mining(ore: Ore) -> bool:
 			hit_particles.global_position = ore.global_position
 
 		# 发射物品获取事件
-		get_node("/root/EventBus").item_added.emit(result.item_id, result.quantity)
+		get_node("/root/EventBus").inventory.item_added.emit(result.item_id, result.quantity)
 	else:
 		print("[Pickaxe] Mining progress: ", result.current_health, "/", result.max_health)
 

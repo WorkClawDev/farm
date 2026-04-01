@@ -1,7 +1,7 @@
 [gd_scene load_steps=11 format=3 uid="uid://dp5y8hqm2x8nr"]
 
 [ext_resource type="Script" path="res://src/entities/player/Player.gd" id="1_player"]
-[ext_resource type="Texture2D" path="res://assets/sprites/characters/player_spritesheet.png" id="2_sprite"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/player_spritesheet_nanobanana2.png" id="2_sprite"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_player"]
 radius = 12.0
@@ -91,13 +91,15 @@ resource_name = "up_idle"
 length = 0.3
 
 [node name="Player" type="CharacterBody2D"]
+z_index = 5
 script = ExtResource("1_player")
 speed = 150.0
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(2, 2)
 texture = ExtResource("2_sprite")
-hframes = 2
-vframes = 4
+hframes = 8
+vframes = 1
 frame = 0
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]

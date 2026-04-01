@@ -99,8 +99,8 @@ func water() -> void:
 	is_watered = true
 	_update_sprite()  # 更新视觉效果显示浇水状态
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus:
-		event_bus.soil_watered.emit(soil_position)
+	if event_bus and event_bus.farm:
+		event_bus.farm.soil_watered.emit(soil_position)
 
 
 ## 生长逻辑
@@ -198,8 +198,8 @@ func harvest() -> Dictionary:
 	# 发射信号
 	crop_harvested.emit(crop_id, quality, quantity)
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus:
-		event_bus.crop_harvested.emit(crop_id, quality, quantity)
+	if event_bus and event_bus.farm:
+		event_bus.farm.crop_harvested.emit(crop_id, quality, quantity)
 
 	# 检查是否可以重复收获
 	if crop_data.regrow:

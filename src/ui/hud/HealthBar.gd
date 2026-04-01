@@ -48,7 +48,7 @@ func _setup_nodes() -> void:
 		progress_bar.show_percentage = false
 
 func _connect_signals() -> void:
-	get_node("/root/EventBus").health_changed.connect(_on_health_changed)
+	get_node("/root/EventBus").player.health_changed.connect(_on_health_changed)
 
 ## 更新显示
 func _update_display() -> void:

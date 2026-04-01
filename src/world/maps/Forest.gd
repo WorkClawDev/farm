@@ -4,6 +4,8 @@ class_name Forest
 ## Forest - 森林场景
 ## 可采集野果、蘑菇、草药等野生资源
 
+const GameConstants = preload("res://src/core/constants/GameConstants.gd")
+const ForestConstants = preload("res://src/core/constants/ForestConstants.gd")
 const TimeDisplayScene = preload("res://src/ui/hud/TimeDisplay.tscn")
 const ForageItemScene = preload("res://src/entities/items/ForageItem.tscn")
 const PlayerScene = preload("res://src/entities/player/Player.tscn")
@@ -27,15 +29,48 @@ func _ready() -> void:
 
 
 func _setup_tilemap() -> void:
-	if tile_map.tile_set == null:
-		var tile_set: TileSet = TileSet.new()
-		tile_map.tile_set = tile_set
+	tile_map.scale = Vector2(GameConstants.TILE_RENDER_SCALE, GameConstants.TILE_RENDER_SCALE)
+	if tile_map.tile_set == null or tile_map.tile_set.get_source_count() == 0:
+		tile_map.tile_set = ForestTilesetBuilder.build_tileset()
+
+	tile_map.clear()
+	var floor := ForestTilesetBuilder.TileCoord.FOREST_FLOOR
+	var grass := ForestTilesetBuilder.TileCoord.GRASS_NATURAL
+	var dark := ForestTilesetBuilder.TileCoord.DARK_FOREST
+	var path := ForestTilesetBuilder.TileCoord.DIRT_PATH
+	var tree := ForestTilesetBuilder.TileCoord.OAK_TREE
+	var stump := ForestTilesetBuilder.TileCoord.TREE_STUMP
+	var flower := ForestTilesetBuilder.TileCoord.WILD_FLOWER
+
+	for y in range(ForestConstants.MAP_TILES_Y):
+		for x in range(ForestConstants.MAP_TILES_X):
+			var tile := floor if (x + y) % 3 else grass
+			if x < ForestConstants.BORDER_THICKNESS or y < ForestConstants.BORDER_THICKNESS or x >= ForestConstants.MAP_TILES_X - ForestConstants.BORDER_THICKNESS or y >= ForestConstants.MAP_TILES_Y - ForestConstants.BORDER_THICKNESS:
+				tile = dark
+			tile_map.set_cell(0, Vector2i(x, y), 0, ForestTilesetBuilder.get_coord(tile))
+
+	for x in range(ForestConstants.HORIZONTAL_PATH_X_MIN, ForestConstants.HORIZONTAL_PATH_X_MAX + 1):
+		tile_map.set_cell(0, Vector2i(x, ForestConstants.HORIZONTAL_PATH_Y), 0, ForestTilesetBuilder.get_coord(path))
+	for y in range(ForestConstants.VERTICAL_PATH_Y_MIN, ForestConstants.VERTICAL_PATH_Y_MAX + 1):
+		tile_map.set_cell(0, Vector2i(ForestConstants.VERTICAL_PATH_X, y), 0, ForestTilesetBuilder.get_coord(path))
+
+	for x in range(0, ForestConstants.MAP_TILES_X, ForestConstants.TREE_STEP):
+		tile_map.set_cell(2, Vector2i(x, ForestConstants.TREE_EDGE_INSET_Y), 0, ForestTilesetBuilder.get_coord(tree))
+		tile_map.set_cell(2, Vector2i(x, ForestConstants.MAP_TILES_Y - ForestConstants.TREE_EDGE_INSET_Y - 1), 0, ForestTilesetBuilder.get_coord(tree))
+	for y in range(ForestConstants.BORDER_THICKNESS * 2, ForestConstants.MAP_TILES_Y - ForestConstants.BORDER_THICKNESS * 2, ForestConstants.TREE_STEP):
+		tile_map.set_cell(2, Vector2i(ForestConstants.TREE_EDGE_INSET_X, y), 0, ForestTilesetBuilder.get_coord(tree))
+		tile_map.set_cell(2, Vector2i(ForestConstants.MAP_TILES_X - ForestConstants.TREE_EDGE_INSET_X - 1, y), 0, ForestTilesetBuilder.get_coord(tree))
+
+	for pos in ForestConstants.STUMP_POSITIONS:
+		tile_map.set_cell(2, pos, 0, ForestTilesetBuilder.get_coord(stump))
+	for pos in ForestConstants.FLOWER_POSITIONS:
+		tile_map.set_cell(2, pos, 0, ForestTilesetBuilder.get_coord(flower))
 	print("[Forest] TileMap setup complete")
 
 
 func _setup_ui() -> void:
 	ui_canvas = CanvasLayer.new()
-	ui_canvas.layer = 10
+	ui_canvas.layer = GameConstants.UI_CANVAS_LAYER
 	add_child(ui_canvas)
 
 	time_display = TimeDisplayScene.instantiate()
@@ -57,11 +92,7 @@ func _generate_random_forage() -> void:
 		return
 
 	var season: String = get_node("/root/TimeManager").get_season_name() if TimeManager else "Spring"
-	var spawn_positions: Array[Vector2] = [
-		Vector2(200, 200), Vector2(400, 150), Vector2(600, 200),
-		Vector2(250, 400), Vector2(450, 350), Vector2(650, 400),
-		Vector2(150, 300), Vector2(750, 300), Vector2(350, 500)
-	]
+	var spawn_positions: Array[Vector2] = ForestConstants.FORAGE_SPAWN_POSITIONS
 
 	# 获取季节可用的采集物品
 	var available_forage: Array = ForagingSystem.get_seasonal_forage(season)

@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bsevme2qaoem1"
-valid=false
+path="res://.godot/imported/goldfish.png-4f21e2796378e511683730e9eab48a12.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/sprites/items/goldfish.png"
+dest_files=["res://.godot/imported/goldfish.png-4f21e2796378e511683730e9eab48a12.ctex"]
 
 [params]
 

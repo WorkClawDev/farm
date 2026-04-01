@@ -100,8 +100,8 @@ func till() -> bool:
 	current_state = State.TILLED
 	soil_tilled.emit(self)
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus:
-		event_bus.crop_planted.emit("soil_tilled", global_position)  # 复用信号
+	if event_bus and event_bus.farm:
+		event_bus.farm.crop_planted.emit("soil_tilled", global_position)  # 复用信号
 	print("[Soil] Tilled at ", grid_position)
 	return true
 
@@ -121,8 +121,8 @@ func water(amount: int = 50) -> bool:
 
 	soil_watered.emit(self)
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus:
-		event_bus.soil_watered.emit(global_position)
+	if event_bus and event_bus.farm:
+		event_bus.farm.soil_watered.emit(global_position)
 	print("[Soil] Watered at ", grid_position, ", moisture: ", moisture, "/", max_moisture)
 	return true
 
@@ -147,8 +147,8 @@ func _process_daily_moisture() -> void:
 			current_state = State.TILLED
 			soil_dried.emit(self)
 			var event_bus = get_node_or_null("/root/EventBus")
-			if event_bus:
-				event_bus.soil_dried.emit(global_position)
+			if event_bus and event_bus.farm:
+				event_bus.farm.soil_dried.emit(global_position)
 			print("[Soil] Dried at ", grid_position)
 
 	_update_visual()
@@ -171,8 +171,8 @@ func dry() -> void:
 		moisture = 0
 		soil_dried.emit(self)
 		var event_bus = get_node_or_null("/root/EventBus")
-		if event_bus:
-			event_bus.soil_dried.emit(global_position)
+		if event_bus and event_bus.farm:
+			event_bus.farm.soil_dried.emit(global_position)
 		print("[Soil] Dried at ", grid_position)
 
 
@@ -193,8 +193,8 @@ func plant_crop(crop_scene: PackedScene, crop_id: String) -> bool:
 
 	crop_planted.emit(self, crop_id)
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus:
-		event_bus.crop_planted.emit(crop_id, global_position)
+	if event_bus and event_bus.farm:
+		event_bus.farm.crop_planted.emit(crop_id, global_position)
 	print("[Soil] Planted ", crop_id, " at ", grid_position)
 	return true
 
@@ -260,8 +260,8 @@ func _on_interaction_area_input_event(_viewport: Node, event: InputEvent, _shape
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		# 由工具系统处理交互
 		var event_bus = get_node_or_null("/root/EventBus")
-		if event_bus:
-			event_bus.player_interacted.emit(self)
+		if event_bus and event_bus.player:
+			event_bus.player.player_interacted.emit(self)
 
 
 func _on_mouse_entered() -> void:

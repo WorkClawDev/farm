@@ -55,7 +55,7 @@ func _load_npc_data() -> void:
 func _connect_signals() -> void:
 	# 监听场景切换
 	if EventBus:
-		get_node("/root/EventBus").scene_transition_completed.connect(_on_scene_transition_completed)
+		get_node("/root/EventBus").game.scene_transition_completed.connect(_on_scene_transition_completed)
 
 ## 设置当前场景
 func set_current_scene(scene: Node2D) -> void:

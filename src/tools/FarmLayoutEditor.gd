@@ -7,6 +7,7 @@ const SCENE_LIBRARY := {
 	"shipping_bin": preload("res://src/world/objects/ShippingBin.tscn"),
 	"workbench": preload("res://src/world/objects/Workbench.tscn"),
 	"fishing_spot": preload("res://src/world/objects/FishingSpot.tscn"),
+	"player_house_exterior": preload("res://src/world/objects/HouseExterior.tscn"),
 	"coop": preload("res://src/world/objects/Coop.tscn"),
 	"barn": preload("res://src/world/objects/Barn.tscn"),
 	"ore": preload("res://src/world/objects/Ore.tscn")
@@ -23,7 +24,7 @@ const PALETTE := {
 	"water_block": {"kind": "rect", "size": Vector2(96, 96), "color": Color(0.24, 0.55, 0.8, 0.85)},
 	"grass_tint": {"kind": "rect", "size": Vector2(128, 128), "color": Color(0.3, 0.55, 0.28, 0.35)},
 	"fence_block": {"kind": "rect", "size": Vector2(64, 8), "color": Color(0.62, 0.43, 0.22, 1.0)},
-	"house_block": {"kind": "rect", "size": Vector2(96, 64), "color": Color(0.72, 0.47, 0.29, 0.95)}
+	"house_block": {"kind": "scene", "scene_key": "player_house_exterior"}
 }
 
 @onready var farm_preview: Node2D = $FarmPreview
@@ -289,6 +290,8 @@ func _detect_scene_key(node: Node2D) -> String:
 		return "workbench"
 	if script_path.ends_with("FishingSpot.gd"):
 		return "fishing_spot"
+	if script_path.ends_with("HouseExterior.gd"):
+		return "player_house_exterior"
 	if script_path.ends_with("Coop.gd"):
 		return "coop"
 	if script_path.ends_with("Barn.gd"):
@@ -310,7 +313,7 @@ func _node_contains_point(node: Node2D, world_pos: Vector2) -> bool:
 		var rect: ColorRect = node.get_child(0)
 		var rect_global = Rect2(node.position - rect.size / 2.0, rect.size)
 		return rect_global.has_point(world_pos)
-	return node.position.distance_to(world_pos) < 40.0
+	return _get_node_rect(node).has_point(world_pos)
 
 func _snap(pos: Vector2) -> Vector2:
 	return Vector2(round(pos.x / grid_size) * grid_size, round(pos.y / grid_size) * grid_size)
@@ -332,6 +335,13 @@ func _get_node_rect(node: Node2D) -> Rect2:
 	if node.get_child_count() > 0 and node.get_child(0) is ColorRect:
 		var color_rect: ColorRect = node.get_child(0)
 		return Rect2(node.position - color_rect.size / 2.0, color_rect.size)
+	var sprite: Sprite2D = node.get_node_or_null("Sprite2D")
+	if sprite and sprite.texture:
+		var texture_size := Vector2(sprite.texture.get_size()) * sprite.scale.abs()
+		var sprite_pos := node.position + sprite.position
+		if sprite.centered:
+			return Rect2(sprite_pos - texture_size / 2.0, texture_size)
+		return Rect2(sprite_pos, texture_size)
 	return Rect2(node.position - Vector2(24, 24), Vector2(48, 48))
 
 func _update_property_fields() -> void:

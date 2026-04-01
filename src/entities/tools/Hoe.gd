@@ -34,12 +34,17 @@ func use(target: Node) -> bool:
 	# 检查目标是否为Soil
 	var soil: Soil = target as Soil
 	if soil == null:
-		print("[Hoe] Invalid target - not a Soil node")
+		push_warning("[Hoe] Invalid target - not a Soil node")
 		return false
 
 	# 检查是否可以耕地
 	if not soil.can_till():
 		print("[Hoe] Cannot till this soil")
+		return false
+
+	var stamina_manager = get_node_or_null("/root/StaminaManager")
+	if stamina_manager and not stamina_manager.use_stamina(energy_cost):
+		print("[Hoe] Not enough stamina")
 		return false
 
 	# 执行耕地
@@ -50,16 +55,16 @@ func use(target: Node) -> bool:
 
 	if success:
 		print("[Hoe] Successfully tilled soil at ", soil.global_position)
-		# 消耗体力（通过EventBus通知）
-		get_node("/root/EventBus").energy_changed.emit(-energy_cost, 0)  # 负值表示消耗
 
 	tool_used.emit(success, soil.global_position)
-
+	
 	# 延迟重置动画状态
-	await get_tree().create_timer(0.3).timeout
-	is_using = false
-
+	get_tree().create_timer(0.3).timeout.connect(_reset_use_state, CONNECT_ONE_SHOT)
+	
 	return success
+
+func _reset_use_state() -> void:
+	is_using = false
 
 
 ## 播放使用动画

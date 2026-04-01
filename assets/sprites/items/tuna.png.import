@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://d1kq58b72k5j"
-valid=false
+path="res://.godot/imported/tuna.png-371d31ce86914097e1b33606e48fb8d6.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/sprites/items/tuna.png"
+dest_files=["res://.godot/imported/tuna.png-371d31ce86914097e1b33606e48fb8d6.ctex"]
 
 [params]
 

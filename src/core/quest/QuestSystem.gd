@@ -208,11 +208,11 @@ func _parse_objective_type(type_str: String) -> ObjectiveType:
 func _connect_signals() -> void:
 	# 连接背包事件（收集任务）
 	if EventBus:
-		get_node("/root/EventBus").item_added.connect(_on_item_added)
-		get_node("/root/EventBus").dialogue_ended.connect(_on_dialogue_ended)
-		get_node("/root/EventBus").gift_given.connect(_on_gift_given)
-		get_node("/root/EventBus").friendship_changed.connect(_on_friendship_changed)
-		get_node("/root/EventBus").crop_harvested.connect(_on_crop_harvested)
+		get_node("/root/EventBus").inventory.item_added.connect(_on_item_added)
+		get_node("/root/EventBus").social.dialogue_ended.connect(_on_dialogue_ended)
+		get_node("/root/EventBus").social.gift_given.connect(_on_gift_given)
+		get_node("/root/EventBus").social.friendship_changed.connect(_on_friendship_changed)
+		get_node("/root/EventBus").farm.crop_harvested.connect(_on_crop_harvested)
 
 	# 连接时间事件（检查时间限制）
 	if TimeManager:

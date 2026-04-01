@@ -292,21 +292,21 @@ func _use_item(index: int) -> void:
 	var db := Inventory.get_item_database()
 	var item := db.get_item(item_id) if db else null
 	if item == null:
-		print("[InventoryUI] Item not found: ", item_id)
+		push_warning("[InventoryUI] Item not found: " + item_id)
 		return
 
 	match item.type:
-		ItemDatabase.ItemType.FOOD:
-			# 消耗食物，恢复体力
-			var effect: Dictionary = item.get("use_effect", {})
-			var stamina_restore: float = effect.get("stamina", 0.0)
-			var health_restore: float = effect.get("health", 0.0)
-			if GameManager and stamina_restore > 0:
-				GameManager.current_stamina = minf(GameManager.current_stamina + stamina_restore, GameManager.max_stamina)
-			if health_restore > 0:
-				print("[InventoryUI] Health restore: ", health_restore)
-			Inventory.remove_item(index)
-			print("[InventoryUI] Consumed food: %s (+%s stamina, +%s health)" % [item_id, stamina_restore, health_restore])
+			ItemDatabase.ItemType.FOOD:
+				# 消耗食物，恢复体力
+				var effect: Dictionary = item.get("use_effect", {})
+				var stamina_restore: float = effect.get("stamina", 0.0)
+				var health_restore: float = effect.get("health", 0.0)
+				if StaminaManager and stamina_restore > 0:
+					StaminaManager.restore_stamina(stamina_restore)
+				if health_restore > 0:
+					print("[InventoryUI] Health restore: ", health_restore)
+				Inventory.remove_item(item_id, 1)
+				print("[InventoryUI] Consumed food: %s (+%s stamina, +%s health)" % [item_id, stamina_restore, health_restore])
 
 		ItemDatabase.ItemType.SEED:
 			print("[InventoryUI] Seed: right-click on tilled soil to plant")
@@ -405,7 +405,7 @@ func open() -> void:
 	_update_all_slots()
 
 	if EventBus:
-		get_node("/root/EventBus").ui_opened.emit("inventory")
+		get_node("/root/EventBus").ui.ui_opened.emit("inventory")
 
 func close() -> void:
 	visible = false
@@ -413,7 +413,7 @@ func close() -> void:
 	_end_drag()
 
 	if EventBus:
-		get_node("/root/EventBus").ui_closed.emit("inventory")
+		get_node("/root/EventBus").ui.ui_closed.emit("inventory")
 
 	inventory_closed.emit()
 

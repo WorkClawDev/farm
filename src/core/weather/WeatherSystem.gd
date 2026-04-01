@@ -142,12 +142,31 @@ func _apply_weather_effect() -> void:
 
 
 func _create_weather_effect() -> void:
+	if _should_skip_visual_effects():
+		return
+
 	var effect_node = _create_effect_node()
 	if effect_node:
 		var root = get_tree().current_scene
 		if root:
 			root.add_child(effect_node)
 			_weather_effect = effect_node
+
+
+func _should_skip_visual_effects() -> bool:
+	var scene := get_tree().current_scene
+	if scene == null:
+		return true
+
+	var scene_path: String = scene.scene_file_path
+	if scene_path.begins_with("res://addons/gut/"):
+		return true
+
+	var scene_script := scene.get_script() as Script
+	if scene_script and scene_script.resource_path.begins_with("res://addons/gut/"):
+		return true
+
+	return scene.name.begins_with("Gut")
 
 
 func _create_effect_node() -> Node2D:

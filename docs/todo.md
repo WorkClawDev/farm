@@ -1,6 +1,6 @@
 # 田园物语 - 开发任务清单
 
-> 更新时间：2026-03-25
+> 更新时间：2026-03-31
 
 ## ✅ 已完成（本次会话）
 
@@ -40,6 +40,13 @@
 - CombatHints: 变量/函数名冲突
 - FishingSpot: 移除缺失的 FishingRod.tscn preload
 - FarmLayoutEditor: reversed() → [::-1]
+- 贴图审计 R1: 玩家正式游戏内 sprite sheet 已接入
+- 贴图审计 R2: Village NPC 改为使用 8 帧 `npc_sheets` 链路
+- 贴图审计 R3: 旧 1024x1024 白底角色大图迁移到 `assets/source_art/`
+- 贴图审计 R4: 旧玩家 sheet 与 `crystal.jpg` 迁移到 `assets/source_art/`
+- 贴图审计 R5: `npc_*.png` 单帧占位图已迁移出运行时目录，仅保留 `npc_default.png` 兜底
+- 贴图审计 R6: 本轮生成的立绘 / 转身图 / sprite concept 已归档到 `assets/source_art/generated/`
+- 贴图审计 R7: `output/google-character-imagegen/` 中间产物已清空
 
 ---
 
@@ -55,10 +62,10 @@
 - ✅ R11: QuestSystem NPC数据库
 
 ### 缺失场景
-- ⬜ Egg.tscn / Snowball.tscn（已设为 null）
+- ✅ Egg.tscn / Snowball.tscn 已创建
 
 ### 测试框架
-- ⬜ tests/ - GUT 测试框架未安装（不影响游戏运行）
+- ✅ tests/ - GUT 测试框架已安装并通过 smoke test
 
 ---
 

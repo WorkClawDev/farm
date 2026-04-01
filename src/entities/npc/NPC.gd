@@ -132,7 +132,7 @@ func _load_npc_data() -> void:
 
 	var json = JSON.new()
 	if json.parse(json_text) != OK:
-		print("[NPC] Failed to parse npcs.json")
+		push_error("[NPC] Failed to parse npcs.json")
 		return
 
 	var data = json.get_data()
@@ -147,10 +147,28 @@ func _load_npc_data() -> void:
 ## 应用NPC配置数据
 func _apply_npc_data(data: Dictionary) -> void:
 	npc_name = data.get("name", npc_name)
+	_apply_sprite_data(data)
 	# 初始化日程系统
 	if data.has("schedule"):
 		schedule = NPCSchedule.new(data)
 		_connect_schedule_signals()
+
+func _apply_sprite_data(data: Dictionary) -> void:
+	if sprite == null:
+		return
+
+	var sprite_path: String = data.get("sprite", "")
+	if sprite_path == "" or not ResourceLoader.exists(sprite_path):
+		return
+
+	var texture := load(sprite_path) as Texture2D
+	if texture == null:
+		return
+
+	sprite.texture = texture
+	sprite.hframes = 8 if texture.get_width() >= texture.get_height() * 4 else 1
+	sprite.vframes = 1
+	sprite.frame = _get_sprite_frame(current_direction)
 
 ## 连接日程信号
 func _connect_schedule_signals() -> void:
@@ -164,8 +182,8 @@ func _connect_schedule_signals() -> void:
 
 ## 设置动画
 func _setup_animation() -> void:
-	if sprite and IDLE_FRAMES.has(current_direction):
-		sprite.frame = IDLE_FRAMES[current_direction]
+	if sprite:
+		sprite.frame = _get_sprite_frame(current_direction)
 
 ## 移动到目标位置
 func move_to(target: Vector2) -> void:
@@ -261,12 +279,12 @@ func _update_animation() -> void:
 			animation_player.play(anim_name)
 		else:
 			animation_player.stop()
-			if sprite and IDLE_FRAMES.has(current_direction):
-				sprite.frame = IDLE_FRAMES[current_direction]
+			if sprite:
+				sprite.frame = _get_sprite_frame(current_direction)
 	else:
 		animation_player.stop()
-		if sprite and IDLE_FRAMES.has(current_direction):
-			sprite.frame = IDLE_FRAMES[current_direction]
+		if sprite:
+			sprite.frame = _get_sprite_frame(current_direction)
 
 ## 获取动画前缀
 func _get_animation_prefix() -> String:
@@ -285,8 +303,20 @@ func _get_animation_prefix() -> String:
 ## 设置NPC朝向
 func set_direction(direction: Direction) -> void:
 	current_direction = direction
-	if sprite and IDLE_FRAMES.has(direction):
-		sprite.frame = IDLE_FRAMES[direction]
+	if sprite:
+		sprite.frame = _get_sprite_frame(direction)
+
+func _get_sprite_frame(direction: Direction) -> int:
+	if sprite == null:
+		return 0
+
+	var total_frames: int = maxi(sprite.hframes * sprite.vframes, 1)
+	var frame: int = int(IDLE_FRAMES.get(direction, 0))
+
+	if frame >= total_frames:
+		return 0
+
+	return frame
 
 ## 面向玩家
 func face_position(target_pos: Vector2) -> void:
@@ -354,9 +384,9 @@ func load_state(state: Dictionary) -> void:
 ## 连接对话信号
 func _connect_dialogue_signals() -> void:
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus:
-		if not event_bus.dialogue_ended.is_connected(_on_dialogue_ended):
-			event_bus.dialogue_ended.connect(_on_dialogue_ended)
+	if event_bus and event_bus.social:
+		if not event_bus.social.dialogue_ended.is_connected(_on_dialogue_ended):
+			event_bus.social.dialogue_ended.connect(_on_dialogue_ended)
 
 ## 时间变化回调
 func _on_time_changed(new_time: float) -> void:
@@ -381,8 +411,8 @@ func _on_schedule_changed(new_activity: Dictionary) -> void:
 
 	# 通过 EventBus 发送通知
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus:
-		event_bus.npc_activity_changed.emit(npc_id, new_activity)
+	if event_bus and event_bus.social:
+		event_bus.social.npc_activity_changed.emit(npc_id, new_activity)
 
 ## 到达目的地回调
 func _on_destination_reached(location_id: String) -> void:
@@ -528,5 +558,5 @@ func interact() -> void:
 
 	# 发射对话开始事件
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus:
-		event_bus.dialogue_started.emit(npc_id)
+	if event_bus and event_bus.social:
+		event_bus.social.dialogue_started.emit(npc_id)

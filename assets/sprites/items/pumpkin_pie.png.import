@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bw6wxfc1mcgsw"
-valid=false
+path="res://.godot/imported/pumpkin_pie.png-0f351f61575092198493257c3e84be9a.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/sprites/items/pumpkin_pie.png"
+dest_files=["res://.godot/imported/pumpkin_pie.png-0f351f61575092198493257c3e84be9a.ctex"]
 
 [params]
 

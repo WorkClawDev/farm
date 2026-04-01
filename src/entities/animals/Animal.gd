@@ -157,15 +157,17 @@ func feed(food_item_id: String = "") -> bool:
 	_add_friendship(5)
 
 	current_state = AnimalState.EATING
-	await get_tree().create_timer(1.5).timeout
-	current_state = AnimalState.IDLE
+	get_tree().create_timer(1.5).timeout.connect(_finish_eating, CONNECT_ONE_SHOT)
 
 	fed.emit(self)
 	if EventBus:
-		get_node("/root/EventBus").notification_shown.emit("%s吃饱了！" % animal_name, 0)
-
+		get_node("/root/EventBus").ui.notification_shown.emit("%s吃饱了！" % animal_name, 0)
+	
 	print("[Animal] %s fed, hunger: %d" % [animal_name, hunger])
 	return true
+
+func _finish_eating() -> void:
+	current_state = AnimalState.IDLE
 
 ## 增加好感度
 func _add_friendship(amount: int) -> void:

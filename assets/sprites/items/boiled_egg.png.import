@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bvjhapl1ii0w1"
-valid=false
+path="res://.godot/imported/boiled_egg.png-32746b89a46931843e251780b7db47e8.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/sprites/items/boiled_egg.png"
+dest_files=["res://.godot/imported/boiled_egg.png-32746b89a46931843e251780b7db47e8.ctex"]
 
 [params]
 

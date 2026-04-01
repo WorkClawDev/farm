@@ -5,6 +5,11 @@
 ```
 tests/
 ├── README.md                    # 测试文档
+├── gut/                         # GUT 测试
+│   ├── test_smoke.gd
+│   ├── test_time_manager.gd
+│   ├── test_inventory_manager.gd
+│   └── test_save_manager.gd
 ├── run_tests.gd                 # 测试运行器
 ├── unit/                        # 单元测试
 │   ├── test_time_manager.gd    # 时间管理器测试
@@ -17,8 +22,8 @@ tests/
 ## 运行测试
 
 ### 方法1: 使用 Godot 编辑器
-1. 安装 Gut 插件 (Godot 单元测试框架)
-2. 在编辑器中运行测试场景
+1. 项目已安装 Gut 插件 (`addons/gut`)
+2. 打开 Godot 后在插件里启用/运行 GUT
 
 ### 方法2: 使用命令行
 ```bash
@@ -27,6 +32,9 @@ godot --script tests/run_tests.gd
 
 # 运行集成测试
 godot --script tests/integration/test_game_startup.gd
+
+# 运行 GUT smoke test
+godot --headless --path . -s res://addons/gut/gut_cmdln.gd -gconfig=res://.gutconfig.json -gexit
 ```
 
 ### 方法3: 手动验证
@@ -40,6 +48,11 @@ godot --script tests/integration/test_game_startup.gd
 - ✅ TimeManager - 时间、季节、暂停/恢复
 - ✅ Inventory - 添加、移除、检查物品
 - ✅ CookingSystem - 配方加载、学习
+
+### GUT 核心测试
+- ✅ TimeManager - 默认状态、跨天/跨季、存档回读
+- ✅ InventoryManager - 堆叠、移除、存档回读
+- ✅ SaveManager - 非法槽位、创建/删除存档、游戏时长格式化
 
 ### 集成测试
 - ✅ 数据文件完整性
@@ -78,10 +91,10 @@ godot --script tests/integration/test_game_startup.gd
 ## 添加新测试
 
 1. 在 `tests/unit/` 创建新的测试文件
-2. 继承 `GutTest` 类
+2. 如果使用 GUT，在 `tests/gut/` 创建文件并继承 `GutTest`
 3. 使用 `before_each()` 和 `after_each()` 设置/清理
 4. 编写测试函数，使用 `assert_*` 断言
-5. 在 `run_tests.gd` 中添加测试调用
+5. GUT 测试由 `.gutconfig.json` 自动发现；旧测试则继续在 `run_tests.gd` 中添加调用
 
 ## 示例
 

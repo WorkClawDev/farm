@@ -40,8 +40,8 @@ func _ready() -> void:
 
 func _connect_event_bus() -> void:
 	if EventBus:
-		get_node("/root/EventBus").dialogue_started.connect(_on_event_dialogue_started)
-		get_node("/root/EventBus").dialogue_ended.connect(_on_event_dialogue_ended)
+		get_node("/root/EventBus").social.dialogue_started.connect(_on_event_dialogue_started)
+		get_node("/root/EventBus").social.dialogue_ended.connect(_on_event_dialogue_ended)
 
 ## 加载对话数据
 func _load_dialogue_data() -> void:
@@ -119,7 +119,7 @@ func start_dialogue(npc_id: String, dialogue_key: String = "") -> bool:
 
 	dialogue_started.emit(npc_id)
 	if EventBus:
-		get_node("/root/EventBus").dialogue_started.emit(npc_id)
+		get_node("/root/EventBus").social.dialogue_started.emit(npc_id)
 
 	print("[DialogueManager] Started dialogue: ", _current_dialogue_id)
 	return true
@@ -191,10 +191,10 @@ func _check_single_condition(condition: Dictionary) -> bool:
 			var hearts = get_friendship_hearts(npc)
 			return hearts >= min_hearts
 
-		"player_energy":
-			var max_energy = condition.get("max", 100)
-			var current_energy = GameManager.current_stamina if GameManager else 100.0
-			return current_energy <= max_energy
+			"player_energy":
+				var max_energy = condition.get("max", 100)
+				var current_energy = StaminaManager.current_stamina if StaminaManager else 100.0
+				return current_energy <= max_energy
 
 		"money":
 			var min_money = condition.get("min", 0)
@@ -233,7 +233,7 @@ func _on_dialogue_finished() -> void:
 
 	dialogue_ended.emit(npc_id)
 	if EventBus:
-		get_node("/root/EventBus").dialogue_ended.emit(npc_id)
+		get_node("/root/EventBus").social.dialogue_ended.emit(npc_id)
 
 	print("[DialogueManager] Dialogue ended")
 
@@ -371,7 +371,7 @@ func add_friendship_points(npc_id: String, points: int) -> void:
 		print("[DialogueManager] Friendship with ", npc_id, " increased to ", data["hearts"], " hearts")
 
 	if EventBus:
-		get_node("/root/EventBus").friendship_changed.emit(npc_id, data["hearts"])
+		get_node("/root/EventBus").social.friendship_changed.emit(npc_id, data["hearts"])
 
 func get_friendship_hearts(npc_id: String) -> int:
 	if _friendship_data.has(npc_id):

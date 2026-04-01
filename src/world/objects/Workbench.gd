@@ -1,6 +1,8 @@
 extends Area2D
 class_name Workbench
 
+const TextureLoader := preload("res://src/core/utils/RuntimeTextureLoader.gd")
+
 ## Workbench - 工作台
 ## 提供制作功能的交互对象
 
@@ -19,6 +21,9 @@ enum WorkbenchType {
 @export var workbench_name: String = "工作台"
 @export var interaction_prompt: String = "按 E 键打开制作界面"
 @export var is_interactable: bool = true
+
+const WORKBENCH_TEXTURE_PATH := "res://assets/sprites/items/workbench.png"
+const WORKBENCH_DISPLAY_SIZE := Vector2(72, 72)
 
 # 节点引用
 @onready var sprite: Sprite2D = $Sprite2D if has_node("Sprite2D") else null
@@ -50,6 +55,8 @@ func _setup_interaction() -> void:
 		new_sprite.modulate = _get_workbench_color()
 		add_child(new_sprite)
 		sprite = new_sprite
+
+	_apply_visual()
 
 	# 创建碰撞形状（如果不存在）
 	if not has_node("CollisionShape2D"):
@@ -83,6 +90,25 @@ func _get_workbench_color() -> Color:
 		WorkbenchType.KITCHEN: return Color(0.4, 0.4, 0.5)    # 灰白色
 		WorkbenchType.ANVIL: return Color(0.3, 0.3, 0.4)      # 深灰色
 		_: return Color(0.5, 0.5, 0.5)
+
+func _apply_visual() -> void:
+	if sprite == null:
+		return
+
+	if sprite.texture == null:
+		var texture := TextureLoader.load_texture(WORKBENCH_TEXTURE_PATH)
+		if texture:
+			var texture_size := Vector2(texture.get_size())
+			sprite.texture = texture
+			sprite.scale = Vector2(
+				WORKBENCH_DISPLAY_SIZE.x / texture_size.x,
+				WORKBENCH_DISPLAY_SIZE.y / texture_size.y
+			)
+			sprite.modulate = Color.WHITE
+			sprite.z_index = 1
+			return
+
+	sprite.modulate = _get_workbench_color()
 
 
 func _connect_signals() -> void:
@@ -217,7 +243,7 @@ func set_workbench_type(type: WorkbenchType) -> void:
 	interaction_prompt = "按 E 键打开%s" % workbench_name
 
 	if sprite:
-		sprite.modulate = _get_workbench_color()
+		_apply_visual()
 
 
 func _get_default_name() -> String:

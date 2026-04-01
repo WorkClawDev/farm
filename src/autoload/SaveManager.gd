@@ -268,7 +268,7 @@ func _apply_save_data(data: Dictionary) -> void:
 func _apply_player_data(player_data: Dictionary) -> void:
 	var player: Node = _find_player()
 	if not player:
-		print("[SaveManager] Player not found, cannot apply player data")
+		push_warning("[SaveManager] Player not found, cannot apply player data")
 		return
 
 	# 恢复玩家位置

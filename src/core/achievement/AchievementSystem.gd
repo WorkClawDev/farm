@@ -195,8 +195,8 @@ func _connect_signals() -> void:
 	
 	var event_bus = get_node_or_null("/root/EventBus")
 	if event_bus:
-		event_bus.crop_harvested.connect(_on_crop_harvested)
-		event_bus.fish_caught.connect(_on_fish_caught)
+		event_bus.farm.crop_harvested.connect(_on_crop_harvested)
+		event_bus.fishing.fish_caught.connect(_on_fish_caught)
 
 ## 更新统计
 func update_stat(stat_name: String, value: int = 1) -> void:
@@ -249,8 +249,8 @@ func unlock_achievement(achievement_id: String) -> void:
 	
 	# 发送通知
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus:
-		event_bus.notification_shown.emit("成就解锁: " + achievement.name, 1)
+	if event_bus and event_bus.ui:
+		event_bus.ui.notification_shown.emit("成就解锁: " + achievement.name, 1)
 
 ## 检查成就是否已解锁
 func is_achievement_unlocked(achievement_id: String) -> bool:

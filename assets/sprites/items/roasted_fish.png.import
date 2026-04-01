@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bxux5afny2oxq"
-valid=false
+path="res://.godot/imported/roasted_fish.png-0c470d017405f02f29b1f2f2504eb814.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/sprites/items/roasted_fish.png"
+dest_files=["res://.godot/imported/roasted_fish.png-0c470d017405f02f29b1f2f2504eb814.ctex"]
 
 [params]
 

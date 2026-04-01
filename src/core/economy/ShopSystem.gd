@@ -65,10 +65,16 @@ func _ready() -> void:
 	load_shops()
 	_connect_signals()
 
+func _get_money_system():
+	return get_node_or_null("/root/MoneySystem")
+
+func _get_inventory():
+	return get_node_or_null("/root/Inventory")
+
 func _connect_signals() -> void:
 	if EventBus:
-		get_node("/root/EventBus").shop_opened.connect(_on_event_bus_shop_opened)
-		get_node("/root/EventBus").shop_closed.connect(_on_event_bus_shop_closed)
+		get_node("/root/EventBus").shop.shop_opened.connect(_on_event_bus_shop_opened)
+		get_node("/root/EventBus").shop.shop_closed.connect(_on_event_bus_shop_closed)
 
 func _on_event_bus_shop_opened(shop_id: String) -> void:
 	open_shop(shop_id)
@@ -319,16 +325,25 @@ func buy_item(item_id: String, quantity: int = 1) -> bool:
 	var total_price: int = calculate_buy_price(item_id, quantity)
 
 	# 检查金钱
-	if GameManager:
-		if get_node_or_null("/root/GameManager").money if get_node_or_null("/root/GameManager") else 0 < total_price:
-			purchase_failed.emit("not_enough_money")
-			return false
+	var money_system = _get_money_system()
+	var inventory = _get_inventory()
+	if money_system == null or inventory == null:
+		purchase_failed.emit("system_unavailable")
+		return false
 
-		# 扣除金钱
-		GameManager.spend_money(total_price)
+	if not money_system.can_afford(total_price):
+		purchase_failed.emit("not_enough_money")
+		return false
 
-		# 添加物品到背包
-		GameManager.add_item(item_id, quantity)
+	if not money_system.spend_money(total_price, money_system.ExpenseType.OTHER, item_id):
+		purchase_failed.emit("not_enough_money")
+		return false
+
+	if not inventory.add_item(item_id, quantity):
+		# Roll back the money if inventory add fails.
+		money_system.add_money(total_price, money_system.IncomeSource.OTHER, "shop_refund_" + item_id)
+		purchase_failed.emit("inventory_full")
+		return false
 
 	# 减少库存
 	if stock > 0:
@@ -338,7 +353,7 @@ func buy_item(item_id: String, quantity: int = 1) -> bool:
 	var final_price: int = calculate_buy_price(item_id, quantity)
 	item_purchased.emit(item_id, quantity, final_price)
 	if EventBus:
-		get_node("/root/EventBus").item_bought.emit(item_id, final_price)
+		get_node("/root/EventBus").shop.item_bought.emit(item_id, final_price)
 
 	print("[ShopSystem] Bought %dx %s for %dG" % [quantity, item_id, final_price])
 	return true
@@ -356,25 +371,32 @@ func sell_item(item_id: String, quantity: int = 1) -> bool:
 		return false
 
 	# 检查玩家是否有该物品
-	if GameManager:
-		if not GameManager.has_item(item_id, quantity):
-			sale_failed.emit("not_enough_items")
-			return false
+	var inventory = _get_inventory()
+	var money_system = _get_money_system()
+	if inventory == null or money_system == null:
+		sale_failed.emit("system_unavailable")
+		return false
 
-		# 计算价格
-		var total_price: int = calculate_sell_price(item_id, quantity)
+	if not inventory.has_item(item_id, quantity):
+		sale_failed.emit("not_enough_items")
+		return false
 
-		# 移除物品
-		GameManager.remove_item(item_id, quantity)
+	# 计算价格
+	var total_price: int = calculate_sell_price(item_id, quantity)
 
-		# 增加金钱
-		GameManager.add_money(total_price)
+	# 移除物品
+	if not inventory.remove_item(item_id, quantity):
+		sale_failed.emit("not_enough_items")
+		return false
+
+	# 增加金钱
+	money_system.add_money(total_price, money_system.IncomeSource.OTHER, item_id)
 
 	# 发送事件
 	var final_price: int = calculate_sell_price(item_id, quantity)
 	item_sold.emit(item_id, quantity, final_price)
 	if EventBus:
-		get_node("/root/EventBus").item_sold.emit(item_id, final_price)
+		get_node("/root/EventBus").shop.item_sold.emit(item_id, final_price)
 
 	print("[ShopSystem] Sold %dx %s for %dG" % [quantity, item_id, final_price])
 	return true

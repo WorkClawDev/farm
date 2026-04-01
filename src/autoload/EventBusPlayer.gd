@@ -9,3 +9,4 @@ signal energy_changed(current: int, maximum: int)
 signal health_changed(current: int, maximum: int)
 signal combat_started
 signal combat_ended
+signal spawn_point_changed(spawn_point: String)

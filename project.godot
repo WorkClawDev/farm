@@ -20,6 +20,10 @@ run/main_scene="res://src/ui/menus/MainMenu.tscn"
 config/features=PackedStringArray("4.6", "Mobile")
 boot_splash/bg_color=Color(0.141176, 0.141176, 0.141176, 1)
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/gut/plugin.cfg")
+
 [autoload]
 
 GameManager="*res://src/autoload/GameManager.gd"

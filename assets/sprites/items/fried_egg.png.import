@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b35x7ajhmsm3b"
-valid=false
+path="res://.godot/imported/fried_egg.png-9b0576be7f98fd85b24e79ca48253275.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/sprites/items/fried_egg.png"
+dest_files=["res://.godot/imported/fried_egg.png-9b0576be7f98fd85b24e79ca48253275.ctex"]
 
 [params]
 

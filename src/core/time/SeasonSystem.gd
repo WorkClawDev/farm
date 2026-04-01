@@ -196,7 +196,7 @@ func process_season_change(new_season: int) -> void:
 func _process_crops_for_season_change() -> void:
 	# 通知所有农场地图处理季节作物
 	if EventBus:
-		get_node("/root/EventBus").season_changed.emit(current_season, SEASON_NAMES[current_season])
+		get_node("/root/EventBus").time.season_changed.emit(current_season, SEASON_NAMES[current_season])
 
 
 ## 更新季节特效
@@ -212,18 +212,37 @@ func _update_season_effect() -> void:
 
 ## 生成季节特效
 func _spawn_season_effect() -> void:
+	if _should_skip_visual_effects():
+		return
+
 	var effect_scene_path := _get_season_effect_path()
 	if effect_scene_path.is_empty():
 		return
 
-	if ResourceLoader.exists(effect_scene_path):
-		var effect_scene := load(effect_scene_path) as PackedScene
-		if effect_scene:
-			_active_season_effect = effect_scene.instantiate() as Node2D
-			if _active_season_effect:
-				# 添加到场景树的根部
-				get_tree().current_scene.add_child(_active_season_effect)
-				print("[SeasonSystem] Spawned season effect: ", SEASON_NAMES[current_season])
+		if ResourceLoader.exists(effect_scene_path):
+			var effect_scene := load(effect_scene_path) as PackedScene
+			if effect_scene:
+				_active_season_effect = effect_scene.instantiate() as Node2D
+				if _active_season_effect:
+					# 添加到场景树的根部
+					get_tree().current_scene.add_child(_active_season_effect)
+					print("[SeasonSystem] Spawned season effect: ", SEASON_NAMES[current_season])
+
+
+func _should_skip_visual_effects() -> bool:
+	var scene := get_tree().current_scene
+	if scene == null:
+		return true
+
+	var scene_path: String = scene.scene_file_path
+	if scene_path.begins_with("res://addons/gut/"):
+		return true
+
+	var scene_script := scene.get_script() as Script
+	if scene_script and scene_script.resource_path.begins_with("res://addons/gut/"):
+		return true
+
+	return scene.name.begins_with("Gut")
 
 
 ## 获取季节特效场景路径

@@ -41,6 +41,8 @@ var _is_loaded: bool = false
 signal database_loaded
 signal database_error(error_message: String)
 
+const ICON_EXTENSIONS: Array[String] = ["png", "jpg", "jpeg", "webp"]
+
 func _ready() -> void:
 	load_database()
 
@@ -215,25 +217,50 @@ func get_icon_path(item_id: String) -> String:
 	# 优先使用 item_data 中定义的 icon_path
 	var item := get_item(item_id)
 	if item and item.icon_path != "":
-		return item.icon_path
+		var configured_path := _resolve_icon_path(item.icon_path)
+		if configured_path != "":
+			return configured_path
 
 	# 自动映射：item_id -> assets/sprites/items/{item_id}.png
-	var icon_path := "res://assets/sprites/items/%s.png" % item_id
-	if FileAccess.file_exists(icon_path):
+	var icon_path := _find_icon_in_directory("res://assets/sprites/items", item_id)
+	if icon_path != "":
 		return icon_path
 
 	# 备用：尝试不带 _seed 后缀
 	if item_id.ends_with("_seed"):
 		var crop_id := item_id.substr(0, item_id.length() - 5)  # 去掉 "_seed"
-		icon_path = "res://assets/sprites/items/%s.png" % crop_id
-		if FileAccess.file_exists(icon_path):
+		icon_path = _find_icon_in_directory("res://assets/sprites/items", crop_id)
+		if icon_path != "":
 			return icon_path
 
 	# 工具类型尝试从 tools 文件夹加载
 	if item and item.type == ItemType.TOOL:
-		icon_path = "res://assets/sprites/tools/%s.png" % item_id
-		if FileAccess.file_exists(icon_path):
+		icon_path = _find_icon_in_directory("res://assets/sprites/tools", item_id)
+		if icon_path != "":
 			return icon_path
+
+	return ""
+
+func _resolve_icon_path(path: String) -> String:
+	if path.is_empty():
+		return ""
+
+	if FileAccess.file_exists(path):
+		return path
+
+	var basename := path.get_basename()
+	for extension in ICON_EXTENSIONS:
+		var candidate := "%s.%s" % [basename, extension]
+		if FileAccess.file_exists(candidate):
+			return candidate
+
+	return ""
+
+func _find_icon_in_directory(directory: String, item_id: String) -> String:
+	for extension in ICON_EXTENSIONS:
+		var candidate := "%s/%s.%s" % [directory, item_id, extension]
+		if FileAccess.file_exists(candidate):
+			return candidate
 
 	return ""
 

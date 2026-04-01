@@ -160,7 +160,7 @@ func give_gift(npc_id: String, item_id: String) -> Dictionary:
 	gift_reaction.emit(npc_id, item_id, reaction, friendship_change)
 
 	if EventBus:
-		get_node("/root/EventBus").gift_given.emit(npc_id, item_id, reaction)
+		get_node("/root/EventBus").social.gift_given.emit(npc_id, item_id, reaction)
 
 	return result
 
@@ -259,7 +259,7 @@ func _update_friendship(npc_id: String, change: int) -> void:
 	friendship_updated.emit(npc_id, hearts)
 
 	if EventBus:
-		get_node("/root/EventBus").friendship_changed.emit(npc_id, hearts)
+		get_node("/root/EventBus").social.friendship_changed.emit(npc_id, hearts)
 
 ## 获取好感度值
 func get_friendship(npc_id: String) -> int:

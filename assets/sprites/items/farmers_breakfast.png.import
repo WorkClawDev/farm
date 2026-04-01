@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://c1nj55t3i662h"
-valid=false
+path="res://.godot/imported/farmers_breakfast.png-6a5191e9fc4d094899c14be7900bcfb7.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/sprites/items/farmers_breakfast.png"
+dest_files=["res://.godot/imported/farmers_breakfast.png-6a5191e9fc4d094899c14be7900bcfb7.ctex"]
 
 [params]
 

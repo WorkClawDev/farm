@@ -474,7 +474,7 @@ func open_for_npc(npc_id: String, npc_name: String) -> void:
 	_update_slots()
 
 	if EventBus:
-		get_node("/root/EventBus").ui_opened.emit("gift")
+		get_node("/root/EventBus").ui.ui_opened.emit("gift")
 
 ## 关闭送礼界面
 func close() -> void:
@@ -484,7 +484,7 @@ func close() -> void:
 	_current_npc_name = ""
 
 	if EventBus:
-		get_node("/root/EventBus").ui_closed.emit("gift")
+		get_node("/root/EventBus").ui.ui_closed.emit("gift")
 
 ## 检查是否打开
 func is_open() -> bool:

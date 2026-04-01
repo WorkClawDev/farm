@@ -96,6 +96,8 @@ func _ready() -> void:
 	tool = EventBusTool.new()
 	tool.name = "EventBusTool"
 	add_child(tool)
+
+	_connect_compatibility_aliases()
 	
 	print("[EventBus] Initialized with 16 domain EventBus")
 
@@ -121,7 +123,9 @@ signal soil_dried(position: Vector2)
 signal scene_transition_started(target_scene: String)
 signal scene_transition_completed
 
-# 社交信号 (EventBusSocial)
+	# 社交信号 (EventBusSocial)
+signal npc_interacted(npc: Node)
+signal dialogue_started(npc_id: String)
 signal dialogue_ended(npc_id: String)
 
 # 钓鱼信号 (EventBusFishing)
@@ -143,6 +147,15 @@ signal ui_opened(ui_name: String)
 signal ui_closed(ui_name: String)
 signal notification_shown(message: String, type: int)
 signal shop_opened(shop_id: String)
+signal shop_closed
+signal item_bought(item_id: String, price: int)
+signal item_sold(item_id: String, price: int)
+signal season_changed(season: int, season_name: String)
+signal enemy_spawned(enemy: Node)
+signal enemy_damaged(enemy: Node, damage: int)
+signal enemy_died(enemy: Node, loot: Dictionary)
+signal player_attacked(weapon: String, damage: int)
+signal player_damaged(damage: int, source: Node)
 
 # Festival 兼容信号
 signal festival_started(festival_id: String, festival_data: Dictionary)
@@ -151,3 +164,57 @@ signal festival_upcoming(festival_id: String, days_until: int)
 signal festival_activity_completed(festival_id: String, activity_id: String, rewards: Dictionary)
 signal festival_reward_claimed(festival_id: String, reward_id: String)
 signal npc_activity_changed(npc_id: String, activity: Dictionary)
+
+func _connect_compatibility_aliases() -> void:
+	inventory.item_added.connect(func(item_id: String, quantity: int): item_added.emit(item_id, quantity))
+	inventory.item_removed.connect(func(item_id: String, quantity: int): item_removed.emit(item_id, quantity))
+	inventory.inventory_full.connect(func(): inventory_full.emit())
+
+	farm.crop_planted.connect(func(crop_type: String, position: Vector2): crop_planted.emit(crop_type, position))
+	farm.crop_grew.connect(func(crop_type: String, stage: int): crop_grew.emit(crop_type, stage))
+	farm.crop_harvested.connect(func(crop_type: String, quality: int, quantity: int): crop_harvested.emit(crop_type, quality, quantity))
+	farm.soil_watered.connect(func(position: Vector2): soil_watered.emit(position))
+	farm.soil_dried.connect(func(position: Vector2): soil_dried.emit(position))
+
+	time.season_changed.connect(func(season: int, season_name: String): season_changed.emit(season, season_name))
+
+	player.player_moved.connect(func(position: Vector2): player_moved.emit(position))
+	player.player_interacted.connect(func(target: Node): player_interacted.emit(target))
+	player.energy_changed.connect(func(current: int, maximum: int): energy_changed.emit(current, maximum))
+	player.health_changed.connect(func(current: int, maximum: int): health_changed.emit(current, maximum))
+	player.combat_started.connect(func(): combat_started.emit())
+	player.combat_ended.connect(func(): combat_ended.emit())
+	player.spawn_point_changed.connect(func(spawn_point: String): spawn_point_changed.emit(spawn_point))
+
+	shop.shop_opened.connect(func(shop_id: String): shop_opened.emit(shop_id))
+	shop.shop_closed.connect(func(): shop_closed.emit())
+	shop.item_bought.connect(func(item_id: String, price: int): item_bought.emit(item_id, price))
+	shop.item_sold.connect(func(item_id: String, price: int): item_sold.emit(item_id, price))
+
+	ui.ui_opened.connect(func(ui_name: String): ui_opened.emit(ui_name))
+	ui.ui_closed.connect(func(ui_name: String): ui_closed.emit(ui_name))
+	ui.notification_shown.connect(func(message: String, type: int): notification_shown.emit(message, type))
+
+	social.npc_interacted.connect(func(npc: Node): npc_interacted.emit(npc))
+	social.dialogue_started.connect(func(npc_id: String): dialogue_started.emit(npc_id))
+	social.dialogue_ended.connect(func(npc_id: String): dialogue_ended.emit(npc_id))
+	social.friendship_changed.connect(func(npc_id: String, hearts: int): friendship_changed.emit(npc_id, hearts))
+	social.gift_given.connect(func(npc_id: String, item_id: String, reaction: int): gift_given.emit(npc_id, item_id, reaction))
+	social.npc_activity_changed.connect(func(npc_id: String, activity: Dictionary): npc_activity_changed.emit(npc_id, activity))
+
+	combat.enemy_spawned.connect(func(enemy: Node): enemy_spawned.emit(enemy))
+	combat.enemy_damaged.connect(func(enemy: Node, damage: int): enemy_damaged.emit(enemy, damage))
+	combat.enemy_died.connect(func(enemy: Node, loot: Dictionary): enemy_died.emit(enemy, loot))
+	combat.player_attacked.connect(func(weapon: String, damage: int): player_attacked.emit(weapon, damage))
+	combat.player_damaged.connect(func(damage: int, source: Node): player_damaged.emit(damage, source))
+	combat.combat_started.connect(func(): combat_started.emit())
+	combat.combat_ended.connect(func(): combat_ended.emit())
+
+	game.scene_transition_started.connect(func(target_scene: String): scene_transition_started.emit(target_scene))
+	game.scene_transition_completed.connect(func(): scene_transition_completed.emit())
+
+	festival.festival_started.connect(func(festival_id: String, festival_data: Dictionary): festival_started.emit(festival_id, festival_data))
+	festival.festival_ended.connect(func(festival_id: String, festival_data: Dictionary): festival_ended.emit(festival_id, festival_data))
+	festival.festival_upcoming.connect(func(festival_id: String, days_until: int): festival_upcoming.emit(festival_id, days_until))
+	festival.festival_activity_completed.connect(func(festival_id: String, activity_id: String, rewards: Dictionary): festival_activity_completed.emit(festival_id, activity_id, rewards))
+	festival.festival_reward_claimed.connect(func(festival_id: String, reward_id: String): festival_reward_claimed.emit(festival_id, reward_id))

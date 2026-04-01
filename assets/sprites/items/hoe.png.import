@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://j7t6u5us7uu4"
-valid=false
+path="res://.godot/imported/hoe.png-4fc968feaeada78dea60d649114d431e.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/sprites/items/hoe.png"
+dest_files=["res://.godot/imported/hoe.png-4fc968feaeada78dea60d649114d431e.ctex"]
 
 [params]
 

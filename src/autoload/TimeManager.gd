@@ -75,6 +75,9 @@ func _advance_day() -> void:
 	day_changed.emit(current_day)
 	print("[TimeManager] Day advanced to: ", current_day, " of ", SEASONS[current_season])
 
+func advance_to_next_day() -> void:
+	_advance_day()
+
 func _advance_season() -> void:
 	current_season += 1
 	
@@ -101,6 +104,9 @@ func set_time_scale(scale: float) -> void:
 
 func get_season_name() -> String:
 	return SEASONS[current_season]
+
+func get_current_day() -> int:
+	return current_day
 
 func get_formatted_time() -> String:
 	return _format_time(current_time)

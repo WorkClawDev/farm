@@ -565,7 +565,7 @@ func open(workbench_type: String = "") -> void:
 	_refresh_recipes()
 
 	if EventBus:
-		get_node("/root/EventBus").ui_opened.emit("crafting")
+		get_node("/root/EventBus").ui.ui_opened.emit("crafting")
 
 
 func close() -> void:
@@ -574,7 +574,7 @@ func close() -> void:
 	_selected_recipe = null
 
 	if EventBus:
-		get_node("/root/EventBus").ui_closed.emit("crafting")
+		get_node("/root/EventBus").ui.ui_closed.emit("crafting")
 
 	crafting_closed.emit()
 

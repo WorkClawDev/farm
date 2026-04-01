@@ -21,7 +21,7 @@
       "id": "farmer",
       "name": "农场主约翰",
       "description": "经验丰富的老农，懂得种植的一切",
-      "portrait": "res://assets/sprites/portraits/farmer.png",
+      "portrait": "res://assets/sprites/portraits/farmer_joe.png",
       "default_location": "farm_shop",
       "friendship": {
         "hearts": 0,
@@ -38,7 +38,7 @@
       "id": "merchant",
       "name": "商人艾米丽",
       "description": "旅行商人，经营各种稀有物品",
-      "portrait": "res://assets/sprites/portraits/merchant.png",
+      "portrait": "res://assets/sprites/portraits/shopkeeper_lily.png",
       "default_location": "general_store",
       "friendship": {
         "hearts": 0,
@@ -55,7 +55,7 @@
       "id": "blacksmith",
       "name": "铁匠布鲁斯",
       "description": "强壮的铁匠，能打造各种工具",
-      "portrait": "res://assets/sprites/portraits/blacksmith.png",
+      "portrait": "res://assets/sprites/portraits/blacksmith_tom.png",
       "default_location": "blacksmith_shop",
       "friendship": {
         "hearts": 0,
@@ -72,7 +72,7 @@
       "id": "doctor",
       "name": "医生玛丽",
       "description": "善良的村医，照顾着大家的健康",
-      "portrait": "res://assets/sprites/portraits/doctor.png",
+      "portrait": "res://assets/sprites/portraits/doctor_mary.png",
       "default_location": "clinic",
       "friendship": {
         "hearts": 0,

@@ -2,11 +2,11 @@
 
 [ext_resource type="Script" path="res://src/world/maps/Village.gd" id="1_village"]
 [ext_resource type="PackedScene" uid="uid://npc_base_001" path="res://src/entities/npc/NPC.tscn" id="2_npc"]
-[ext_resource type="Texture2D" path="res://assets/sprites/characters/npc_mayor.png" id="3_mayor_sprite"]
-[ext_resource type="Texture2D" path="res://assets/sprites/characters/npc_shopkeeper.png" id="4_shopkeeper_sprite"]
-[ext_resource type="Texture2D" path="res://assets/sprites/characters/npc_farmer.png" id="5_farmer_sprite"]
-[ext_resource type="Texture2D" path="res://assets/sprites/characters/npc_blacksmith.png" id="6_blacksmith_sprite"]
-[ext_resource type="Texture2D" path="res://assets/sprites/characters/npc_doctor.png" id="7_doctor_sprite"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/npc_sheets/mayor_sheet.png" id="3_mayor_sprite"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/npc_sheets/shopkeeper_lily_sheet.png" id="4_shopkeeper_sprite"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/npc_sheets/farmer_joe_sheet.png" id="5_farmer_sprite"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/npc_sheets/blacksmith_tom_sheet.png" id="6_blacksmith_sprite"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/npc_sheets/doctor_mary_sheet.png" id="7_doctor_sprite"]
 
 [sub_resource type="TileSet" id="TileSet_village"]
 
@@ -42,33 +42,43 @@ shape = SubResource("RectangleShape2D_tofarm")
 [node name="NPCs" type="Node2D" parent="."]
 
 [node name="MayorThomas" parent="NPCs" instance=ExtResource("2_npc")]
-npc_id = "mayor_thomas"
-npc_name = "托马斯镇长"
+npc_id = "mayor"
+npc_name = "镇长·威廉"
 position = Vector2(400, 200)
 Sprite2D/texture = ExtResource("3_mayor_sprite")
+Sprite2D/hframes = 8
+Sprite2D/vframes = 1
 
 [node name="Maria" parent="NPCs" instance=ExtResource("2_npc")]
-npc_id = "shopkeeper_maria"
-npc_name = "玛丽亚"
+npc_id = "shopkeeper_lily"
+npc_name = "店主·莉莉"
 position = Vector2(600, 250)
 Sprite2D/texture = ExtResource("4_shopkeeper_sprite")
+Sprite2D/hframes = 8
+Sprite2D/vframes = 1
 
 [node name="John" parent="NPCs" instance=ExtResource("2_npc")]
-npc_id = "farmer_john"
-npc_name = "老约翰"
+npc_id = "farmer_joe"
+npc_name = "农夫·乔"
 position = Vector2(200, 350)
 Sprite2D/texture = ExtResource("5_farmer_sprite")
+Sprite2D/hframes = 8
+Sprite2D/vframes = 1
 
 [node name="Iron" parent="NPCs" instance=ExtResource("2_npc")]
-npc_id = "blacksmith_iron"
-npc_name = "铁锤"
+npc_id = "blacksmith_tom"
+npc_name = "铁匠·汤姆"
 position = Vector2(700, 400)
 Sprite2D/texture = ExtResource("6_blacksmith_sprite")
+Sprite2D/hframes = 8
+Sprite2D/vframes = 1
 
 [node name="Lily" parent="NPCs" instance=ExtResource("2_npc")]
-npc_id = "doctor_lily"
-npc_name = "莉莉医生"
+npc_id = "doctor_mary"
+npc_name = "医生·玛丽"
 position = Vector2(500, 150)
 Sprite2D/texture = ExtResource("7_doctor_sprite")
+Sprite2D/hframes = 8
+Sprite2D/vframes = 1
 
 [node name="Buildings" type="Node2D" parent="."]

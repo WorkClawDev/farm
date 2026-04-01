@@ -33,7 +33,7 @@ func interact() -> void:
 	
 	# 触发对话
 	if EventBus:
-		get_node("/root/EventBus").dialogue_started.emit(npc_id)
+		get_node("/root/EventBus").social.dialogue_started.emit(npc_id)
 	
 	# 对话结束后打开商店
 	# 这里简化处理，直接打开商店

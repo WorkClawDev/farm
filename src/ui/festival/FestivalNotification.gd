@@ -13,15 +13,12 @@ func _ready() -> void:
 
 func _connect_signals() -> void:
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus == null:
+	if event_bus == null or event_bus.festival == null:
 		return
 
-	if event_bus.has_signal("festival_started"):
-		event_bus.festival_started.connect(_on_festival_started)
-	if event_bus.has_signal("festival_ended"):
-		event_bus.festival_ended.connect(_on_festival_ended)
-	if event_bus.has_signal("festival_upcoming"):
-		event_bus.festival_upcoming.connect(_on_festival_upcoming)
+	event_bus.festival.festival_started.connect(_on_festival_started)
+	event_bus.festival.festival_ended.connect(_on_festival_ended)
+	event_bus.festival.festival_upcoming.connect(_on_festival_upcoming)
 
 func show_notification(festival_id: String, notification_type: String, days_until: int = 0) -> void:
 	var festival_data: Dictionary = FestivalSystem.get_festival_data(festival_id)

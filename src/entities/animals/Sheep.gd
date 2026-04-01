@@ -14,12 +14,6 @@ func _ready() -> void:
 	production_interval = 2
 	days_until_production = 2
 	is_outside = true
-	# 加载精灵
-	if has_node("Sprite2D"):
-		var tex = load("res://assets/sprites/animals/sheep_sheet.png")
-		if tex:
-			$sprite.texture = tex
-			$sprite.hframes = 8
 
 func get_product_id() -> String:
 	return "wool"

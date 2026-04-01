@@ -56,7 +56,7 @@ func _chase_target() -> void:
 	if distance > detection_range * 1.5:
 		target = null
 		change_state(State.IDLE)
-		get_node("/root/EventBus").combat_ended.emit()
+		get_node("/root/EventBus").combat.combat_ended.emit()
 		return
 
 	var direction = (target.global_position - global_position).normalized()
@@ -87,7 +87,7 @@ func _start_dive_attack() -> void:
 		if distance <= attack_range:
 			if target.has_method("take_damage"):
 				target.take_damage(attack_damage, self)
-				get_node("/root/EventBus").player_attacked.emit(enemy_name, attack_damage)
+				get_node("/root/EventBus").combat.player_attacked.emit(enemy_name, attack_damage)
 
 	# 恢复
 	await get_tree().create_timer(0.5).timeout

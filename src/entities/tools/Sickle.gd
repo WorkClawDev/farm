@@ -30,6 +30,10 @@ func use(target: Node) -> bool:
 	_play_use_animation()
 	
 	var success = false
+	var stamina_manager = get_node_or_null("/root/StaminaManager")
+	if stamina_manager and not stamina_manager.use_stamina(energy_cost):
+		is_using = false
+		return false
 	
 	# 检查目标是否为作物
 	if target is Crop:
@@ -37,21 +41,19 @@ func use(target: Node) -> bool:
 		if crop.can_harvest():
 			var result = crop.harvest()
 			if not result.is_empty():
-				get_node("/root/EventBus").item_added.emit(result.crop_id, result.quantity)
+				get_node("/root/EventBus").inventory.item_added.emit(result.crop_id, result.quantity)
 				success = true
 				print("[Sickle] Harvested ", result.quantity, "x ", result.crop_id)
-	
-	# 消耗体力
-	if success:
-		get_node("/root/EventBus").energy_changed.emit(-energy_cost, 0)
 	
 	tool_used.emit(success, target)
 	
 	# 延迟重置
-	await get_tree().create_timer(0.3).timeout
-	is_using = false
+	get_tree().create_timer(0.3).timeout.connect(_reset_use_state, CONNECT_ONE_SHOT)
 	
 	return success
+
+func _reset_use_state() -> void:
+	is_using = false
 
 ## 播放使用动画
 func _play_use_animation() -> void:

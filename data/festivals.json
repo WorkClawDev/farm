@@ -11,7 +11,7 @@
       "location": "village_square",
       "start_hour": 10,
       "end_hour": 22,
-      "icon": "res://assets/sprites/ui/icons/festival_spring.png",
+      "icon": "res://assets/sprites/ui/icons/season_spring.png",
       "activities": [
         {
           "id": "flower_offering",
@@ -126,7 +126,7 @@
       "location": "beach",
       "start_hour": 10,
       "end_hour": 24,
-      "icon": "res://assets/sprites/ui/icons/festival_summer.png",
+      "icon": "res://assets/sprites/ui/icons/season_summer.png",
       "activities": [
         {
           "id": "swimming_race",
@@ -258,7 +258,7 @@
       "location": "farm",
       "start_hour": 9,
       "end_hour": 22,
-      "icon": "res://assets/sprites/ui/icons/festival_fall.png",
+      "icon": "res://assets/sprites/ui/icons/season_fall.png",
       "activities": [
         {
           "id": "crop_showcase",
@@ -403,7 +403,7 @@
       "location": "village_square",
       "start_hour": 10,
       "end_hour": 24,
-      "icon": "res://assets/sprites/ui/icons/festival_winter.png",
+      "icon": "res://assets/sprites/ui/icons/season_winter.png",
       "activities": [
         {
           "id": "ice_sculpture",

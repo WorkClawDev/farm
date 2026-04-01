@@ -8,12 +8,14 @@ extends CanvasLayer
 @onready var day_label: Label = $DayContainer/DayLabel
 @onready var gold_icon: ColorRect = $MoneyContainer/GoldIcon
 
-var _game_manager: Node = null
 var _time_manager: Node = null
+var _stamina_manager: Node = null
+var _money_system: Node = null
 
 func _ready() -> void:
-	_game_manager = get_node_or_null("/root/GameManager")
 	_time_manager = get_node_or_null("/root/TimeManager")
+	_stamina_manager = get_node_or_null("/root/StaminaManager")
+	_money_system = get_node_or_null("/root/MoneySystem")
 	_update_display()
 
 func _process(_delta: float) -> void:
@@ -21,9 +23,9 @@ func _process(_delta: float) -> void:
 
 func _update_display() -> void:
 	# 体力条
-	if _game_manager:
-		var stamina = _game_manager.get("current_stamina") if _game_manager.has_method("current_stamina") else _game_manager.get("current_stamina", 100.0)
-		var max_stamina = _game_manager.get("max_stamina") if _game_manager.has_method("max_stamina") else 100.0
+	if _stamina_manager:
+		var stamina = _stamina_manager.get("current_stamina", 100.0)
+		var max_stamina = _stamina_manager.get("max_stamina", 100.0)
 		var ratio = clampf(stamina / max_stamina if max_stamina > 0 else 0.0, 0.0, 1.0)
 		stamina_bar.value = ratio * 100.0
 		stamina_label.text = "%d/%d" % [int(stamina), int(max_stamina)]
@@ -36,8 +38,9 @@ func _update_display() -> void:
 		else:
 			stamina_bar.modulate = Color(0.9, 0.3, 0.2, 1.0)  # 红色
 
-		# 金钱
-		var money = _game_manager.get_money() if _game_manager.has_method("get_money") else 0
+	# 金钱
+	if _money_system:
+		var money = _money_system.get_money() if _money_system.has_method("get_money") else 0
 		money_label.text = "%,d" % money
 
 	# 日期/季节

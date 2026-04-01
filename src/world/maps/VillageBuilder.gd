@@ -1,11 +1,7 @@
 extends Node2D
 class_name VillageBuilder
 
-const MAP_WIDTH: int = 1280
-const MAP_HEIGHT: int = 960
-const TILE_SIZE: int = 64
-const MAP_TILES_X: int = 20
-const MAP_TILES_Y: int = 15
+const VillageConstants = preload("res://src/core/constants/VillageConstants.gd")
 
 const TID_GRASS: int = 2
 const TID_PATH: int = 11
@@ -88,16 +84,16 @@ func _setup_tileset() -> void:
 	print("[VillageBuilder] TileSet ready")
 
 func _fill_ground_layer() -> void:
-	for y in range(MAP_TILES_Y):
-		for x in range(MAP_TILES_X):
+	for y in range(VillageConstants.MAP_TILES_Y):
+		for x in range(VillageConstants.MAP_TILES_X):
 			tilemap.set_cell(0, Vector2i(x, y), 0, VillageTilesetBuilder.get_coord(TID_GRASS))
 
-	for x in range(MAP_TILES_X):
+	for x in range(VillageConstants.MAP_TILES_X):
 		_set_tile_safe(0, Vector2i(x, 4), TID_PATH)
 		_set_tile_safe(0, Vector2i(x, 3), TID_PATH_GRASS)
 		_set_tile_safe(0, Vector2i(x, 5), TID_PATH_GRASS)
 
-	for y in range(MAP_TILES_Y):
+	for y in range(VillageConstants.MAP_TILES_Y):
 		_set_tile_safe(0, Vector2i(6, y), TID_PATH)
 		_set_tile_safe(0, Vector2i(5, y), TID_PATH_GRASS)
 		_set_tile_safe(0, Vector2i(7, y), TID_PATH_GRASS)
@@ -173,14 +169,14 @@ func _fill_buildings() -> void:
 	print("[VillageBuilder] Buildings filled")
 
 func _fill_trees_boundaries() -> void:
-	for x in range(MAP_TILES_X):
+	for x in range(VillageConstants.MAP_TILES_X):
 		_set_tile_safe(2, Vector2i(x, 0), TID_TREE)
 
 	for y in range(1, 6):
 		_set_tile_safe(2, Vector2i(0, y), TID_TREE)
 		_set_tile_safe(2, Vector2i(1, y), TID_TREE)
 
-	for x in range(15, MAP_TILES_X):
+	for x in range(15, VillageConstants.MAP_TILES_X):
 		for y in range(1, 4):
 			_set_tile_safe(2, Vector2i(x, y), TID_TREE)
 
@@ -232,14 +228,6 @@ func _add_transition_zones(village: Node) -> void:
 		shape.shape = RectangleShape2D.new()
 		shape.shape.size = Vector2(48, 48)
 		area.add_child(shape)
-
-		var vis := ColorRect.new()
-		vis.name = "Visual"
-		vis.size = Vector2(48, 48)
-		vis.position = Vector2(-24, -24)
-		vis.color = COLOR_EXIT
-		vis.z_index = 10
-		area.add_child(vis)
 
 		area.body_entered.connect(_on_transition_body_entered.bind(area_name))
 

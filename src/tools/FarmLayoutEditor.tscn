@@ -63,7 +63,7 @@ text = "Grass Tint"
 text = "Fence Block"
 
 [node name="House_Block" type="Button" parent="CanvasLayer/Panel/Buttons"]
-text = "House Block"
+text = "House"
 
 [node name="SaveButton" type="Button" parent="CanvasLayer/Panel"]
 offset_left = 12.0

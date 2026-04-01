@@ -25,17 +25,13 @@ func _ready() -> void:
 
 func _connect_signals() -> void:
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus == null:
+	if event_bus == null or event_bus.festival == null:
 		return
 
-	if event_bus.has_signal("festival_started"):
-		event_bus.festival_started.connect(_on_festival_started)
-	if event_bus.has_signal("festival_ended"):
-		event_bus.festival_ended.connect(_on_festival_ended)
-	if event_bus.has_signal("festival_activity_completed"):
-		event_bus.festival_activity_completed.connect(_on_activity_completed)
-	if event_bus.has_signal("festival_reward_claimed"):
-		event_bus.festival_reward_claimed.connect(_on_reward_claimed)
+	event_bus.festival.festival_started.connect(_on_festival_started)
+	event_bus.festival.festival_ended.connect(_on_festival_ended)
+	event_bus.festival.festival_activity_completed.connect(_on_activity_completed)
+	event_bus.festival.festival_reward_claimed.connect(_on_reward_claimed)
 
 func _setup_buttons() -> void:
 	if close_button:
@@ -54,8 +50,8 @@ func open_festival(festival_id: String) -> void:
 	visible = true
 
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus and event_bus.has_signal("ui_opened"):
-		event_bus.ui_opened.emit("festival_ui")
+	if event_bus and event_bus.ui:
+		event_bus.ui.ui_opened.emit("festival_ui")
 
 func close() -> void:
 	visible = false
@@ -63,8 +59,8 @@ func close() -> void:
 	festival_data = {}
 
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus and event_bus.has_signal("ui_closed"):
-		event_bus.ui_closed.emit("festival_ui")
+	if event_bus and event_bus.ui:
+		event_bus.ui.ui_closed.emit("festival_ui")
 
 	closed.emit()
 
@@ -229,8 +225,8 @@ func _on_shop_pressed() -> void:
 
 	var shop_id: String = vendors[0].get("id", "")
 	var event_bus = get_node_or_null("/root/EventBus")
-	if not shop_id.is_empty() and event_bus and event_bus.has_signal("shop_opened"):
-		event_bus.shop_opened.emit(shop_id)
+	if not shop_id.is_empty() and event_bus and event_bus.shop:
+		event_bus.shop.shop_opened.emit(shop_id)
 
 func _input(event: InputEvent) -> void:
 	if visible and event.is_action_pressed("ui_cancel"):

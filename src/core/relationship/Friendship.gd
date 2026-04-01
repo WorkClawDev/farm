@@ -76,7 +76,7 @@ func _load_gift_preferences() -> void:
 
 	var json = JSON.new()
 	if json.parse(json_text) != OK:
-		print("[Friendship] Failed to parse npcs.json for gift preferences")
+		push_error("[Friendship] Failed to parse npcs.json for gift preferences")
 		return
 
 	var data = json.get_data()
@@ -196,7 +196,7 @@ func add_friendship_points(npc_id: String, points: int, source: FriendshipSource
 
 	# 发射EventBus信号
 	if EventBus:
-		get_node("/root/EventBus").friendship_changed.emit(npc_id, new_hearts)
+		get_node("/root/EventBus").social.friendship_changed.emit(npc_id, new_hearts)
 
 	print("[Friendship] %s: %+d points (source: %s), total: %d points, %d hearts" % [
 		npc_id, delta, FriendshipSource.keys()[source], new_points, new_hearts
@@ -267,7 +267,7 @@ func give_gift(npc_id: String, item_id: String, is_birthday: bool = false) -> Di
 
 	# 发射EventBus信号
 	if EventBus:
-		get_node("/root/EventBus").gift_given.emit(npc_id, item_id, reaction)
+		get_node("/root/EventBus").social.gift_given.emit(npc_id, item_id, reaction)
 
 	return {
 		"success": true,

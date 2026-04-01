@@ -43,7 +43,7 @@ var _cooking_progress: float = 0.0
 # 引用
 var _inventory: Inventory = null
 var _item_database: ItemDatabase = null
-var _game_manager: Node = null
+var _stamina_manager: Node = null
 
 func _ready() -> void:
 	load_recipes()
@@ -56,8 +56,8 @@ func _connect_systems() -> void:
 		_inventory = Inventory.new()
 		add_child(_inventory)
 
-	# 获取 GameManager 引用（体力系统）
-	_game_manager = get_node_or_null("/root/GameManager")
+	# 获取体力系统引用
+	_stamina_manager = get_node_or_null("/root/StaminaManager")
 
 	# 获取 ItemDatabase 引用
 	_item_database = get_node_or_null("/root/ItemDatabase")
@@ -247,13 +247,11 @@ func can_cook(recipe_id: String) -> Dictionary:
 
 	# 检查体力
 	var stamina_ok := true
-	if _game_manager:
+	if _stamina_manager:
 		var cost: float = recipe.energy_cost
-		if _game_manager.has_method("use_stamina"):
-			# GameManager.use_stamina 返回是否足够
-			# 用 test 版本检查是否足够（不实际消耗）
-			if _game_manager.current_stamina < cost:
-				stamina_ok = false
+		var current_stamina = _stamina_manager.get("current_stamina")
+		if current_stamina is float or current_stamina is int:
+			stamina_ok = float(current_stamina) >= cost
 		else:
 			stamina_ok = false
 	result.has_energy = stamina_ok
@@ -299,10 +297,10 @@ func cook(recipe_id: String) -> bool:
 			_inventory.remove_item(item_id, quantity)
 
 	# 消耗体力
-	if _game_manager:
+	if _stamina_manager:
 		var cost: float = recipe.energy_cost
-		if _game_manager.has_method("use_stamina"):
-			_game_manager.use_stamina(cost)
+		if _stamina_manager.has_method("use_stamina"):
+			_stamina_manager.use_stamina(cost)
 
 	# 添加成品
 	if _inventory:

@@ -187,10 +187,10 @@ func start_festival(festival_type: int) -> void:
 
 	var event_bus = get_node_or_null("/root/EventBus")
 	if event_bus:
-		if event_bus.has_signal("festival_started"):
-			event_bus.festival_started.emit(festival_id, get_festival_data(festival_id))
-		if event_bus.has_signal("notification_shown"):
-			event_bus.notification_shown.emit("%s started." % festival.get("name", "Festival"), 2)
+		if event_bus.festival:
+			event_bus.festival.festival_started.emit(festival_id, get_festival_data(festival_id))
+		if event_bus.ui:
+			event_bus.ui.notification_shown.emit("%s started." % festival.get("name", "Festival"), 2)
 
 	_open_festival_minigame(festival)
 
@@ -212,8 +212,8 @@ func end_festival() -> void:
 	print("[FestivalSystem] Festival ended: ", festival.get("name", "Unknown"))
 
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus and event_bus.has_signal("festival_ended"):
-		event_bus.festival_ended.emit(festival_id, get_festival_data(festival_id))
+	if event_bus and event_bus.festival:
+		event_bus.festival.festival_ended.emit(festival_id, get_festival_data(festival_id))
 
 	current_festival = -1
 
@@ -429,8 +429,8 @@ func complete_festival_activity(festival_id: String, activity_id: String) -> Dic
 	participate_in_festival()
 
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus and event_bus.has_signal("festival_activity_completed"):
-		event_bus.festival_activity_completed.emit(festival_id, activity_id, rewards)
+	if event_bus and event_bus.festival:
+		event_bus.festival.festival_activity_completed.emit(festival_id, activity_id, rewards)
 
 	return {"success": true, "rewards": rewards}
 
@@ -456,8 +456,8 @@ func claim_festival_reward(festival_id: String, reward_id: String) -> Dictionary
 	_give_rewards(payload)
 
 	var event_bus = get_node_or_null("/root/EventBus")
-	if event_bus and event_bus.has_signal("festival_reward_claimed"):
-		event_bus.festival_reward_claimed.emit(festival_id, reward_id)
+	if event_bus and event_bus.festival:
+		event_bus.festival.festival_reward_claimed.emit(festival_id, reward_id)
 
 	return {"success": true, "items": payload}
 

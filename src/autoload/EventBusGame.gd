@@ -8,3 +8,5 @@ signal game_paused
 signal game_resumed
 signal game_saved
 signal game_loaded
+signal scene_transition_started(target_scene: String)
+signal scene_transition_completed

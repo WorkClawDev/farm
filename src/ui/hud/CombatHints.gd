@@ -28,10 +28,10 @@ func _ready() -> void:
 	hide()  # 默认隐藏
 
 func _connect_signals() -> void:
-	get_node("/root/EventBus").combat_started.connect(_on_combat_started)
-	get_node("/root/EventBus").combat_ended.connect(_on_combat_ended)
-	get_node("/root/EventBus").enemy_damaged.connect(_on_enemy_damaged)
-	get_node("/root/EventBus").enemy_died.connect(_on_enemy_died)
+	get_node("/root/EventBus").combat.combat_started.connect(_on_combat_started)
+	get_node("/root/EventBus").combat.combat_ended.connect(_on_combat_ended)
+	get_node("/root/EventBus").combat.enemy_damaged.connect(_on_enemy_damaged)
+	get_node("/root/EventBus").combat.enemy_died.connect(_on_enemy_died)
 
 func _setup_ui() -> void:
 	if enemy_info:

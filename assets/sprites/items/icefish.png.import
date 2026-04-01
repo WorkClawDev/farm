@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://du2q0he2r3xtp"
-valid=false
+path="res://.godot/imported/icefish.png-ae3aec13eaa32332115e0161e5f9e785.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/sprites/items/icefish.png"
+dest_files=["res://.godot/imported/icefish.png-ae3aec13eaa32332115e0161e5f9e785.ctex"]
 
 [params]
 

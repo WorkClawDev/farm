@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b2alrqoxsj586"
-valid=false
+path="res://.godot/imported/cheese_press.png-5e8ee490db3099cbef33c01109d02208.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/sprites/items/cheese_press.png"
+dest_files=["res://.godot/imported/cheese_press.png-5e8ee490db3099cbef33c01109d02208.ctex"]
 
 [params]
 

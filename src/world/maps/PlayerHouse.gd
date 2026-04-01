@@ -4,6 +4,8 @@ class_name PlayerHouse
 ## PlayerHouse - 玩家房屋场景
 ## 可升级的房屋内部，包含家具系统和升级功能
 
+const GameConstants = preload("res://src/core/constants/GameConstants.gd")
+const HouseConstants = preload("res://src/core/constants/HouseConstants.gd")
 const TimeDisplayScene = preload("res://src/ui/hud/TimeDisplay.tscn")
 
 @onready var tile_map: TileMap = $TileMap
@@ -19,15 +21,52 @@ var house_data: Dictionary = {}
 
 func _ready() -> void:
 	print("[PlayerHouse] Scene loaded")
+	_setup_tilemap()
 	_setup_ui()
 	_setup_house_data()
 	_connect_signals()
 	_apply_house_upgrades()
 	_setup_furniture()
 
+func _setup_tilemap() -> void:
+	if tile_map == null:
+		return
+
+	tile_map.scale = Vector2(GameConstants.TILE_RENDER_SCALE, GameConstants.TILE_RENDER_SCALE)
+
+	if tile_map.tile_set == null or tile_map.tile_set.get_source_count() == 0:
+		tile_map.tile_set = IndoorTilesetBuilder.build_tileset()
+
+	tile_map.clear()
+	var wood_floor := IndoorTilesetBuilder.TileCoord.WOOD_FLOOR
+	var wall := IndoorTilesetBuilder.TileCoord.WALLPAPER_CREAM
+	var rug := IndoorTilesetBuilder.TileCoord.CARPET_RED
+	var bed := IndoorTilesetBuilder.TileCoord.BED_DOUBLE
+	var table := IndoorTilesetBuilder.TileCoord.TABLE
+	var chest := IndoorTilesetBuilder.TileCoord.CHEST
+	var stove := IndoorTilesetBuilder.TileCoord.STOVE
+	var fireplace := IndoorTilesetBuilder.TileCoord.FIREPLACE
+
+	for y in range(HouseConstants.MAP_TILES_Y):
+		for x in range(HouseConstants.MAP_TILES_X):
+			var tile := wood_floor
+			if x < HouseConstants.BORDER_THICKNESS or y < HouseConstants.BORDER_THICKNESS or x >= HouseConstants.MAP_TILES_X - HouseConstants.BORDER_THICKNESS or y >= HouseConstants.MAP_TILES_Y - HouseConstants.BORDER_THICKNESS:
+				tile = wall
+			tile_map.set_cell(0, Vector2i(x, y), 0, IndoorTilesetBuilder.get_coord(tile))
+
+	for y in range(HouseConstants.RUG_Y_MIN, HouseConstants.RUG_Y_MAX + 1):
+		for x in range(HouseConstants.RUG_X_MIN, HouseConstants.RUG_X_MAX + 1):
+			tile_map.set_cell(0, Vector2i(x, y), 0, IndoorTilesetBuilder.get_coord(rug))
+
+	tile_map.set_cell(2, HouseConstants.BED_POSITION, 0, IndoorTilesetBuilder.get_coord(bed))
+	tile_map.set_cell(2, HouseConstants.TABLE_POSITION, 0, IndoorTilesetBuilder.get_coord(table))
+	tile_map.set_cell(2, HouseConstants.CHEST_POSITION, 0, IndoorTilesetBuilder.get_coord(chest))
+	tile_map.set_cell(2, HouseConstants.STOVE_POSITION, 0, IndoorTilesetBuilder.get_coord(stove))
+	tile_map.set_cell(2, HouseConstants.FIREPLACE_POSITION, 0, IndoorTilesetBuilder.get_coord(fireplace))
+
 func _setup_ui() -> void:
 	ui_canvas = CanvasLayer.new()
-	ui_canvas.layer = 10
+	ui_canvas.layer = GameConstants.UI_CANVAS_LAYER
 	add_child(ui_canvas)
 
 	time_display = TimeDisplayScene.instantiate()
@@ -59,7 +98,7 @@ func _connect_signals() -> void:
 
 	# 连接EventBus信号
 	if EventBus:
-		get_node("/root/EventBus").spawn_point_changed.connect(_on_spawn_point_changed)
+		get_node("/root/EventBus").player.spawn_point_changed.connect(_on_spawn_point_changed)
 
 	print("[PlayerHouse] Signals connected")
 
@@ -91,8 +130,8 @@ func _on_sleep_confirmed() -> void:
 	if TimeManager:
 		TimeManager.advance_to_next_day()
 		# 恢复体力
-		if GameManager:
-			GameManager.current_stamina = GameManager.max_stamina
+		if StaminaManager:
+			StaminaManager.set_stamina(StaminaManager.max_stamina)
 		print("[PlayerHouse] Advanced to next day, stamina restored")
 
 func _on_sleep_canceled() -> void:

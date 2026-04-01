@@ -59,7 +59,7 @@ func _load_tools() -> void:
 			add_child(tool_instance)
 			print("[ToolManager] Loaded tool: ", _get_tool_name(tool_type))
 		else:
-			print("[ToolManager] Tool scene not found: ", scene_path)
+			push_warning("[ToolManager] Tool scene not found: " + scene_path)
 
 ## 装备指定工具
 func equip_tool(tool_type: ToolType) -> void:
@@ -139,12 +139,13 @@ func use_tool(target: Node = null) -> bool:
 					target.water()
 		
 		ToolType.AXE, ToolType.PICKAXE, ToolType.SICKLE:
-			if tool.has_method("use"):
+			if tool.has_method("use") and target != null:
 				success = tool.use(target)
 		
 		ToolType.FISHING_ROD:
-			if tool.has_method("start_fishing"):
-				success = tool.start_fishing()
+			if tool.has_method("use") and target != null:
+				var location_type: String = str(target.get("location_type")) if "location_type" in target else "lake"
+				success = tool.use(target.global_position, location_type)
 	
 	tool_used.emit(current_tool_type, success)
 	return success

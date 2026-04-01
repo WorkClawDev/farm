@@ -100,8 +100,7 @@ func _start_casting() -> void:
 		tween.tween_property(self, "rotation", PI / 8, 0.3)
 
 	# 等待动画完成后开始等待鱼咬钩
-	await get_tree().create_timer(0.5).timeout
-	_start_waiting()
+	get_tree().create_timer(0.5).timeout.connect(_start_waiting, CONNECT_ONE_SHOT)
 
 ## 开始等待鱼咬钩
 func _start_waiting() -> void:
@@ -137,9 +136,10 @@ func _fish_hooked() -> void:
 	_play_hooked_effects()
 
 	# 给玩家短时间反应
-	await get_tree().create_timer(0.5).timeout
+	get_tree().create_timer(0.5).timeout.connect(_on_hook_reaction_window_finished, CONNECT_ONE_SHOT)
 
-	# 如果玩家没有操作，自动失败
+func _on_hook_reaction_window_finished() -> void:
+	# 如果玩家没有操作，自动开始小游戏
 	if current_state == FishingState.HOOKED:
 		_start_minigame()
 
@@ -244,10 +244,9 @@ func _on_minigame_success() -> void:
 	var min_size: int = current_fish_data.get("min_size", 30)
 	var max_size: int = current_fish_data.get("max_size", 60)
 	var fish_size := randi_range(min_size, max_size)
-
+	
 	# 成功钓鱼
-	await get_tree().create_timer(0.5).timeout
-	_fishing_success(fish_size)
+	get_tree().create_timer(0.5).timeout.connect(_fishing_success.bind(fish_size), CONNECT_ONE_SHOT)
 
 ## 小游戏失败
 func _on_minigame_failed() -> void:
@@ -260,17 +259,17 @@ func _fishing_success(fish_size: int) -> void:
 	# 播放收杆动画
 	if animation_player and animation_player.has_animation("reel"):
 		animation_player.play("reel")
+	get_tree().create_timer(0.3).timeout.connect(_complete_fishing_success.bind(fish_size), CONNECT_ONE_SHOT)
 
-	await get_tree().create_timer(0.3).timeout
-
+func _complete_fishing_success(fish_size: int) -> void:
 	var fish_id: String = current_fish_data.get("id", "")
 	fishing_ended.emit(true, fish_id, fish_size)
-
+	
 	# 添加到背包
-	get_node("/root/EventBus").item_added.emit(fish_id, 1)
-
+	get_node("/root/EventBus").inventory.item_added.emit(fish_id, 1)
+	
 	print("[FishingRod] Caught fish: ", current_fish_data.get("name"), " (", fish_size, "cm)")
-
+	
 	_reset_fishing()
 
 ## 钓鱼失败
