@@ -115,8 +115,8 @@ func _do_mining(ore: Ore) -> bool:
 			hit_particles.emitting = true
 			hit_particles.global_position = ore.global_position
 
-		# 发射物品获取事件
-		get_node("/root/EventBus").inventory.item_added.emit(result.item_id, result.quantity)
+		if Inventory:
+			Inventory.add_item(result.item_id, result.quantity)
 	else:
 		print("[Pickaxe] Mining progress: ", result.current_health, "/", result.max_health)
 

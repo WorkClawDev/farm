@@ -16,6 +16,9 @@ var is_walking: bool = false
 # NPC交互
 var npc_in_range: NPC = null
 
+# 动物交互
+var animal_in_range: Animal = null
+
 # 建筑交互
 var building_in_range: Node = null
 
@@ -60,6 +63,9 @@ func _ready() -> void:
 	add_to_group("player")
 
 func _physics_process(_delta: float) -> void:
+	if not _can_process_player_input():
+		return
+
 	# 获取输入方向
 	var input_direction := _get_input_direction()
 
@@ -85,16 +91,24 @@ func _physics_process(_delta: float) -> void:
 func _get_input_direction() -> Vector2:
 	var direction := Vector2.ZERO
 	
-	if Input.is_action_pressed("ui_up") or Input.is_key_pressed(KEY_W):
+	if Input.is_action_pressed("move_up"):
 		direction.y -= 1
-	if Input.is_action_pressed("ui_down") or Input.is_key_pressed(KEY_S):
+	if Input.is_action_pressed("move_down"):
 		direction.y += 1
-	if Input.is_action_pressed("ui_left") or Input.is_key_pressed(KEY_A):
+	if Input.is_action_pressed("move_left"):
 		direction.x -= 1
-	if Input.is_action_pressed("ui_right") or Input.is_key_pressed(KEY_D):
+	if Input.is_action_pressed("move_right"):
 		direction.x += 1
 	
 	return direction.normalized()
+
+func _can_process_player_input() -> bool:
+	if not GameManager or not GameManager.is_game_active:
+		return false
+	match GameManager.current_state:
+		GameManager.GameState.PAUSED, GameManager.GameState.DIALOGUE, GameManager.GameState.CUTSCENE:
+			return false
+	return true
 
 func _update_direction(input_direction: Vector2) -> void:
 	if input_direction == Vector2.ZERO:
@@ -145,6 +159,8 @@ func _handle_interaction() -> void:
 		# 优先处理NPC交互
 		if npc_in_range and npc_in_range.interactable:
 			_interact_with_npc()
+		elif animal_in_range:
+			_interact_with_animal()
 		elif building_in_range and building_in_range.has_method("interact"):
 			building_in_range.interact()
 		else:
@@ -196,6 +212,18 @@ func _interact_with_npc() -> void:
 	if event_bus and event_bus.social:
 		event_bus.social.npc_interacted.emit(npc_in_range)
 
+func _interact_with_animal() -> void:
+	if not animal_in_range:
+		return
+
+	if animal_in_range.can_collect_product():
+		var product := animal_in_range.collect_product()
+		if not product.is_empty() and Inventory:
+			Inventory.add_item(product.get("item_id", ""), product.get("quantity", 1))
+			print("[Player] Collected product from %s" % animal_in_range.animal_name)
+	else:
+		print("[Player] Checked on %s" % animal_in_range.animal_name)
+
 ## 初始化战斗系统
 func _setup_combat() -> void:
 	combat = PlayerCombat.new()
@@ -244,28 +272,30 @@ func get_direction() -> Vector2:
 
 ## 处理战斗输入
 func _handle_combat_input() -> void:
-	# J键或Z键攻击
-	if Input.is_key_pressed(KEY_J) or Input.is_key_pressed(KEY_Z):
-		var attack_direction = _get_direction_vector()
-		combat.attack(attack_direction)
+	if Input.is_action_just_pressed("attack"):
+		combat.attack(_get_direction_vector())
+
+func _input(event: InputEvent) -> void:
+	if not _can_process_player_input() or tool_manager == null or combat == null:
+		return
+	if event is InputEventKey and event.pressed and not event.echo:
+		match event.keycode:
+			KEY_1:
+				tool_manager.equip_tool(ToolManager.ToolType.HOE)
+			KEY_2:
+				tool_manager.equip_tool(ToolManager.ToolType.WATERING_CAN)
+			KEY_3:
+				tool_manager.equip_tool(ToolManager.ToolType.AXE)
+			KEY_4:
+				tool_manager.equip_tool(ToolManager.ToolType.PICKAXE)
+			KEY_5:
+				tool_manager.equip_tool(ToolManager.ToolType.SICKLE)
+			KEY_6:
+				tool_manager.equip_tool(ToolManager.ToolType.FISHING_ROD)
 
 ## 处理工具切换输入
 func _handle_tool_input() -> void:
-	# 数字键1-6切换工具
-	if Input.is_key_pressed(KEY_1):
-		tool_manager.equip_tool(ToolManager.ToolType.HOE)
-	elif Input.is_key_pressed(KEY_2):
-		tool_manager.equip_tool(ToolManager.ToolType.WATERING_CAN)
-	elif Input.is_key_pressed(KEY_3):
-		tool_manager.equip_tool(ToolManager.ToolType.AXE)
-	elif Input.is_key_pressed(KEY_4):
-		tool_manager.equip_tool(ToolManager.ToolType.PICKAXE)
-	elif Input.is_key_pressed(KEY_5):
-		tool_manager.equip_tool(ToolManager.ToolType.SICKLE)
-	elif Input.is_key_pressed(KEY_6):
-		tool_manager.equip_tool(ToolManager.ToolType.FISHING_ROD)
-	
-	# Q/E键切换工具
+	# Q/R 键切换工具（避免与 E 交互键冲突）
 	if Input.is_action_just_pressed("tool_previous"):
 		tool_manager.previous_tool()
 	elif Input.is_action_just_pressed("tool_next"):

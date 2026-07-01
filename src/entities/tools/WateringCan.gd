@@ -14,11 +14,14 @@ signal watering_finished
 @export var water_per_use: int = 5
 
 # 当前水量
+var _current_water: int = 100
 var current_water: int:
+	get:
+		return _current_water
 	set(value):
-		current_water = clampi(value, 0, max_water)
-		water_changed.emit(current_water, max_water)
-		if current_water == 0:
+		_current_water = clampi(value, 0, max_water)
+		water_changed.emit(_current_water, max_water)
+		if _current_water == 0:
 			water_depleted.emit()
 
 # 是否正在浇水

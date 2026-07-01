@@ -48,11 +48,15 @@ func _initialize_slots() -> void:
 		_slots.append(InventorySlot.new())
 
 func _connect_database() -> void:
-	# 等待 ItemDatabase 加载完成
 	_item_database = get_node_or_null("/root/ItemDatabase")
-	if _item_database == null:
-		# 创建 ItemDatabase 实例
-		_item_database = get_node_or_null("/root/ItemDatabase")
+
+func _notify_item_added(item_id: String, quantity: int) -> void:
+	if EventBus:
+		EventBus.inventory.item_added.emit(item_id, quantity)
+
+func _notify_item_removed(item_id: String, quantity: int) -> void:
+	if EventBus:
+		EventBus.inventory.item_removed.emit(item_id, quantity)
 		
 
 ## 获取物品数据库
@@ -81,6 +85,7 @@ func add_item(item_id: String, quantity: int = 1) -> bool:
 			if remaining <= 0:
 				_emit_slot_changes()
 				item_added.emit(item_id, quantity)
+				_notify_item_added(item_id, quantity)
 				return true
 
 	# 寻找空槽位
@@ -95,6 +100,7 @@ func add_item(item_id: String, quantity: int = 1) -> bool:
 				if remaining <= 0:
 					_emit_slot_changes()
 					item_added.emit(item_id, quantity)
+					_notify_item_added(item_id, quantity)
 					return true
 
 	# 没有足够空间
@@ -104,6 +110,7 @@ func add_item(item_id: String, quantity: int = 1) -> bool:
 		var added := quantity - remaining
 		if added > 0:
 			item_added.emit(item_id, added)
+			_notify_item_added(item_id, added)
 		push_warning("[Inventory] Not enough space for %d %s, added %d" % [quantity, item_id, added])
 		return false
 
@@ -130,6 +137,7 @@ func remove_item(item_id: String, quantity: int = 1) -> bool:
 			if remaining <= 0:
 				_emit_slot_changes()
 				item_removed.emit(item_id, quantity)
+				_notify_item_removed(item_id, quantity)
 				return true
 
 	# 没有足够的物品
@@ -138,6 +146,7 @@ func remove_item(item_id: String, quantity: int = 1) -> bool:
 		var removed := quantity - remaining
 		if removed > 0:
 			item_removed.emit(item_id, removed)
+			_notify_item_removed(item_id, removed)
 		push_warning("[Inventory] Not enough %s to remove, removed %d" % [item_id, removed])
 		return false
 

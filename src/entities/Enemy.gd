@@ -90,6 +90,7 @@ func _setup_areas() -> void:
 		attack_area.body_exited.connect(_on_attack_area_body_exited)
 
 	if hurtbox:
+		hurtbox.add_to_group("hurtbox")
 		hurtbox.area_entered.connect(_on_hurtbox_area_entered)
 
 ## 设置血条

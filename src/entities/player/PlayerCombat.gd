@@ -80,7 +80,12 @@ func _ready() -> void:
 	_setup_signals()
 
 func _setup_signals() -> void:
-	get_node("/root/EventBus").player.health_changed.connect(_on_health_changed)
+	if EventBus:
+		EventBus.player.health_changed.connect(_on_health_changed)
+
+func _exit_tree() -> void:
+	if EventBus and EventBus.player.health_changed.is_connected(_on_health_changed):
+		EventBus.player.health_changed.disconnect(_on_health_changed)
 
 ## 初始化战斗系统
 func initialize(player_node: CharacterBody2D) -> void:
@@ -93,8 +98,9 @@ func initialize(player_node: CharacterBody2D) -> void:
 func _create_attack_area() -> void:
 	attack_area = Area2D.new()
 	attack_area.name = "AttackArea"
-	attack_area.collision_layer = 8  # Player attack layer
-	attack_area.collision_mask = 4   # Enemy layer
+	attack_area.collision_layer = 0
+	attack_area.collision_mask = 8  # Enemy hurtbox layer
+	attack_area.add_to_group("player_attack")
 
 	var collision = CollisionShape2D.new()
 	var shape = CircleShape2D.new()

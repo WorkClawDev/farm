@@ -255,8 +255,8 @@ func _on_ore_mined(ore_type: String, quantity: int, quality: int) -> void:
 	print("[Mine] Ore mined: ", ore_type, " x", quantity, " quality:", quality)
 	ore_mined.emit(ore_type, quantity, quality)
 
-	# 通知EventBus
-	get_node("/root/EventBus").inventory.item_added.emit(ore_type, quantity)
+	if Inventory:
+		Inventory.add_item(ore_type, quantity)
 
 
 func get_player_spawn_position() -> Vector2:

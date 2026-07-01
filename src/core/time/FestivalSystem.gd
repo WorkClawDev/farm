@@ -273,7 +273,7 @@ func _give_rewards(rewards: Dictionary) -> void:
 	var inventory = get_node_or_null("/root/Inventory")
 
 	if rewards.has("money") and money_system and money_system.has_method("add_money"):
-		money_system.add_money(rewards["money"])
+		money_system.add_money(rewards["money"], money_system.IncomeSource.OTHER, "Festival reward")
 		print("[FestivalSystem] Money awarded: ", rewards["money"])
 
 	if rewards.has("items") and inventory and inventory.has_method("add_item"):

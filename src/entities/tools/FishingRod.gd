@@ -265,8 +265,8 @@ func _complete_fishing_success(fish_size: int) -> void:
 	var fish_id: String = current_fish_data.get("id", "")
 	fishing_ended.emit(true, fish_id, fish_size)
 	
-	# 添加到背包
-	get_node("/root/EventBus").inventory.item_added.emit(fish_id, 1)
+	if fish_id != "" and Inventory:
+		Inventory.add_item(fish_id, 1)
 	
 	print("[FishingRod] Caught fish: ", current_fish_data.get("name"), " (", fish_size, "cm)")
 	

@@ -550,8 +550,7 @@ func collect_forage(pos: Vector2) -> Dictionary:
 
 	# 发送通知
 	if EventBus:
-		get_node("/root/EventBus").inventory.item_added.emit(forage_data.item_id, quantity)
-		get_node("/root/EventBus").ui.notification_shown.emit(
+		EventBus.ui.notification_shown.emit(
 			"采集了 %d 个%s" % [quantity, forage_data.name],
 			0
 		)

@@ -330,8 +330,10 @@ func _add_to_inventory(harvest_result: Dictionary) -> void:
 	var crop_id: String = harvest_result.get("crop_id", "")
 	var quantity: int = harvest_result.get("quantity", 1)
 
-	# 发射添加物品事件
-	get_node("/root/EventBus").inventory.item_added.emit(crop_id, quantity)
+	if Inventory:
+		Inventory.add_item(crop_id, quantity)
+	else:
+		push_warning("[GrowthSystem] Inventory not available, cannot add %s" % crop_id)
 
 	print("[GrowthSystem] Added ", quantity, " ", crop_id, " to inventory")
 

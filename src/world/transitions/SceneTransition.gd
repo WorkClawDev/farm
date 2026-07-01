@@ -82,8 +82,10 @@ func _on_fade_out_complete(scene_path: String, spawn_point: String) -> void:
 		is_transitioning = false
 		return
 	
-	# 等待场景加载后淡入
+	# 等待场景加载后应用出生点并淡入
 	await get_tree().process_frame
+	if spawn_point != "":
+		_apply_spawn_point(spawn_point)
 	_fade_in()
 
 ## 淡入动画
@@ -101,8 +103,33 @@ func _on_fade_in_complete() -> void:
 
 ## 设置玩家出生点（在新场景中调用）
 static func set_spawn_point(spawn_point: String) -> void:
-	# 通过EventBus通知新场景设置玩家位置
 	if instance:
-		var event_bus = instance.get_node_or_null("/root/EventBus")
-		if event_bus and event_bus.player:
-			event_bus.player.spawn_point_changed.emit(spawn_point)
+		instance._apply_spawn_point(spawn_point)
+
+func _apply_spawn_point(spawn_point: String) -> void:
+	if spawn_point == "":
+		return
+
+	var event_bus = get_node_or_null("/root/EventBus")
+	if event_bus and event_bus.player:
+		event_bus.player.spawn_point_changed.emit(spawn_point)
+
+	var scene := get_tree().current_scene
+	if scene == null:
+		return
+
+	var player: Node = scene.find_child("Player", true, false)
+	if player == null:
+		return
+
+	# 优先查找与 spawn_point 同名的 Marker2D
+	var marker: Node = scene.find_child(spawn_point, true, false)
+	if marker is Node2D:
+		player.global_position = marker.global_position
+		print("[SceneTransition] Player spawned at marker: %s" % spawn_point)
+		return
+
+	# 回退：场景提供的默认出生点
+	if scene.has_method("get_player_spawn_position"):
+		player.global_position = scene.get_player_spawn_position()
+		print("[SceneTransition] Player spawned at default position for: %s" % spawn_point)

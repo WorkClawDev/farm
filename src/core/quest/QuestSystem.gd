@@ -559,7 +559,7 @@ func _grant_rewards(rewards: Dictionary) -> void:
 	# 金钱奖励
 	var money: int = rewards.get("money", 0)
 	if money > 0 and MoneySystem:
-		get_node("/root/MoneySystem").add_money(money)
+		MoneySystem.add_money(money, MoneySystem.IncomeSource.QUEST_REWARD, "Quest reward")
 		print("[QuestSystem] Reward: %d gold" % money)
 
 	# 物品奖励

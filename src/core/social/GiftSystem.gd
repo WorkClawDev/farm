@@ -27,9 +27,6 @@ const BIRTHDAY_MULTIPLIER = 2
 # NPC数据缓存
 var _npc_data_cache: Dictionary = {}
 
-# NPC好感度数据
-var _friendship_data: Dictionary = {}
-
 # 送礼记录（每周每个NPC只能送一次）
 # 格式: {npc_id: {week: {item_id: bool}}}
 var _gift_history: Dictionary = {}
@@ -78,9 +75,6 @@ func _load_npc_data() -> void:
 		var npc_id: String = npc_data.get("id", "")
 		if npc_id != "":
 			_npc_data_cache[npc_id] = npc_data
-			# 初始化好感度
-			if not _friendship_data.has(npc_id):
-				_friendship_data[npc_id] = npc_data.get("default_friendship", 0)
 
 	print("[GiftSystem] Loaded %d NPCs" % _npc_data_cache.size())
 
@@ -136,17 +130,11 @@ func give_gift(npc_id: String, item_id: String) -> Dictionary:
 	var reaction := get_reaction_type(npc_id, item_id)
 	result.reaction = reaction
 
-	# 计算好感度变化
-	var friendship_change: int = FRIENDSHIP_CHANGE.get(reaction, 0)
-
-	# 检查是否是生日
-	if is_npc_birthday(npc_id):
-		friendship_change *= BIRTHDAY_MULTIPLIER
-
-	result.friendship_change = friendship_change
-
 	# 更新好感度
-	_update_friendship(npc_id, friendship_change)
+	var is_birthday := is_npc_birthday(npc_id)
+	var friendship_change := _get_friendship_change_for_reaction(reaction, is_birthday)
+	result.friendship_change = friendship_change
+	_update_friendship(npc_id, reaction, is_birthday)
 	result.hearts = get_friendship_hearts(npc_id)
 
 	# 获取对话
@@ -247,29 +235,68 @@ func get_npc_role(npc_id: String) -> String:
 	var npc_data: Dictionary = _npc_data_cache[npc_id]
 	return npc_data.get("role", "")
 
-## 更新好感度
-func _update_friendship(npc_id: String, change: int) -> void:
-	if not _friendship_data.has(npc_id):
-		_friendship_data[npc_id] = 0
+## 更新好感度（委托给 Friendship 系统）
+func _update_friendship(npc_id: String, reaction: int, is_birthday: bool = false) -> void:
+	if not Friendship:
+		return
 
-	var max_friendship := get_max_friendship(npc_id)
-	_friendship_data[npc_id] = clampi(_friendship_data[npc_id] + change, 0, max_friendship)
+	var source: Friendship.FriendshipSource
+	var amount: int
+	match reaction:
+		ReactionType.LOVE:
+			source = Friendship.FriendshipSource.GIFT_LOVE
+			amount = Friendship.FRIENDSHIP_VALUES.get(source, 80)
+		ReactionType.LIKE:
+			source = Friendship.FriendshipSource.GIFT_LIKE
+			amount = Friendship.FRIENDSHIP_VALUES.get(source, 45)
+		ReactionType.DISLIKE:
+			source = Friendship.FriendshipSource.GIFT_DISLIKE
+			amount = Friendship.FRIENDSHIP_VALUES.get(source, -20)
+		ReactionType.HATE:
+			source = Friendship.FriendshipSource.GIFT_DISLIKE
+			amount = -80
+		_:
+			source = Friendship.FriendshipSource.GIFT_NEUTRAL
+			amount = Friendship.FRIENDSHIP_VALUES.get(source, 20)
+
+	if is_birthday and amount > 0:
+		amount *= BIRTHDAY_MULTIPLIER
+
+	Friendship.add_friendship_points(npc_id, amount, source)
 
 	var hearts := get_friendship_hearts(npc_id)
 	friendship_updated.emit(npc_id, hearts)
 
-	if EventBus:
-		get_node("/root/EventBus").social.friendship_changed.emit(npc_id, hearts)
+## 根据反应类型估算好感度变化（用于 UI 反馈）
+func _get_friendship_change_for_reaction(reaction: int, is_birthday: bool) -> int:
+	var source: Friendship.FriendshipSource
+	match reaction:
+		ReactionType.LOVE:
+			source = Friendship.FriendshipSource.GIFT_LOVE
+		ReactionType.LIKE:
+			source = Friendship.FriendshipSource.GIFT_LIKE
+		ReactionType.DISLIKE:
+			source = Friendship.FriendshipSource.GIFT_DISLIKE
+		ReactionType.HATE:
+			source = Friendship.FriendshipSource.GIFT_DISLIKE
+		_:
+			source = Friendship.FriendshipSource.GIFT_NEUTRAL
+	var amount: int = Friendship.FRIENDSHIP_VALUES.get(source, 20) if Friendship else FRIENDSHIP_CHANGE.get(reaction, 0)
+	if is_birthday:
+		amount *= BIRTHDAY_MULTIPLIER
+	return amount
 
 ## 获取好感度值
 func get_friendship(npc_id: String) -> int:
-	return _friendship_data.get(npc_id, 0)
+	if Friendship:
+		return Friendship.get_points(npc_id)
+	return 0
 
 ## 获取好感度心数
 func get_friendship_hearts(npc_id: String) -> int:
-	var friendship := get_friendship(npc_id)
-	# 每10点好感度等于1颗心
-	return friendship / 10
+	if Friendship:
+		return Friendship.get_hearts(npc_id)
+	return 0
 
 ## 获取最大好感度
 func get_max_friendship(npc_id: String) -> int:
@@ -380,15 +407,15 @@ func get_reaction_name(reaction: int) -> String:
 ## 保存送礼系统数据
 func get_save_data() -> Dictionary:
 	return {
-		"friendship": _friendship_data.duplicate(),
 		"gift_history": _gift_history.duplicate()
 	}
 
 ## 加载送礼系统数据
 func load_save_data(data: Dictionary) -> void:
-	if data.has("friendship"):
-		_friendship_data = data["friendship"].duplicate()
 	if data.has("gift_history"):
 		_gift_history = data["gift_history"].duplicate()
+	elif data.has("friendship"):
+		# 旧存档中的 friendship 字段由 SaveManager 迁移到 Friendship 系统
+		pass
 
 	print("[GiftSystem] Loaded save data")

@@ -168,7 +168,7 @@ func collect_all_products() -> Dictionary:
 		if animal.has_product:
 			var product = animal.collect_product()
 			if not product.is_empty():
-				var product_id = product.get("product_id", "")
+				var product_id = product.get("item_id", "")
 				var quality = product.get("quality", 0)
 				if not collected.has(product_id):
 					collected[product_id] = {"count": 0, "qualities": []}

@@ -98,10 +98,14 @@ func die() -> void:
 
 	super.die()
 
+const SLIME_SCENE: PackedScene = preload("res://src/entities/enemies/Slime.tscn")
+
 ## 生成分裂体
 func _spawn_splits() -> void:
 	for i in range(split_count):
-		var split = Slime.new()
+		var split: Slime = SLIME_SCENE.instantiate() as Slime
+		if split == null:
+			continue
 		split.enemy_id = enemy_id + "_split_%d" % i
 		split.enemy_name = "Small Slime"
 		split.max_health = int(max_health * split_health_multiplier)

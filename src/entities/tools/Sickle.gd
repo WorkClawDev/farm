@@ -41,7 +41,8 @@ func use(target: Node) -> bool:
 		if crop.can_harvest():
 			var result = crop.harvest()
 			if not result.is_empty():
-				get_node("/root/EventBus").inventory.item_added.emit(result.crop_id, result.quantity)
+				if Inventory:
+					Inventory.add_item(result.crop_id, result.quantity)
 				success = true
 				print("[Sickle] Harvested ", result.quantity, "x ", result.crop_id)
 	

@@ -64,7 +64,7 @@ const TILE_PROPERTIES := {
 }
 
 static func get_coord(tile_id: int) -> Vector2i:
-	return Vector2i(tile_id % 10, tile_id / 10)
+	return Vector2i(tile_id % COLUMNS, tile_id / COLUMNS)
 
 static func build_tileset() -> TileSet:
 	var tile_set := TileSet.new()

@@ -122,6 +122,17 @@ func _gather_save_data() -> Dictionary:
 	var shipping_system = get_node_or_null("/root/ShippingSystem")
 	var gift_system = get_node_or_null("/root/GiftSystem")
 	var quest_system = get_node_or_null("/root/QuestSystem")
+	var growth_system = get_node_or_null("/root/GrowthSystem")
+	var friendship = get_node_or_null("/root/Friendship")
+	var foraging_system = get_node_or_null("/root/ForagingSystem")
+	var weather_system = get_node_or_null("/root/WeatherSystem")
+	var festival_system = get_node_or_null("/root/FestivalSystem")
+	var achievement_system = get_node_or_null("/root/AchievementSystem")
+	var fishing_system = get_node_or_null("/root/FishingSystem")
+	var house_upgrade_system = get_node_or_null("/root/HouseUpgradeSystem")
+	var npc_manager = get_node_or_null("/root/NPCManager")
+	var crafting_system = get_node_or_null("/root/CraftingSystem")
+	var cooking_system = get_node_or_null("/root/CookingSystem")
 
 	# 保存时间数据
 	if time_manager:
@@ -154,6 +165,48 @@ func _gather_save_data() -> Dictionary:
 	# 保存任务系统数据
 	if quest_system:
 		save_data["quest"] = quest_system.save_state()
+
+	# 保存农场作物数据
+	if growth_system and growth_system.has_method("save_state"):
+		save_data["growth"] = growth_system.save_state()
+
+	# 保存好感度数据
+	if friendship and friendship.has_method("save_state"):
+		save_data["friendship"] = friendship.save_state()
+
+	# 保存采集点数据
+	if foraging_system and foraging_system.has_method("save_state"):
+		save_data["foraging"] = foraging_system.save_state()
+
+	# 保存天气数据
+	if weather_system and weather_system.has_method("save_state"):
+		save_data["weather"] = weather_system.save_state()
+
+	# 保存节日数据
+	if festival_system and festival_system.has_method("save_state"):
+		save_data["festival"] = festival_system.save_state()
+
+	# 保存成就数据
+	if achievement_system and achievement_system.has_method("save_state"):
+		save_data["achievement"] = achievement_system.save_state()
+
+	# 保存钓鱼数据
+	if fishing_system and fishing_system.has_method("save_state"):
+		save_data["fishing"] = fishing_system.save_state()
+
+	# 保存房屋升级数据
+	if house_upgrade_system and house_upgrade_system.has_method("save_state"):
+		save_data["house_upgrade"] = house_upgrade_system.save_state()
+
+	# 保存 NPC 管理器数据
+	if npc_manager and npc_manager.has_method("save_state"):
+		save_data["npc_manager"] = npc_manager.save_state()
+
+	# 保存制作/烹饪数据
+	if crafting_system and crafting_system.has_method("get_save_data"):
+		save_data["crafting"] = crafting_system.get_save_data()
+	if cooking_system and cooking_system.has_method("get_save_data"):
+		save_data["cooking"] = cooking_system.get_save_data()
 
 	# 保存动物建筑数据
 	var animal_buildings_data := _gather_animal_buildings_data()
@@ -218,6 +271,17 @@ func _apply_save_data(data: Dictionary) -> void:
 	var shipping_system = get_node_or_null("/root/ShippingSystem")
 	var gift_system = get_node_or_null("/root/GiftSystem")
 	var quest_system = get_node_or_null("/root/QuestSystem")
+	var growth_system = get_node_or_null("/root/GrowthSystem")
+	var friendship = get_node_or_null("/root/Friendship")
+	var foraging_system = get_node_or_null("/root/ForagingSystem")
+	var weather_system = get_node_or_null("/root/WeatherSystem")
+	var festival_system = get_node_or_null("/root/FestivalSystem")
+	var achievement_system = get_node_or_null("/root/AchievementSystem")
+	var fishing_system = get_node_or_null("/root/FishingSystem")
+	var house_upgrade_system = get_node_or_null("/root/HouseUpgradeSystem")
+	var npc_manager = get_node_or_null("/root/NPCManager")
+	var crafting_system = get_node_or_null("/root/CraftingSystem")
+	var cooking_system = get_node_or_null("/root/CookingSystem")
 	
 	# 加载时间数据
 	if data.has("time") and time_manager:
@@ -252,6 +316,53 @@ func _apply_save_data(data: Dictionary) -> void:
 	# 加载任务系统数据
 	if data.has("quest") and quest_system:
 		quest_system.load_state(data["quest"])
+
+	# 加载农场作物数据
+	if data.has("growth") and growth_system and growth_system.has_method("load_state"):
+		growth_system.load_state(data["growth"])
+
+	# 加载好感度数据
+	if data.has("friendship") and friendship and friendship.has_method("load_state"):
+		friendship.load_state(data["friendship"])
+	elif data.has("gift") and friendship and friendship.has_method("load_state"):
+		# 兼容旧存档：从 GiftSystem 迁移好感度
+		var legacy_gift: Dictionary = data["gift"]
+		if legacy_gift.has("friendship"):
+			_migrate_legacy_friendship(friendship, legacy_gift["friendship"])
+
+	# 加载采集点数据
+	if data.has("foraging") and foraging_system and foraging_system.has_method("load_state"):
+		foraging_system.load_state(data["foraging"])
+
+	# 加载天气数据
+	if data.has("weather") and weather_system and weather_system.has_method("load_state"):
+		weather_system.load_state(data["weather"])
+
+	# 加载节日数据
+	if data.has("festival") and festival_system and festival_system.has_method("load_state"):
+		festival_system.load_state(data["festival"])
+
+	# 加载成就数据
+	if data.has("achievement") and achievement_system and achievement_system.has_method("load_state"):
+		achievement_system.load_state(data["achievement"])
+
+	# 加载钓鱼数据
+	if data.has("fishing") and fishing_system and fishing_system.has_method("load_state"):
+		fishing_system.load_state(data["fishing"])
+
+	# 加载房屋升级数据
+	if data.has("house_upgrade") and house_upgrade_system and house_upgrade_system.has_method("load_state"):
+		house_upgrade_system.load_state(data["house_upgrade"])
+
+	# 加载 NPC 管理器数据
+	if data.has("npc_manager") and npc_manager and npc_manager.has_method("load_state"):
+		npc_manager.load_state(data["npc_manager"])
+
+	# 加载制作/烹饪数据
+	if data.has("crafting") and crafting_system and crafting_system.has_method("load_save_data"):
+		crafting_system.load_save_data(data["crafting"])
+	if data.has("cooking") and cooking_system and cooking_system.has_method("load_save_data"):
+		cooking_system.load_save_data(data["cooking"])
 
 	# 加载动物建筑数据
 	if data.has("animal_buildings"):
@@ -340,3 +451,18 @@ func _apply_animal_buildings_data(data: Array) -> void:
 				break
 
 	print("[SaveManager] Animal buildings data applied")
+
+## 将旧版 GiftSystem 好感度（0-100）迁移到 Friendship 点数系统
+func _migrate_legacy_friendship(friendship: Node, legacy_data: Dictionary) -> void:
+	if not friendship.has_method("add_friendship_points"):
+		return
+	for npc_id in legacy_data.keys():
+		var legacy_hearts: int = int(legacy_data[npc_id]) / 10
+		if legacy_hearts <= 0:
+			continue
+		var target_points: int = legacy_hearts * 250
+		var current_points: int = friendship.get_points(npc_id) if friendship.has_method("get_points") else 0
+		var delta: int = target_points - current_points
+		if delta > 0:
+			friendship.add_friendship_points(npc_id, delta, Friendship.FriendshipSource.EVENT)
+	print("[SaveManager] Migrated legacy friendship data for %d NPCs" % legacy_data.size())
