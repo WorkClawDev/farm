@@ -1,0 +1,324 @@
+{
+	"shops": [
+		{
+			"id": "general_store",
+			"name": "皮埃尔杂货店",
+			"type": "general",
+			"npc_id": "pierre",
+			"opening_hour": 9,
+			"closing_hour": 18,
+			"buy_multiplier": 1.0,
+			"sell_multiplier": 0.8,
+			"items": [
+				{
+					"item_id": "turnip_seed",
+					"stock": -1,
+					"unlock_condition": ""
+				},
+				{
+					"item_id": "potato_seed",
+					"stock": -1,
+					"unlock_condition": ""
+				},
+				{
+					"item_id": "tomato_seed",
+					"stock": -1,
+					"unlock_condition": ""
+				},
+				{
+					"item_id": "corn_seed",
+					"stock": -1,
+					"unlock_condition": ""
+				},
+				{
+					"item_id": "pumpkin_seed",
+					"stock": -1,
+					"unlock_condition": ""
+				},
+				{
+					"item_id": "fiber_seeds",
+					"stock": -1,
+					"unlock_condition": ""
+				},
+				{
+					"item_id": "basic_fertilizer",
+					"stock": 20,
+					"max_stock": 20
+				},
+				{
+					"item_id": "quality_fertilizer",
+					"stock": 20,
+					"max_stock": 20
+				}
+			]
+		},
+		{
+			"id": "seed_shop",
+			"name": "种子商店",
+			"type": "seed",
+			"npc_id": "merchant_seed",
+			"opening_hour": 8,
+			"closing_hour": 20,
+			"buy_multiplier": 0.9,
+			"sell_multiplier": 0.7,
+			"items": [
+				{
+					"item_id": "turnip_seed",
+					"stock": -1
+				},
+				{
+					"item_id": "potato_seed",
+					"stock": -1
+				},
+				{
+					"item_id": "tomato_seed",
+					"stock": -1
+				},
+				{
+					"item_id": "basic_fertilizer",
+					"stock": 10,
+					"max_stock": 10,
+					"unlock_condition": "spring_15"
+				},
+				{
+					"item_id": "quality_fertilizer",
+					"stock": -1
+				},
+				{
+					"item_id": "fiber_seeds",
+					"stock": -1
+				},
+				{
+					"item_id": "corn_seed",
+					"stock": -1
+				},
+				{
+					"item_id": "sunflower",
+					"stock": -1
+				},
+				{
+					"item_id": "pumpkin_seed",
+					"stock": -1
+				},
+				{
+					"item_id": "daffodil",
+					"stock": -1
+				}
+			]
+		},
+		{
+			"id": "blacksmith",
+			"name": "铁匠铺",
+			"type": "tool",
+			"npc_id": "clint",
+			"opening_hour": 9,
+			"closing_hour": 16,
+			"buy_multiplier": 1.0,
+			"sell_multiplier": 0.5,
+			"items": [
+				{
+					"item_id": "copper_ore",
+					"stock": 50,
+					"max_stock": 50,
+					"buy_price": 75
+				},
+				{
+					"item_id": "iron_ore",
+					"stock": 30,
+					"max_stock": 30,
+					"buy_price": 150
+				},
+				{
+					"item_id": "stone",
+					"stock": 100,
+					"max_stock": 100,
+					"buy_price": 15
+				},
+				{
+					"item_id": "copper_ingot",
+					"stock": 1,
+					"max_stock": 1,
+					"buy_price": 2000
+				},
+				{
+					"item_id": "iron_ingot",
+					"stock": 1,
+					"max_stock": 1,
+					"buy_price": 5000,
+					"unlock_condition": "mines_level_40"
+				}
+			]
+		},
+		{
+			"id": "fish_shop",
+			"name": "威利鱼店",
+			"type": "fish",
+			"npc_id": "willy",
+			"opening_hour": 6,
+			"closing_hour": 17,
+			"buy_multiplier": 1.0,
+			"sell_multiplier": 1.2,
+			"items": [
+				{
+					"item_id": "fishing_rod",
+					"stock": 1,
+					"max_stock": 1,
+					"buy_price": 500
+				},
+				{
+					"item_id": "fish_common",
+					"stock": 1,
+					"max_stock": 1,
+					"buy_price": 1800,
+					"unlock_condition": "fishing_level_2"
+				},
+				{
+					"item_id": "carp",
+					"stock": 1,
+					"max_stock": 1,
+					"buy_price": 7500,
+					"unlock_condition": "fishing_level_6"
+				},
+				{
+					"item_id": "bass",
+					"stock": 999,
+					"max_stock": 999,
+					"buy_price": 5
+				},
+				{
+					"item_id": "salmon",
+					"stock": 50,
+					"max_stock": 50,
+					"buy_price": 200
+				}
+			]
+		},
+		{
+			"id": "animal_shop",
+			"name": "玛妮牧场",
+			"type": "animal",
+			"npc_id": "marnie",
+			"opening_hour": 9,
+			"closing_hour": 16,
+			"buy_multiplier": 1.0,
+			"sell_multiplier": 0.6,
+			"items": [
+				{
+					"item_id": "hay",
+					"stock": 999,
+					"max_stock": 999,
+					"buy_price": 50
+				},
+				{
+					"item_id": "quality_feed",
+					"stock": 100,
+					"max_stock": 100,
+					"buy_price": 100
+				},
+				{
+					"item_id": "milk",
+					"stock": 1,
+					"max_stock": 1,
+					"buy_price": 1000
+				},
+				{
+					"item_id": "wool",
+					"stock": 1,
+					"max_stock": 1,
+					"buy_price": 1000
+				},
+				{
+					"item_id": "quality_sprinkler",
+					"stock": 10,
+					"max_stock": 10,
+					"buy_price": 2000
+				},
+				{
+					"item_id": "scarecrow",
+					"stock": 10,
+					"max_stock": 10,
+					"buy_price": 25000,
+					"unlock_condition": "farming_level_10"
+				}
+			]
+		},
+		{
+			"id": "carpenter_shop",
+			"name": "木匠店",
+			"type": "building",
+			"npc_id": "robin",
+			"opening_hour": 9,
+			"closing_hour": 17,
+			"buy_multiplier": 1.0,
+			"sell_multiplier": 0.5,
+			"items": [
+				{
+					"item_id": "wood",
+					"stock": 999,
+					"max_stock": 999,
+					"buy_price": 10
+				},
+				{
+					"item_id": "stone",
+					"stock": 999,
+					"max_stock": 999,
+					"buy_price": 10
+				},
+				{
+					"item_id": "hardwood",
+					"stock": 50,
+					"max_stock": 50,
+					"buy_price": 100
+				},
+				{
+					"item_id": "workbench",
+					"stock": 1,
+					"max_stock": 1,
+					"buy_price": 100
+				},
+				{
+					"item_id": "chest",
+					"stock": 1,
+					"max_stock": 1,
+					"buy_price": 50
+				}
+			]
+		},
+		{
+			"id": "traveling_cart",
+			"name": "旅行商人",
+			"type": "special",
+			"npc_id": "traveling_merchant",
+			"opening_hour": 6,
+			"closing_hour": 24,
+			"buy_multiplier": 1.5,
+			"sell_multiplier": 1.0,
+			"items": [
+				{
+					"item_id": "diamond",
+					"stock": 5,
+					"max_stock": 5,
+					"buy_price": 1000
+				},
+				{
+					"item_id": "coffee_beans",
+					"stock": 3,
+					"max_stock": 3,
+					"buy_price": 2500
+				},
+				{
+					"item_id": "pumpkin_pie",
+					"stock": 2,
+					"max_stock": 2,
+					"buy_price": 500
+				},
+				{
+					"item_id": "sunflower",
+					"stock": 1,
+					"max_stock": 1,
+					"buy_price": 100
+				}
+			]
+		}
+	]
+}

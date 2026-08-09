@@ -1,0 +1,47 @@
+name: Validate and export
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: pastoral-tales-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-and-export:
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: 4.6.1
+      GODOT: /usr/local/bin/godot
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Godot and export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}-stable"
+          curl -fL "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -o /tmp/godot.zip
+          curl -fL "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -o /tmp/templates.tpz
+          unzip -q /tmp/godot.zip -d /tmp/godot
+          sudo install /tmp/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 "$GODOT"
+          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          unzip -q /tmp/templates.tpz -d /tmp/templates
+          cp -R /tmp/templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
+
+      - name: Full project check
+        run: bash scripts/check.sh
+
+      - name: Windows release export
+        run: bash scripts/export.sh release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PastoralTales-windows-${{ github.sha }}
+          path: |
+            build/windows/PastoralTales.exe
+            build/windows/PastoralTales.pck
+          if-no-files-found: error
+          retention-days: 14

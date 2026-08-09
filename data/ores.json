@@ -1,0 +1,101 @@
+{
+	"ores": [
+		{
+			"id": "copper_ore",
+			"name": "铜矿",
+			"description": "常见的矿石，可用于制作基础工具和建筑",
+			"tier": 1,
+			"min_floor": 1,
+			"base_health": 3,
+			"base_quantity": 1,
+			"max_quantity": 3,
+			"value": 10,
+			"color": "#CD804D",
+			"uses": ["crafting", "building", "selling"]
+		},
+		{
+			"id": "iron_ore",
+			"name": "铁矿",
+			"description": "坚固的矿石，用于制作中级工具和装备",
+			"tier": 2,
+			"min_floor": 2,
+			"base_health": 5,
+			"base_quantity": 1,
+			"max_quantity": 4,
+			"value": 25,
+			"color": "#80808C",
+			"uses": ["crafting", "building", "upgrading"]
+		},
+		{
+			"id": "silver_ore",
+			"name": "银矿",
+			"description": "稀有矿石，用于制作精美饰品",
+			"tier": 3,
+			"min_floor": 4,
+			"base_health": 7,
+			"base_quantity": 1,
+			"max_quantity": 3,
+			"value": 50,
+			"color": "#D9D9E6",
+			"uses": ["crafting", "jewelry", "selling"]
+		},
+		{
+			"id": "gold_ore",
+			"name": "金矿",
+			"description": "珍贵的矿石，用于高级制作和出售",
+			"tier": 4,
+			"min_floor": 6,
+			"base_health": 10,
+			"base_quantity": 1,
+			"max_quantity": 3,
+			"value": 100,
+			"color": "#FFD84D",
+			"uses": ["crafting", "upgrading", "selling"]
+		},
+		{
+			"id": "gem",
+			"name": "宝石",
+			"description": "美丽的宝石，可用于赠送NPC或出售",
+			"tier": 5,
+			"min_floor": 8,
+			"base_health": 8,
+			"base_quantity": 1,
+			"max_quantity": 2,
+			"value": 200,
+			"color": "#CC33CC",
+			"uses": ["gift", "jewelry", "selling"]
+		},
+		{
+			"id": "crystal",
+			"name": "水晶",
+			"description": "神秘的水晶，蕴含着强大的能量",
+			"tier": 6,
+			"min_floor": 10,
+			"base_health": 12,
+			"base_quantity": 1,
+			"max_quantity": 2,
+			"value": 300,
+			"color": "#4DB3FF",
+			"uses": ["magic", "crafting", "selling"]
+		}
+	],
+	"mine_config": {
+		"total_floors": 10,
+		"base_ore_count": 5,
+		"ores_per_floor": 2,
+		"respawn_days": 3,
+		"floor_unlock_requirements": {
+			"2": {"mining_level": 1},
+			"4": {"mining_level": 2},
+			"6": {"mining_level": 3},
+			"8": {"mining_level": 4},
+			"10": {"mining_level": 5}
+		}
+	},
+	"quality_multipliers": {
+		"normal": 1.0,
+		"good": 1.25,
+		"excellent": 1.5,
+		"perfect": 2.0
+	}
+}

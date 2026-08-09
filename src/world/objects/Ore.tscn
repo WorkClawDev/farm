@@ -1,0 +1,58 @@
+[gd_scene load_steps=5 format=3 uid="uid://ore_object_001"]
+
+[ext_resource type="Script" path="res://src/world/objects/Ore.gd" id="1_ore"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ore"]
+size = Vector2(88, 88)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ore_solid"]
+size = Vector2(42, 34)
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_ore"]
+
+[node name="Ore" type="Area2D"]
+collision_layer = 8
+collision_mask = 2
+script = ExtResource("1_ore")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+modulate = Color(0.8, 0.5, 0.3, 1)
+scale = Vector2(0.75, 0.75)
+material = SubResource("CanvasItemMaterial_ore")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_ore")
+
+[node name="SolidBody" type="StaticBody2D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="SolidBody"]
+position = Vector2(0, 5)
+shape = SubResource("RectangleShape2D_ore_solid")
+
+[node name="Particles" type="GPUParticles2D" parent="."]
+emitting = false
+amount = 15
+one_shot = true
+explosiveness = 0.9
+lifetime = 0.5
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+
+[node name="InteractionHint" type="Label" parent="."]
+offset_left = -20.0
+offset_top = -40.0
+offset_right = 20.0
+offset_bottom = -20.0
+text = "挖掘"
+horizontal_alignment = 1
+visible = false
+
+[node name="HealthBar" type="ProgressBar" parent="."]
+offset_left = -20.0
+offset_top = 20.0
+offset_right = 20.0
+offset_bottom = 30.0
+value = 100.0
+show_percentage = false

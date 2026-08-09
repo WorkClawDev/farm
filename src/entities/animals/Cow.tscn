@@ -1,0 +1,40 @@
+[gd_scene load_steps=5 format=3 uid="uid://c7cow001"]
+
+[ext_resource type="Script" path="res://src/entities/animals/Cow.gd" id="1_cow"]
+[ext_resource type="Texture2D" path="res://assets/sprites/animals/Cow.png" id="2_texture"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_cow"]
+radius = 20.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_cow_interaction"]
+radius = 56.0
+
+[node name="Cow" type="CharacterBody2D"]
+collision_layer = 4
+collision_mask = 1
+script = ExtResource("1_cow")
+animal_id = "cow_001"
+animal_name = "小牛"
+animal_type = "cow"
+move_speed = 20.0
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+modulate = Color(1, 1, 1, 1)
+scale = Vector2(1.5, 1.5)
+texture = ExtResource("2_texture")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_cow")
+
+[node name="InteractionArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractionArea"]
+shape = SubResource("CircleShape2D_cow_interaction")
+debug_color = Color(0, 0.6, 1, 0.42)
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+
+[node name="ProductSpawnPoint" type="Marker2D" parent="."]
+position = Vector2(0, 24)

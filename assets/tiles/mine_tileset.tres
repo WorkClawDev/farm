@@ -1,0 +1,27 @@
+[gd_resource type="TileSet" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/tiles/mine_tiles.png" id="1_w7cyl"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_nnokl"]
+texture = ExtResource("1_w7cyl")
+1:0/0 = 0
+2:0/0 = 0
+3:0/0 = 0
+4:0/0 = 0
+5:0/0 = 0
+6:0/0 = 0
+7:0/0 = 0
+8:0/0 = 0
+24:2/0 = 0
+19:1/0 = 0
+58:1/0 = 0
+16:0/0 = 0
+51:17/0 = 0
+56:5/0 = 0
+14:0/0 = 0
+15:0/0 = 0
+17:0/0 = 0
+
+[resource]
+resource_name = "mine_tiles"
+sources/0 = SubResource("TileSetAtlasSource_nnokl")

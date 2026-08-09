@@ -1,0 +1,129 @@
+[gd_scene load_steps=6 format=3 uid="uid://cbeachscene001"]
+
+[ext_resource type="Script" path="res://src/world/maps/Beach.gd" id="1_beach"]
+[ext_resource type="Script" path="res://src/world/objects/FishingSpot.gd" id="2_fishingspot"]
+[ext_resource type="PackedScene" uid="uid://dp5y8hqm2x8nr" path="res://src/entities/player/Player.tscn" id="3_player"]
+[ext_resource type="PackedScene" path="res://src/world/maps/content/BeachMap.tscn" id="4_map"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_interaction"]
+radius = 40.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_exit"]
+size = Vector2(64, 32)
+
+[node name="Beach" type="Node2D"]
+script = ExtResource("1_beach")
+
+[node name="BeachMap" parent="." instance=ExtResource("4_map")]
+
+[node name="Background" type="ColorRect" parent="."]
+z_index = -10
+offset_left = -500.0
+offset_top = -400.0
+offset_right = 500.0
+offset_bottom = 400.0
+color = Color(0.53, 0.81, 0.92, 1)
+
+[node name="WaterLayer" type="ColorRect" parent="."]
+z_index = -5
+offset_left = -500.0
+offset_top = 100.0
+offset_right = 500.0
+offset_bottom = 400.0
+color = Color(0.2, 0.4, 0.6, 1)
+
+[node name="Player" parent="." instance=ExtResource("3_player")]
+position = Vector2(0, -100)
+
+[node name="FishingSpots" type="Node2D" parent="."]
+
+[node name="FishingSpot1" type="Area2D" parent="FishingSpots"]
+position = Vector2(-150, 150)
+collision_layer = 8
+collision_mask = 2
+script = ExtResource("2_fishingspot")
+spot_name = "海滩钓鱼点1"
+fishing_location = "beach"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="FishingSpots/FishingSpot1"]
+shape = SubResource("CircleShape2D_interaction")
+
+[node name="Sprite2D" type="Sprite2D" parent="FishingSpots/FishingSpot1"]
+modulate = Color(0.3, 0.5, 0.7, 1)
+scale = Vector2(2, 2)
+
+[node name="HintLabel" type="Label" parent="FishingSpots/FishingSpot1"]
+visible = false
+offset_top = -40.0
+offset_right = 100.0
+offset_bottom = -20.0
+text = "[按E键钓鱼]"
+horizontal_alignment = 1
+
+[node name="FishingSpot2" type="Area2D" parent="FishingSpots"]
+position = Vector2(0, 180)
+collision_layer = 8
+collision_mask = 2
+script = ExtResource("2_fishingspot")
+spot_name = "海滩钓鱼点2"
+fishing_location = "beach"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="FishingSpots/FishingSpot2"]
+shape = SubResource("CircleShape2D_interaction")
+
+[node name="Sprite2D" type="Sprite2D" parent="FishingSpots/FishingSpot2"]
+modulate = Color(0.3, 0.5, 0.7, 1)
+scale = Vector2(2, 2)
+
+[node name="HintLabel" type="Label" parent="FishingSpots/FishingSpot2"]
+visible = false
+offset_top = -40.0
+offset_right = 100.0
+offset_bottom = -20.0
+text = "[按E键钓鱼]"
+horizontal_alignment = 1
+
+[node name="FishingSpot3" type="Area2D" parent="FishingSpots"]
+position = Vector2(150, 150)
+collision_layer = 8
+collision_mask = 2
+script = ExtResource("2_fishingspot")
+spot_name = "海滩钓鱼点3"
+fishing_location = "beach"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="FishingSpots/FishingSpot3"]
+shape = SubResource("CircleShape2D_interaction")
+
+[node name="Sprite2D" type="Sprite2D" parent="FishingSpots/FishingSpot3"]
+modulate = Color(0.3, 0.5, 0.7, 1)
+scale = Vector2(2, 2)
+
+[node name="HintLabel" type="Label" parent="FishingSpots/FishingSpot3"]
+visible = false
+offset_top = -40.0
+offset_right = 100.0
+offset_bottom = -20.0
+text = "[按E键钓鱼]"
+horizontal_alignment = 1
+
+[node name="ExitToVillage" type="Area2D" parent="."]
+position = Vector2(0, -200)
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExitToVillage"]
+shape = SubResource("RectangleShape2D_exit")
+
+[node name="ExitLabel" type="Label" parent="ExitToVillage"]
+offset_left = -50.0
+offset_top = -30.0
+offset_right = 50.0
+offset_bottom = -10.0
+text = "→ 村庄"
+horizontal_alignment = 1
+
+[node name="AmbiencePlayer" type="AudioStreamPlayer" parent="."]
+volume_db = -10.0
+
+[node name="Camera2D" type="Camera2D" parent="."]
+enabled = false

@@ -1,0 +1,86 @@
+[gd_resource type="Resource" script_class="MapProfile" format=3 uid="uid://78pugtyqn53n"]
+
+[ext_resource type="Resource" uid="uid://bsh1hta7etyf6" path="res://data/maps/farm/farm_asset_library.tres" id="1_lxhew"]
+[ext_resource type="Script" uid="uid://dl1661uiiugro" path="res://src/world/map_editor/CollisionPreset.gd" id="2_wlo3c"]
+[ext_resource type="Script" uid="uid://e2wmhmhkrxnj" path="res://src/world/map_editor/MapLayerSpec.gd" id="3_nhhca"]
+[ext_resource type="TileSet" uid="uid://dxhij1xumhutj" path="res://assets/tiles/farm_tileset.tres" id="4_e7mos"]
+[ext_resource type="Script" uid="uid://b45gtnlgfercn" path="res://src/world/map_editor/MapProfile.gd" id="5_hxr2h"]
+
+[sub_resource type="Resource" id="Resource_57dp0"]
+script = ExtResource("2_wlo3c")
+preset_id = &"world_solid"
+display_name = "世界实体"
+
+[sub_resource type="Resource" id="Resource_5kews"]
+script = ExtResource("2_wlo3c")
+preset_id = &"player_trigger"
+display_name = "玩家触发区"
+collision_layer = 0
+collision_mask = 2
+editor_color = Color(0.2, 0.75, 1, 0.3)
+
+[sub_resource type="Resource" id="Resource_roxam"]
+script = ExtResource("2_wlo3c")
+preset_id = &"npc_trigger"
+display_name = "NPC 触发区"
+collision_layer = 0
+collision_mask = 4
+editor_color = Color(0.75, 0.3, 1, 0.3)
+
+[sub_resource type="Resource" id="Resource_xg5hj"]
+script = ExtResource("3_nhhca")
+layer_id = &"ground"
+display_name = "地面"
+required = true
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_l1jno"]
+script = ExtResource("3_nhhca")
+layer_id = &"terrain_overlay"
+display_name = "地形覆盖"
+default_z_index = 1
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_kdc5b"]
+script = ExtResource("3_nhhca")
+layer_id = &"decoration"
+display_name = "装饰"
+kind = 1
+default_z_index = 2
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_2k0u4"]
+script = ExtResource("3_nhhca")
+layer_id = &"objects"
+display_name = "对象"
+kind = 2
+required = true
+default_z_index = 10
+y_sort = true
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_3016x"]
+script = ExtResource("3_nhhca")
+layer_id = &"collision"
+display_name = "碰撞"
+kind = 3
+required = true
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_17fyh"]
+script = ExtResource("3_nhhca")
+layer_id = &"markers"
+display_name = "标记"
+kind = 4
+required = true
+allowed_asset_tags = PackedStringArray()
+
+[resource]
+script = ExtResource("5_hxr2h")
+profile_id = &"farm"
+display_name = "农场"
+primary_tileset = ExtResource("4_e7mos")
+layer_specs = Array[ExtResource("3_nhhca")]([SubResource("Resource_xg5hj"), SubResource("Resource_l1jno"), SubResource("Resource_kdc5b"), SubResource("Resource_2k0u4"), SubResource("Resource_3016x"), SubResource("Resource_17fyh")])
+asset_library = ExtResource("1_lxhew")
+collision_presets = Array[ExtResource("2_wlo3c")]([SubResource("Resource_57dp0"), SubResource("Resource_5kews"), SubResource("Resource_roxam")])
+required_marker_ids = PackedStringArray("player_spawn", "from_village")

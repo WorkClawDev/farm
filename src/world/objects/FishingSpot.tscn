@@ -1,0 +1,25 @@
+[gd_scene load_steps=3 format=3 uid="uid://fishing_spot_001"]
+
+[ext_resource type="Script" path="res://src/world/objects/FishingSpot.gd" id="1_fishing_spot"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_fishing"]
+size = Vector2(96, 96)
+
+[node name="FishingSpot" type="Area2D"]
+collision_layer = 8
+collision_mask = 2
+script = ExtResource("1_fishing_spot")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_fishing")
+
+[node name="Visual" type="Node2D" parent="."]
+
+[node name="WaterRipple" type="CPUParticles2D" parent="Visual"]
+amount = 10
+emission_shape = 3
+emission_rect_extents = Vector2(30, 30)
+gravity = Vector2(0, 0)
+scale_amount_min = 2.0
+scale_amount_max = 4.0
+color = Color(0.3, 0.6, 0.9, 0.5)

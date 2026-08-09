@@ -1,0 +1,11 @@
+#!/bin/bash
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+echo "[pre-commit] Regenerating resource sitemap..."
+bash "$REPO_ROOT/scripts/generate_resource_sitemap.sh"
+
+git add data/resource_sitemap.json
+
+echo "[pre-commit] Resource sitemap refreshed."

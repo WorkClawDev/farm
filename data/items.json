@@ -1,0 +1,1277 @@
+{
+  "items": [
+    {
+      "id": "wild_berry",
+      "name": "野莓",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 15,
+      "usable": true,
+      "use_effect": {
+        "energy": 8
+      },
+      "description": "野生的小浆果，酸甜可口。"
+    },
+    {
+      "id": "wild_grape",
+      "name": "野葡萄",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 40,
+      "usable": true,
+      "use_effect": {
+        "energy": 15
+      },
+      "description": "藤蔓上结出的紫色葡萄。"
+    },
+    {
+      "id": "blackberry",
+      "name": "黑莓",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 25,
+      "usable": true,
+      "use_effect": {
+        "energy": 10
+      },
+      "description": "深紫色的黑莓，营养丰富。"
+    },
+    {
+      "id": "common_mushroom",
+      "name": "普通蘑菇",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 20,
+      "usable": true,
+      "use_effect": {
+        "energy": 10
+      },
+      "description": "常见的可食用蘑菇。"
+    },
+    {
+      "id": "chanterelle",
+      "name": "鸡油菌",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 80,
+      "usable": true,
+      "use_effect": {
+        "energy": 20
+      },
+      "description": "金黄色的鸡油菌，味道鲜美。"
+    },
+    {
+      "id": "morel",
+      "name": "羊肚菌",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 150,
+      "usable": true,
+      "use_effect": {
+        "energy": 30
+      },
+      "description": "珍贵的羊肚菌，稀有食材。"
+    },
+    {
+      "id": "wild_flower",
+      "name": "野花",
+      "type": "decoration",
+      "buy_price": 0,
+      "sell_price": 10,
+      "description": "路边盛开的野花。"
+    },
+    {
+      "id": "daffodil",
+      "name": "水仙花",
+      "type": "decoration",
+      "buy_price": 0,
+      "sell_price": 30,
+      "description": "春天盛开的水仙花。"
+    },
+    {
+      "id": "sunflower",
+      "name": "向日葵",
+      "type": "decoration",
+      "buy_price": 0,
+      "sell_price": 50,
+      "description": "追随阳光的向日葵。"
+    },
+    {
+      "id": "wild_herb",
+      "name": "野草药",
+      "type": "resource",
+      "buy_price": 0,
+      "sell_price": 25,
+      "description": "有药用价值的野生草药。"
+    },
+    {
+      "id": "ginger_root",
+      "name": "野姜",
+      "type": "resource",
+      "buy_price": 0,
+      "sell_price": 45,
+      "description": "辛辣的生姜根茎。"
+    },
+    {
+      "id": "hardwood",
+      "name": "硬木",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 0,
+      "sell_price": 15,
+      "description": "坚硬的硬木，用于高级制作。"
+    },
+    {
+      "id": "river_stone",
+      "name": "河石",
+      "type": "resource",
+      "buy_price": 0,
+      "sell_price": 20,
+      "description": "河边的光滑石头，可用于装饰。"
+    },
+    {
+      "id": "seashell",
+      "name": "贝壳",
+      "type": "decoration",
+      "buy_price": 0,
+      "sell_price": 40,
+      "description": "海边捡到的漂亮贝壳。"
+    },
+    {
+      "id": "coral",
+      "name": "珊瑚",
+      "type": "decoration",
+      "buy_price": 0,
+      "sell_price": 80,
+      "description": "海洋中的珊瑚，美丽而脆弱。"
+    },
+    {
+      "id": "turnip_seed",
+      "name": "芜菁种子",
+      "type": "seed",
+      "seasons": [
+        "spring"
+      ],
+      "growth_days": 4,
+      "crop_id": "turnip",
+      "buy_price": 20,
+      "sell_price": 10,
+      "description": "春天播种，4天成熟。朴实无华的蔬菜。"
+    },
+    {
+      "id": "potato_seed",
+      "name": "土豆种子",
+      "type": "seed",
+      "seasons": [
+        "spring"
+      ],
+      "growth_days": 6,
+      "crop_id": "potato",
+      "buy_price": 50,
+      "sell_price": 25,
+      "description": "春天播种，6天成熟。适合做各种料理。"
+    },
+    {
+      "id": "tomato_seed",
+      "name": "番茄种子",
+      "type": "seed",
+      "seasons": [
+        "summer"
+      ],
+      "growth_days": 11,
+      "crop_id": "tomato",
+      "buy_price": 50,
+      "sell_price": 25,
+      "description": "夏天播种，11天成熟。多汁酸甜。"
+    },
+    {
+      "id": "corn_seed",
+      "name": "玉米种子",
+      "type": "seed",
+      "seasons": [
+        "summer"
+      ],
+      "growth_days": 14,
+      "crop_id": "corn",
+      "buy_price": 80,
+      "sell_price": 40,
+      "description": "夏天播种，14天成熟。金灿灿的谷物。"
+    },
+    {
+      "id": "pumpkin_seed",
+      "name": "南瓜种子",
+      "type": "seed",
+      "seasons": [
+        "fall"
+      ],
+      "growth_days": 13,
+      "crop_id": "pumpkin",
+      "buy_price": 100,
+      "sell_price": 50,
+      "description": "秋天播种，13天成熟。万圣节必备。"
+    },
+    {
+      "id": "turnip",
+      "name": "芜菁",
+      "type": "crop",
+      "buy_price": 0,
+      "sell_price": 35,
+      "usable": true,
+      "use_effect": {
+        "energy": 10
+      },
+      "description": "新鲜的芜菁，可以生吃或烹饪。"
+    },
+    {
+      "id": "potato",
+      "name": "土豆",
+      "type": "crop",
+      "buy_price": 0,
+      "sell_price": 80,
+      "usable": true,
+      "use_effect": {
+        "energy": 15
+      },
+      "description": "用途广泛的土豆，炸煮烤都美味。"
+    },
+    {
+      "id": "tomato",
+      "name": "番茄",
+      "type": "crop",
+      "buy_price": 0,
+      "sell_price": 60,
+      "usable": true,
+      "use_effect": {
+        "energy": 12
+      },
+      "description": "新鲜红透的番茄。"
+    },
+    {
+      "id": "corn",
+      "name": "玉米",
+      "type": "crop",
+      "buy_price": 0,
+      "sell_price": 50,
+      "usable": true,
+      "use_effect": {
+        "energy": 8
+      },
+      "description": "香甜可口的玉米棒。"
+    },
+    {
+      "id": "pumpkin",
+      "name": "南瓜",
+      "type": "crop",
+      "buy_price": 0,
+      "sell_price": 320,
+      "usable": true,
+      "use_effect": {
+        "energy": 20
+      },
+      "description": "大个的南瓜，可以做派或装饰。"
+    },
+    {
+      "id": "hoe",
+      "name": "锄头",
+      "type": "tool",
+      "max_stack": 1,
+      "description": "基础农具，用于耕地松土。"
+    },
+    {
+      "id": "watering_can",
+      "name": "水壶",
+      "type": "tool",
+      "max_stack": 1,
+      "description": "基础农具，用于给作物浇水。"
+    },
+    {
+      "id": "axe",
+      "name": "斧头",
+      "type": "tool",
+      "max_stack": 1,
+      "description": "基础工具，用于砍伐树木。"
+    },
+    {
+      "id": "pickaxe",
+      "name": "镐子",
+      "type": "tool",
+      "max_stack": 1,
+      "description": "基础工具，用于开采矿石。"
+    },
+    {
+      "id": "sickle",
+      "name": "镰刀",
+      "type": "tool",
+      "max_stack": 1,
+      "description": "基础农具，用于收割作物和除草。"
+    },
+    {
+      "id": "wood",
+      "name": "木材",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 0,
+      "sell_price": 2,
+      "description": "基础建筑材料，用途广泛。"
+    },
+    {
+      "id": "stone",
+      "name": "石头",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 0,
+      "sell_price": 2,
+      "description": "基础建筑材料，坚硬耐用。"
+    },
+    {
+      "id": "fiber",
+      "name": "纤维",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 0,
+      "sell_price": 1,
+      "description": "草丛中采集的纤维，可用于制作。"
+    },
+    {
+      "id": "fish_common",
+      "name": "鲤鱼",
+      "type": "fish",
+      "icon": "res://assets/sprites/items/carp.png",
+      "buy_price": 0,
+      "sell_price": 30,
+      "usable": true,
+      "use_effect": {
+        "energy": 13
+      },
+      "description": "常见的淡水鱼。"
+    },
+    {
+      "id": "fish_rare",
+      "name": "金枪鱼",
+      "type": "fish",
+      "icon": "res://assets/sprites/items/tuna.png",
+      "buy_price": 0,
+      "sell_price": 100,
+      "usable": true,
+      "use_effect": {
+        "energy": 25
+      },
+      "description": "美味的深海鱼。"
+    },
+    {
+      "id": "bread",
+      "name": "面包",
+      "type": "food",
+      "buy_price": 50,
+      "sell_price": 25,
+      "usable": true,
+      "use_effect": {
+        "energy": 30
+      },
+      "description": "新鲜出炉的面包，香气扑鼻。"
+    },
+    {
+      "id": "cheese",
+      "name": "奶酪",
+      "type": "food",
+      "buy_price": 80,
+      "sell_price": 40,
+      "usable": true,
+      "use_effect": {
+        "energy": 40
+      },
+      "description": "浓郁的奶酪，营养丰富。"
+    },
+    {
+      "id": "flower_spring",
+      "name": "郁金香",
+      "type": "decoration",
+      "icon": "res://assets/sprites/items/daffodil.png",
+      "buy_price": 50,
+      "sell_price": 30,
+      "description": "春天盛开的花朵，适合送人。"
+    },
+    {
+      "id": "letter",
+      "name": "神秘信件",
+      "type": "quest",
+      "max_stack": 1,
+      "description": "一封神秘的信件，似乎隐藏着秘密..."
+    },
+    {
+      "id": "copper_ingot",
+      "name": "铜锭",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 50,
+      "sell_price": 25,
+      "description": "熔炼过的铜块，基础工具材料。"
+    },
+    {
+      "id": "iron_ingot",
+      "name": "铁锭",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 100,
+      "sell_price": 50,
+      "description": "熔炼过的铁块，用于工具升级。"
+    },
+    {
+      "id": "gold_ingot",
+      "name": "金锭",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 300,
+      "sell_price": 150,
+      "description": "珍贵的金块，用于高级工具升级。"
+    },
+    {
+      "id": "diamond",
+      "name": "钻石",
+      "type": "resource",
+      "max_stack": 99,
+      "buy_price": 1000,
+      "sell_price": 500,
+      "description": "稀有的宝石，用于顶级工具升级。"
+    },
+    {
+      "id": "gold_coins",
+      "name": "金币",
+      "type": "resource",
+      "max_stack": 9999,
+      "buy_price": 1,
+      "sell_price": 1,
+      "description": "通用货币，用于交易和升级。"
+    },
+    {
+      "id": "copper_ore",
+      "name": "铜矿石",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 25,
+      "sell_price": 15,
+      "description": "基础矿石，可熔炼成铜锭。"
+    },
+    {
+      "id": "iron_ore",
+      "name": "铁矿石",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 50,
+      "sell_price": 30,
+      "description": "常见矿石，可熔炼成铁锭。"
+    },
+    {
+      "id": "gold_ore",
+      "name": "金矿石",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 150,
+      "sell_price": 100,
+      "description": "珍贵矿石，可熔炼成金锭。"
+    },
+    {
+      "id": "egg",
+      "name": "鸡蛋",
+      "type": "animal_product",
+      "buy_price": 0,
+      "sell_price": 50,
+      "usable": true,
+      "use_effect": {
+        "energy": 15
+      },
+      "description": "母鸡产下的新鲜鸡蛋。"
+    },
+    {
+      "id": "golden_egg",
+      "name": "金蛋",
+      "type": "animal_product",
+      "buy_price": 0,
+      "sell_price": 300,
+      "usable": true,
+      "use_effect": {
+        "energy": 50
+      },
+      "description": "闪耀着金光的稀有鸡蛋，非常珍贵。"
+    },
+    {
+      "id": "milk",
+      "name": "牛奶",
+      "type": "animal_product",
+      "buy_price": 0,
+      "sell_price": 80,
+      "usable": true,
+      "use_effect": {
+        "energy": 25
+      },
+      "description": "新鲜挤出的牛奶，营养丰富。"
+    },
+    {
+      "id": "quality_milk",
+      "name": "高品质牛奶",
+      "type": "animal_product",
+      "buy_price": 0,
+      "sell_price": 200,
+      "usable": true,
+      "use_effect": {
+        "energy": 60
+      },
+      "description": "高品质的牛奶，味道浓郁。"
+    },
+    {
+      "id": "hay",
+      "name": "干草",
+      "type": "animal_feed",
+      "buy_price": 10,
+      "sell_price": 5,
+      "description": "动物的基础饲料，可以恢复饥饿值。"
+    },
+    {
+      "id": "quality_feed",
+      "name": "优质饲料",
+      "type": "animal_feed",
+      "buy_price": 30,
+      "sell_price": 15,
+      "description": "营养丰富的优质饲料，完全恢复饥饿值并增加好感度。"
+    },
+    {
+      "id": "wool",
+      "name": "羊毛",
+      "type": "animal_product",
+      "buy_price": 0,
+      "sell_price": 100,
+      "description": "绵羊的毛，柔软温暖，可用于制作。"
+    },
+    {
+      "id": "truffle",
+      "name": "松露",
+      "type": "animal_product",
+      "buy_price": 0,
+      "sell_price": 500,
+      "usable": true,
+      "use_effect": {
+        "energy": 80
+      },
+      "description": "猪找到的珍贵松露，价值连城。"
+    },
+    {
+      "id": "duck_feather",
+      "name": "鸭毛",
+      "type": "animal_product",
+      "buy_price": 0,
+      "sell_price": 60,
+      "description": "漂亮的鸭毛，可用于制作装饰品。"
+    },
+    {
+      "id": "rabbit_foot",
+      "name": "幸运兔脚",
+      "type": "animal_product",
+      "buy_price": 0,
+      "sell_price": 400,
+      "description": "据说能带来好运的兔脚。"
+    },
+    {
+      "id": "mayonnaise",
+      "name": "蛋黄酱",
+      "type": "artisan_good",
+      "buy_price": 0,
+      "sell_price": 100,
+      "usable": true,
+      "use_effect": {
+        "energy": 40
+      },
+      "description": "用鸡蛋制作的蛋黄酱。"
+    },
+    {
+      "id": "cheese_artisan",
+      "name": "奶酪",
+      "type": "artisan_good",
+      "buy_price": 0,
+      "sell_price": 160,
+      "usable": true,
+      "use_effect": {
+        "energy": 50
+      },
+      "description": "用牛奶制作的奶酪。"
+    },
+    {
+      "id": "fried_egg",
+      "name": "煎蛋",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 50,
+      "usable": true,
+      "use_effect": {
+        "energy": 35
+      },
+      "description": "简单美味的煎蛋，恢复少量体力。"
+    },
+    {
+      "id": "boiled_egg",
+      "name": "水煮蛋",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 40,
+      "usable": true,
+      "use_effect": {
+        "energy": 30
+      },
+      "description": "营养保留最完整的水煮蛋。"
+    },
+    {
+      "id": "toast",
+      "name": "烤面包",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 35,
+      "usable": true,
+      "use_effect": {
+        "energy": 40
+      },
+      "description": "香脆的烤面包，早餐的好选择。"
+    },
+    {
+      "id": "vegetable_soup",
+      "name": "蔬菜汤",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 150,
+      "usable": true,
+      "use_effect": {
+        "energy": 80
+      },
+      "description": "营养丰富的蔬菜汤，恢复中量体力。"
+    },
+    {
+      "id": "mashed_potato",
+      "name": "土豆泥",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 100,
+      "usable": true,
+      "use_effect": {
+        "energy": 60
+      },
+      "description": "绵软香甜的土豆泥。"
+    },
+    {
+      "id": "tomato_soup",
+      "name": "番茄浓汤",
+      "type": "food",
+      "icon": "res://assets/sprites/items/vegetable_soup.png",
+      "buy_price": 0,
+      "sell_price": 90,
+      "usable": true,
+      "use_effect": {
+        "energy": 55
+      },
+      "description": "酸甜可口的番茄浓汤。"
+    },
+    {
+      "id": "grilled_fish",
+      "name": "烤鱼",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 80,
+      "usable": true,
+      "use_effect": {
+        "energy": 75
+      },
+      "description": "鲜嫩多汁的烤鱼。"
+    },
+    {
+      "id": "sashimi",
+      "name": "生鱼片",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 200,
+      "usable": true,
+      "use_effect": {
+        "energy": 100
+      },
+      "description": "新鲜的生鱼片，保持原汁原味。"
+    },
+    {
+      "id": "pumpkin_pie",
+      "name": "南瓜派",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 300,
+      "usable": true,
+      "use_effect": {
+        "energy": 120
+      },
+      "description": "香甜的南瓜派，秋天特色美食。"
+    },
+    {
+      "id": "corn_on_cob",
+      "name": "煮玉米",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 45,
+      "usable": true,
+      "use_effect": {
+        "energy": 30
+      },
+      "description": "简单香甜的煮玉米。"
+    },
+    {
+      "id": "popcorn",
+      "name": "爆米花",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 60,
+      "usable": true,
+      "use_effect": {
+        "energy": 25
+      },
+      "description": "看电影必备的爆米花。"
+    },
+    {
+      "id": "cheese_plate",
+      "name": "奶酪拼盘",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 180,
+      "usable": true,
+      "use_effect": {
+        "energy": 100
+      },
+      "description": "精致的奶酪拼盘，恢复大量体力。"
+    },
+    {
+      "id": "farmers_breakfast",
+      "name": "农夫早餐",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 250,
+      "usable": true,
+      "use_effect": {
+        "energy": 150
+      },
+      "description": "丰盛的早餐，提供一整天的活力。"
+    },
+    {
+      "id": "fish_stew",
+      "name": "鱼汤",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 220,
+      "usable": true,
+      "use_effect": {
+        "energy": 130
+      },
+      "description": "温暖的鱼汤，适合寒冷的日子。"
+    },
+    {
+      "id": "grilled_vegetables",
+      "name": "烤蔬菜",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 170,
+      "usable": true,
+      "use_effect": {
+        "energy": 90
+      },
+      "description": "健康的烤蔬菜拼盘。"
+    },
+    {
+      "id": "omelet",
+      "name": "煎蛋卷",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 140,
+      "usable": true,
+      "use_effect": {
+        "energy": 100
+      },
+      "description": "松软的煎蛋卷，可以加入各种配料。"
+    },
+    {
+      "id": "vegetable_salad",
+      "name": "蔬菜沙拉",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 70,
+      "usable": true,
+      "use_effect": {
+        "energy": 40
+      },
+      "description": "清脆爽口的蔬菜沙拉。"
+    },
+    {
+      "id": "baked_fish",
+      "name": "烤鱼料理",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 350,
+      "usable": true,
+      "use_effect": {
+        "energy": 180
+      },
+      "description": "精心烤制的鱼肉料理。"
+    },
+    {
+      "id": "survival_burger",
+      "name": "生存汉堡",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 280,
+      "usable": true,
+      "use_effect": {
+        "energy": 200
+      },
+      "description": "超高热量的汉堡，冒险者必备。"
+    },
+    {
+      "id": "triple_shot_espresso",
+      "name": "三倍浓缩咖啡",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 120,
+      "usable": true,
+      "use_effect": {
+        "energy": 50
+      },
+      "description": "超强的提神饮料，让你不知疲倦。"
+    },
+    {
+      "id": "wheat",
+      "name": "小麦",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 0,
+      "sell_price": 20,
+      "description": "收获的小麦，可用于烘焙。"
+    },
+    {
+      "id": "coffee_beans",
+      "name": "咖啡豆",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 0,
+      "sell_price": 30,
+      "description": "烘焙过的咖啡豆，可以煮咖啡。"
+    },
+    {
+      "id": "copper_bar",
+      "name": "铜锭",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 60,
+      "sell_price": 30,
+      "description": "熔炼铜矿石得到的铜锭，用于制作各种物品。"
+    },
+    {
+      "id": "iron_bar",
+      "name": "铁锭",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 120,
+      "sell_price": 60,
+      "description": "熔炼铁矿石得到的铁锭，用于制作高级物品。"
+    },
+    {
+      "id": "gold_bar",
+      "name": "金锭",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 400,
+      "sell_price": 200,
+      "description": "熔炼金矿石得到的金锭，稀有且珍贵。"
+    },
+    {
+      "id": "wooden_fence",
+      "name": "木栅栏",
+      "type": "decoration",
+      "max_stack": 99,
+      "buy_price": 0,
+      "sell_price": 5,
+      "description": "用木材制作的简单栅栏，可用于围栏农场。"
+    },
+    {
+      "id": "chest",
+      "name": "木箱",
+      "type": "decoration",
+      "max_stack": 99,
+      "buy_price": 0,
+      "sell_price": 20,
+      "description": "用于存储物品的木箱，放置后可以扩展存储空间。"
+    },
+    {
+      "id": "stone_brick",
+      "name": "石砖",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 0,
+      "sell_price": 4,
+      "description": "加工过的石材，比普通石头更坚固美观。"
+    },
+    {
+      "id": "wooden_plank",
+      "name": "木板",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 0,
+      "sell_price": 3,
+      "description": "加工过的木材，建筑和制作的基础材料。"
+    },
+    {
+      "id": "copper_axe",
+      "name": "铜斧",
+      "type": "tool",
+      "max_stack": 1,
+      "buy_price": 200,
+      "sell_price": 100,
+      "description": "比基础斧头更耐用的铜制斧头。"
+    },
+    {
+      "id": "copper_pickaxe",
+      "name": "铜镐",
+      "type": "tool",
+      "max_stack": 1,
+      "buy_price": 200,
+      "sell_price": 100,
+      "description": "比基础镐子更耐用的铜制镐子，可以开采更坚硬的矿石。"
+    },
+    {
+      "id": "iron_axe",
+      "name": "铁斧",
+      "type": "tool",
+      "max_stack": 1,
+      "buy_price": 500,
+      "sell_price": 250,
+      "description": "坚固的铁制斧头，砍伐效率更高。"
+    },
+    {
+      "id": "iron_pickaxe",
+      "name": "铁镐",
+      "type": "tool",
+      "max_stack": 1,
+      "buy_price": 500,
+      "sell_price": 250,
+      "description": "坚固的铁制镐子，可以开采稀有矿石。"
+    },
+    {
+      "id": "sprinkler",
+      "name": "洒水器",
+      "type": "equipment",
+      "max_stack": 99,
+      "buy_price": 0,
+      "sell_price": 50,
+      "description": "自动浇灌周围4格的土地，每天早晨自动工作。"
+    },
+    {
+      "id": "quality_sprinkler",
+      "name": "优质洒水器",
+      "type": "equipment",
+      "max_stack": 99,
+      "buy_price": 0,
+      "sell_price": 150,
+      "description": "高级洒水器，可以浇灌周围8格的土地。"
+    },
+    {
+      "id": "scarecrow",
+      "name": "稻草人",
+      "type": "equipment",
+      "max_stack": 99,
+      "buy_price": 0,
+      "sell_price": 30,
+      "description": "防止乌鸦啄食作物，保护周围农作物。"
+    },
+    {
+      "id": "bee_house",
+      "name": "蜂箱",
+      "type": "equipment",
+      "max_stack": 99,
+      "buy_price": 0,
+      "sell_price": 80,
+      "description": "养殖蜜蜂，春季和夏季可以产出蜂蜜。"
+    },
+    {
+      "id": "mayonnaise_machine",
+      "name": "蛋黄酱机",
+      "type": "equipment",
+      "max_stack": 99,
+      "buy_price": 0,
+      "sell_price": 100,
+      "description": "将鸡蛋加工成蛋黄酱，提高售价。"
+    },
+    {
+      "id": "cheese_press",
+      "name": "奶酪机",
+      "type": "equipment",
+      "max_stack": 99,
+      "buy_price": 0,
+      "sell_price": 120,
+      "description": "将牛奶加工成奶酪，提高售价。"
+    },
+    {
+      "id": "furnace",
+      "name": "熔炉",
+      "type": "equipment",
+      "max_stack": 99,
+      "buy_price": 0,
+      "sell_price": 50,
+      "description": "用于熔炼矿石制作金属锭的基础设施。"
+    },
+    {
+      "id": "workbench",
+      "name": "工作台",
+      "type": "equipment",
+      "max_stack": 99,
+      "buy_price": 0,
+      "sell_price": 80,
+      "description": "基础制作设施，解锁更多制作配方。"
+    },
+    {
+      "id": "basic_fertilizer",
+      "name": "基础肥料",
+      "type": "resource",
+      "icon": "res://assets/sprites/items/quality_fertilizer.png",
+      "max_stack": 999,
+      "buy_price": 20,
+      "sell_price": 10,
+      "description": "提高作物品质的基础肥料。"
+    },
+    {
+      "id": "quality_fertilizer",
+      "name": "高级肥料",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 50,
+      "sell_price": 25,
+      "description": "大幅提高作物品质的高级肥料。"
+    },
+    {
+      "id": "flour",
+      "name": "面粉",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 30,
+      "sell_price": 15,
+      "description": "研磨小麦得到的面粉，烹饪的基础材料。"
+    },
+    {
+      "id": "roasted_fish",
+      "name": "烤鱼",
+      "type": "food",
+      "buy_price": 0,
+      "sell_price": 50,
+      "usable": true,
+      "use_effect": {
+        "energy": 30
+      },
+      "description": "新鲜烤制的鱼，美味可口。"
+    },
+    {
+      "id": "rope",
+      "name": "绳索",
+      "type": "resource",
+      "max_stack": 999,
+      "buy_price": 0,
+      "sell_price": 4,
+      "description": "用纤维编织的绳索，制作的基础材料。"
+    },
+    {
+      "id": "torch",
+      "name": "火把",
+      "type": "tool",
+      "icon": "res://assets/sprites/items/wood.png",
+      "max_stack": 99,
+      "buy_price": 0,
+      "sell_price": 5,
+      "description": "照明用火把，在黑暗中提供光源。"
+    },
+    {
+      "id": "fiber_seeds",
+      "name": "纤维种子",
+      "type": "seed",
+      "seasons": [
+        "spring",
+        "summer",
+        "fall"
+      ],
+      "growth_days": 3,
+      "crop_id": "fiber",
+      "buy_price": 0,
+      "sell_price": 5,
+      "description": "种植后可以收获纤维。"
+    },
+    {
+      "id": "honey",
+      "name": "蜂蜜",
+      "type": "artisan_good",
+      "buy_price": 0,
+      "sell_price": 40,
+      "usable": true,
+      "use_effect": {
+        "energy": 20
+      },
+      "description": "蜜蜂酿制的蜂蜜，甜美可口。"
+    },
+    {
+      "id": "fishing_rod",
+      "name": "鱼竿",
+      "type": "tool",
+      "max_stack": 1,
+      "description": "基础鱼竿，用于在水边钓鱼。"
+    },
+    {
+      "id": "carp",
+      "name": "鲤鱼",
+      "type": "fish",
+      "buy_price": 0,
+      "sell_price": 30,
+      "usable": true,
+      "use_effect": {
+        "energy": 13
+      },
+      "description": "常见的淡水鱼，适应力强。"
+    },
+    {
+      "id": "bass",
+      "name": "鲈鱼",
+      "type": "fish",
+      "buy_price": 0,
+      "sell_price": 50,
+      "usable": true,
+      "use_effect": {
+        "energy": 18
+      },
+      "description": "淡水中的掠食者，肉质鲜美。"
+    },
+    {
+      "id": "salmon",
+      "name": "三文鱼",
+      "type": "fish",
+      "buy_price": 0,
+      "sell_price": 80,
+      "usable": true,
+      "use_effect": {
+        "energy": 25
+      },
+      "description": "洄游鱼类，营养价值极高。"
+    },
+    {
+      "id": "tuna",
+      "name": "金枪鱼",
+      "type": "fish",
+      "buy_price": 0,
+      "sell_price": 150,
+      "usable": true,
+      "use_effect": {
+        "energy": 35
+      },
+      "description": "深海中的游泳健将，肉质紧实。"
+    },
+    {
+      "id": "sardine",
+      "name": "沙丁鱼",
+      "type": "fish",
+      "buy_price": 0,
+      "sell_price": 20,
+      "usable": true,
+      "use_effect": {
+        "energy": 8
+      },
+      "description": "小型海鱼，常成群出现。"
+    },
+    {
+      "id": "catfish",
+      "name": "鲶鱼",
+      "type": "fish",
+      "buy_price": 0,
+      "sell_price": 70,
+      "usable": true,
+      "use_effect": {
+        "energy": 20
+      },
+      "description": "底栖鱼类，喜欢浑浊的水域。"
+    },
+    {
+      "id": "pufferfish",
+      "name": "河豚",
+      "type": "fish",
+      "buy_price": 0,
+      "sell_price": 120,
+      "usable": true,
+      "use_effect": {
+        "energy": 15
+      },
+      "description": "受到惊吓会鼓起来的奇特鱼类。"
+    },
+    {
+      "id": "anglerfish",
+      "name": "鮟鱇鱼",
+      "type": "fish",
+      "buy_price": 0,
+      "sell_price": 300,
+      "usable": true,
+      "use_effect": {
+        "energy": 40
+      },
+      "description": "深海怪鱼，头顶有发光的诱饵。"
+    },
+    {
+      "id": "goldfish",
+      "name": "金鱼",
+      "type": "fish",
+      "buy_price": 0,
+      "sell_price": 60,
+      "usable": true,
+      "use_effect": {
+        "energy": 5
+      },
+      "description": "观赏鱼类，色彩鲜艳。"
+    },
+    {
+      "id": "icefish",
+      "name": "冰鱼",
+      "type": "fish",
+      "buy_price": 0,
+      "sell_price": 180,
+      "usable": true,
+      "use_effect": {
+        "energy": 30
+      },
+      "description": "生活在冰冷海域的珍稀鱼类。"
+    },
+    {
+      "id": "eel",
+      "name": "鳗鱼",
+      "type": "fish",
+      "buy_price": 0,
+      "sell_price": 90,
+      "usable": true,
+      "use_effect": {
+        "energy": 22
+      },
+      "description": "滑溜溜的长条鱼，夜间活动。"
+    },
+    {
+      "id": "rainbow_trout",
+      "name": "虹鳟鱼",
+      "type": "fish",
+      "buy_price": 0,
+      "sell_price": 130,
+      "usable": true,
+      "use_effect": {
+        "energy": 28
+      },
+      "description": "色彩斑斓的美丽鱼类，味道鲜美。"
+    },
+    {
+      "id": "pork",
+      "name": "猪肉",
+      "type": "animal_product",
+      "buy_price": 0,
+      "sell_price": 80,
+      "usable": true,
+      "use_effect": {
+        "energy": 20
+      },
+      "description": "猪产下的新鲜猪肉，营养丰富。"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+[gd_resource type="TileSet" format=3]
+
+[ext_resource type="Texture2D" path="res://assets/tiles/beach_tiles.png" id="1_7gpln"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_sw4hr"]
+texture = ExtResource("1_7gpln")
+0:0/0 = 0
+1:0/0 = 0
+2:0/0 = 0
+3:0/0 = 0
+54:3/0 = 0
+55:3/0 = 0
+56:3/0 = 0
+57:3/0 = 0
+58:3/0 = 0
+59:3/0 = 0
+10:0/0 = 0
+11:0/0 = 0
+12:0/0 = 0
+13:0/0 = 0
+14:0/0 = 0
+15:0/0 = 0
+16:0/0 = 0
+17:0/0 = 0
+18:0/0 = 0
+
+[resource]
+resource_name = "beach_tiles"
+sources/0 = SubResource("TileSetAtlasSource_sw4hr")

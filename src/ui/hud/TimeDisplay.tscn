@@ -1,0 +1,30 @@
+[gd_scene load_steps=2 format=3 uid="uid://c8t7q3h2v9wxy"]
+
+[ext_resource type="Script" path="res://src/ui/hud/TimeDisplay.gd" id="1_time_display"]
+
+[node name="TimeDisplay" type="Control"]
+layout_mode = 3
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -200.0
+offset_bottom = 60.0
+grow_horizontal = 0
+script = ExtResource("1_time_display")
+
+[node name="TimeLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 0
+offset_right = 200.0
+offset_bottom = 30.0
+text = "6:00 AM"
+horizontal_alignment = 2
+
+[node name="DateLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 0
+offset_top = 30.0
+offset_right = 200.0
+offset_bottom = 60.0
+text = "Year 1, Spring 1"
+horizontal_alignment = 2

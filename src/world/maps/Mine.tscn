@@ -1,0 +1,95 @@
+[gd_scene load_steps=8 format=3 uid="uid://mine_scene_001"]
+
+[ext_resource type="Script" path="res://src/world/maps/Mine.gd" id="1_mine"]
+[ext_resource type="PackedScene" uid="uid://dp5y8hqm2x8nr" path="res://src/entities/player/Player.tscn" id="2_player"]
+[ext_resource type="Script" path="res://src/world/transitions/SceneTransition.gd" id="3_transition"]
+[ext_resource type="PackedScene" path="res://src/entities/tools/Pickaxe.tscn" id="4_pickaxe"]
+[ext_resource type="PackedScene" path="res://src/world/objects/Ore.tscn" id="5_ore"]
+[ext_resource type="PackedScene" path="res://src/world/maps/content/MineMap.tscn" id="6_map"]
+
+[sub_resource type="TileSet" id="TileSet_mine"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ladder"]
+size = Vector2(32, 32)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_exit"]
+size = Vector2(64, 32)
+
+[node name="Mine" type="Node2D"]
+script = ExtResource("1_mine")
+
+[node name="MineMap" parent="." instance=ExtResource("6_map")]
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+position = Vector2(400, 300)
+
+[node name="Ladders" type="Node2D" parent="."]
+
+[node name="LadderUp" type="Area2D" parent="Ladders"]
+position = Vector2(100, 300)
+collision_layer = 2
+collision_mask = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ladders/LadderUp"]
+shape = SubResource("RectangleShape2D_ladder")
+
+[node name="Sprite2D" type="Sprite2D" parent="Ladders/LadderUp"]
+modulate = Color(0.4, 0.2, 0.1, 1)
+scale = Vector2(1, 2)
+
+[node name="LadderDown" type="Area2D" parent="Ladders"]
+position = Vector2(700, 300)
+collision_layer = 2
+collision_mask = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ladders/LadderDown"]
+shape = SubResource("RectangleShape2D_ladder")
+
+[node name="Sprite2D" type="Sprite2D" parent="Ladders/LadderDown"]
+modulate = Color(0.4, 0.2, 0.1, 1)
+scale = Vector2(1, 2)
+
+[node name="ExitArea" type="Area2D" parent="Ladders"]
+position = Vector2(50, 300)
+collision_layer = 2
+collision_mask = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Ladders/ExitArea"]
+shape = SubResource("RectangleShape2D_exit")
+
+[node name="Ores" type="Node2D" parent="."]
+
+[node name="SceneTransition" type="CanvasLayer" parent="."]
+script = ExtResource("3_transition")
+
+[node name="Walls" type="Node2D" parent="."]
+
+[node name="TopWall" type="StaticBody2D" parent="Walls"]
+position = Vector2(400, 20)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/TopWall"]
+shape = SubResource("RectangleShape2D_exit")
+
+[node name="BottomWall" type="StaticBody2D" parent="Walls"]
+position = Vector2(400, 580)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Walls/BottomWall"]
+shape = SubResource("RectangleShape2D_exit")
+
+[node name="Lighting" type="Node2D" parent="."]
+
+[node name="AmbientLight" type="PointLight2D" parent="Lighting"]
+position = Vector2(400, 300)
+color = Color(0.6, 0.5, 0.4, 1)
+energy = 0.5
+shadow_enabled = true
+
+[node name="PlayerLight" type="PointLight2D" parent="Lighting"]
+color = Color(1, 0.9, 0.7, 1)
+energy = 0.8
+texture = null
+texture_scale = 2.0

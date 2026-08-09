@@ -1,0 +1,74 @@
+[gd_scene load_steps=7 format=3 uid="uid://playerhouse001"]
+
+[ext_resource type="Script" path="res://src/world/maps/PlayerHouse.gd" id="1_house"]
+[ext_resource type="PackedScene" uid="uid://dp5y8hqm2x8nr" path="res://src/entities/player/Player.tscn" id="2_player"]
+[ext_resource type="Script" path="res://src/world/transitions/SceneTransition.gd" id="3_transition"]
+[ext_resource type="PackedScene" path="res://src/world/objects/Kitchen.tscn" id="4_kitchen"]
+[ext_resource type="PackedScene" path="res://src/world/maps/content/PlayerHouseMap.tscn" id="5_map"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_toexit"]
+size = Vector2(64, 32)
+
+[sub_resource type="TileSet" id="TileSet_house"]
+
+[node name="PlayerHouse" type="Node2D"]
+script = ExtResource("1_house")
+
+[node name="PlayerHouseMap" parent="." instance=ExtResource("5_map")]
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+position = Vector2(400, 300)
+
+[node name="ExitArea" type="Area2D" parent="."]
+position = Vector2(400, 450)
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="ExitArea"]
+shape = SubResource("RectangleShape2D_toexit")
+
+[node name="FurnitureContainer" type="Node2D" parent="."]
+
+[node name="BedPosition" type="Marker2D" parent="FurnitureContainer"]
+position = Vector2(200, 200)
+
+[node name="TablePosition" type="Marker2D" parent="FurnitureContainer"]
+position = Vector2(400, 200)
+
+[node name="ChestPosition" type="Marker2D" parent="FurnitureContainer"]
+position = Vector2(600, 200)
+
+[node name="KitchenPosition" type="Marker2D" parent="FurnitureContainer"]
+position = Vector2(200, 350)
+
+[node name="DecorPosition1" type="Marker2D" parent="FurnitureContainer"]
+position = Vector2(350, 150)
+
+[node name="DecorPosition2" type="Marker2D" parent="FurnitureContainer"]
+position = Vector2(450, 150)
+
+[node name="RoomExtensions" type="Node2D" parent="."]
+
+[node name="SceneTransition" type="CanvasLayer" parent="."]
+script = ExtResource("3_transition")
+
+[node name="InteractionZones" type="Node2D" parent="."]
+
+[node name="Kitchen" parent="InteractionZones" instance=ExtResource("4_kitchen")]
+position = Vector2(200, 435)
+
+[node name="BedZone" type="Area2D" parent="InteractionZones"]
+position = Vector2(200, 235)
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractionZones/BedZone"]
+shape = SubResource("RectangleShape2D_toexit")
+
+[node name="UpgradeStation" type="Area2D" parent="InteractionZones"]
+position = Vector2(600, 445)
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractionZones/UpgradeStation"]
+shape = SubResource("RectangleShape2D_toexit")

@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3 uid="uid://ch8x7qm2hoe_tool"]
+
+[ext_resource type="Script" path="res://src/entities/tools/Hoe.gd" id="1_hoe"]
+[ext_resource type="Texture2D" path="res://assets/sprites/tools/hoe.png" id="2_sprite"]
+
+[node name="Hoe" type="Node2D"]
+script = ExtResource("1_hoe")
+tool_name = "锄头"
+energy_cost = 2
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(1, 1)
+texture = ExtResource("2_sprite")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]

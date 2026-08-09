@@ -1,0 +1,4 @@
+[gd_scene format=3 uid="uid://cbiu24bomtevv"]
+
+[node name="FestivalActivityButton" type="Button"]
+text = "活动名称"

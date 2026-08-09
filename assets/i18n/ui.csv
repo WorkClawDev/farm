@@ -1,0 +1,140 @@
+keys,en,zh_CN
+ui.game.title,Pastoral Tales,田园物语
+ui.game.subtitle,Pastoral Tales,Pastoral Tales
+ui.main.continue,Continue,继续游戏
+ui.main.new_game,New Farm,创建农场
+ui.main.load,Load,读取进度
+ui.main.settings,Settings,设置
+ui.main.credits,Credits,制作人员
+ui.main.quit,Quit,退出游戏
+ui.main.version,Version 0.3 · UI Renewal,版本 0.3 · 界面焕新
+ui.main.latest_save,Latest farm,最近的农场
+ui.main.no_save,No farm yet,还没有农场记录
+ui.common.confirm,Confirm,确认
+ui.common.cancel,Cancel,取消
+ui.common.close,Close,关闭
+ui.common.back,Back,返回
+ui.common.apply,Apply,应用
+ui.common.reset,Reset,恢复默认
+ui.common.yes,Yes,是
+ui.common.no,No,否
+ui.common.empty,Nothing here yet,这里暂时没有内容
+ui.common.search,Search,搜索
+ui.confirm.title,Please confirm,请确认
+ui.confirm.message,Continue with this action?,确定继续吗？
+ui.save.title.save,Save Farm,保存农场
+ui.save.title.load,Load Farm,读取农场
+ui.save.title.new,Choose a Farm Slot,选择农场位置
+ui.save.slot,Slot {slot},农场 {slot}
+ui.save.empty,Create a new farm,创建新农场
+ui.save.corrupt,This save cannot be read,这个存档暂时无法读取
+ui.save.overwrite_title,Overwrite farm?,覆盖现有农场？
+ui.save.overwrite_message,The previous farm in slot {slot} will be replaced. This cannot be undone.,农场 {slot} 的原有进度将被替换，此操作无法撤销。
+ui.save.delete_title,Delete farm?,删除这个农场？
+ui.save.delete_message,Delete the farm in slot {slot}? The original file cannot be recovered.,确定删除农场 {slot} 吗？原始文件将无法恢复。
+ui.save.delete,Delete,删除
+ui.save.play_time,Play time {time},游玩 {time}
+ui.save.saved_at,Saved {time},保存于 {time}
+ui.save.unknown_time,Unknown time,时间未知
+ui.save.location,Location: {location},地点：{location}
+ui.save.money,Money: {money}G,金币：{money}G
+ui.save.success,Farm saved,农场已保存
+ui.save.failed,Save failed. The old file was kept.,保存失败，旧存档已保留
+ui.save.load_failed,This farm could not be loaded. The file was kept.,无法读取这个农场，原文件已保留
+ui.save.deleted,Farm deleted,农场已删除
+ui.settings.title,Settings,设置
+ui.settings.audio,Audio,声音
+ui.settings.display,Display,显示
+ui.settings.controls,Controls,操作
+ui.settings.accessibility,Accessibility,辅助功能
+ui.settings.master_volume,Master Volume,主音量
+ui.settings.music_volume,Music Volume,音乐音量
+ui.settings.sfx_volume,Sound Effects,音效音量
+ui.settings.window_mode,Window Mode,窗口模式
+ui.settings.windowed,Windowed,窗口
+ui.settings.fullscreen,Fullscreen,全屏
+ui.settings.borderless,Borderless Fullscreen,无边框全屏
+ui.settings.resolution,Resolution,分辨率
+ui.settings.vsync,Vertical Sync,垂直同步
+ui.settings.ui_scale,UI Scale,界面缩放
+ui.settings.high_contrast,High Contrast,高对比模式
+ui.settings.reduce_motion,Reduce Motion,减少动态
+ui.settings.text_speed,Text Speed,文字速度
+ui.settings.show_hints,Context Hints,情境提示
+ui.settings.gamepad_icons,Controller Icons,手柄图标
+ui.settings.remap_hint,Select an action to remap it. Conflicting bindings are rejected.,选择操作后按下新按键；有冲突时不会保存。
+ui.settings.saved,Settings saved,设置已保存
+ui.settings.reset_title,Reset settings?,恢复默认设置？
+ui.settings.reset_message,All interface and control settings will return to their defaults.,所有界面与操作设置将恢复默认值。
+ui.pause.title,Paused,农场小憩
+ui.pause.resume,Resume,继续
+ui.pause.save,Save,保存
+ui.pause.load,Load,读取
+ui.pause.settings,Settings,设置
+ui.pause.menu,Main Menu,返回主菜单
+ui.pause.quit,Quit Game,退出游戏
+ui.pause.menu_confirm,Return to the main menu? Unsaved progress will be lost.,返回主菜单吗？未保存的进度会丢失。
+ui.pause.quit_confirm,Quit the game? Unsaved progress will be lost.,退出游戏吗？未保存的进度会丢失。
+ui.journal.title,Farm Journal,农场手册
+ui.journal.inventory,Backpack,背包
+ui.journal.quests,Quests,任务
+ui.journal.map,Map,地图
+ui.journal.relationships,Friends,关系
+ui.journal.skills,Skills,技能
+ui.journal.crafting,Crafting,制作
+ui.journal.collection,Collection,收藏
+ui.journal.achievements,Achievements,成就
+ui.journal.inventory_empty,Your backpack is empty.,背包里还没有物品
+ui.journal.sort,Sort,整理
+ui.journal.money,Money,金币
+ui.journal.item_detail,Select an item to view its details.,选择物品查看详情
+ui.journal.quest_empty,No active quests. Enjoy the day at your own pace.,当前没有任务，按自己的节奏享受今天吧
+ui.journal.map_hint,The hand-drawn valley map marks the places you have visited.,绘制中的山谷地图会标记你去过的地点
+ui.journal.relationship_hint,Meet villagers to record friendships and gift discoveries.,认识村民后，这里会记录关系与礼物线索
+ui.journal.skills_hint,Work around the farm to grow your skills.,在农场生活中积累经验，提升各项技能
+ui.journal.crafting_hint,Recipes and available materials are collected here.,配方与可用材料会整理在这里
+ui.journal.collection_hint,Every discovered crop fish and mineral becomes a page in your collection.,发现过的作物、鱼类与矿物都会记入收藏
+ui.journal.achievement_hint,Milestones and rewards from your farm life.,记录农场生活中的里程碑与奖励
+ui.hud.spring,Spring,春
+ui.hud.summer,Summer,夏
+ui.hud.autumn,Autumn,秋
+ui.hud.winter,Winter,冬
+ui.hud.day,Day {day},第 {day} 天
+ui.hud.money,{money} G,{money} 金
+ui.hud.stamina,Stamina {current}/{maximum},体力 {current}/{maximum}
+ui.hud.quest,Current task,当前任务
+ui.hud.hint.keyboard,{interact} Interact  ·  {journal} Journal  ·  {pause} Pause,{interact} 互动  ·  {journal} 手册  ·  {pause} 暂停
+ui.hud.hint.gamepad,{interact} Interact  ·  {journal} Journal  ·  {pause} Pause,{interact} 互动  ·  {journal} 手册  ·  {pause} 暂停
+ui.dialog.history,History,记录
+ui.dialog.skip,Show all,显示全文
+ui.shop.title,Farm Shop,农场商店
+ui.shop.buy,Buy,购买
+ui.shop.sell,Sell,出售
+ui.shop.owned,Owned {count},持有 {count}
+ui.shop.balance,Balance {money}G,余额 {money}G
+ui.shop.insufficient,Not enough money,金币不足
+ui.shipping.title,Farm Shipping Bin,农场出货箱
+ui.shipping.subtitle,Items are sold the next morning. You can take them back before sleeping.,放入的物品会在次日清晨结算；睡觉前可以随时取回。
+ui.shipping.inventory,Sellable Backpack Items,背包中的可售物品
+ui.shipping.inventory_hint,Quest items and items without a sell price are hidden.,任务物品和无售价物品不会显示。
+ui.shipping.contents,Tonight's Shipment,今晚的出货
+ui.shipping.done,Done,完成
+ui.shipping.summary,Estimated {money}G · {count} items,预计收入 {money} 金 · 共 {count} 件
+ui.shipping.capacity,{used}/{max} slots,{used}/{max} 格
+ui.shipping.no_sellable,There is nothing sellable in your backpack.,背包里暂时没有可以出货的物品。
+ui.shipping.empty,The bin is empty. Add today's harvest here.,出货箱还是空的。把今天的收获放进来吧。
+ui.shipping.deposit_one,Deposit 1,放入 1 个
+ui.shipping.deposit_five,Deposit up to 5,放入最多 5 个
+ui.shipping.all,All,全部
+ui.shipping.take_one,Take 1,取回 1
+ui.shipping.take_all,Take All,全部取回
+ui.shipping.unit_price,Unit price {price}G,单价 {price} 金
+ui.shipping.full,The shipping bin cannot hold that many items.,出货箱装不下这么多物品
+ui.shipping.deposited,Shipped {item} × {count},已放入 {item} × {count}
+ui.toast.inventory_full,Backpack is full,背包已满
+ui.toast.money_low,Not enough money,金币不足
+ui.toast.item_received,Received {item} × {count},获得 {item} × {count}
+ui.toast.quest_complete,Quest complete: {quest},任务完成：{quest}
+ui.error.screen_missing,Screen unavailable: {screen},界面暂时无法打开：{screen}
+ui.credits.title,Credits,制作人员
+ui.credits.body,Design and development by the Pastoral Tales team. Thank you for visiting this valley.,《田园物语》团队设计与开发。感谢你来到这片山谷。

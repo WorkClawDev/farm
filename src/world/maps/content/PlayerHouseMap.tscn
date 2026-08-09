@@ -1,0 +1,357 @@
+[gd_scene format=4]
+
+[ext_resource type="Script" path="res://src/world/map_editor/EditableMap2D.gd" id="1_jmpjt"]
+[ext_resource type="Script" path="res://src/world/map_editor/MapAssetEntry.gd" id="2_jq7jv"]
+[ext_resource type="Script" path="res://src/world/map_editor/MapAssetLibrary.gd" id="3_4q5gf"]
+[ext_resource type="Script" path="res://src/world/map_editor/CollisionPreset.gd" id="4_q76c7"]
+[ext_resource type="Script" path="res://src/world/map_editor/MapLayerSpec.gd" id="5_103uo"]
+[ext_resource type="Texture2D" path="res://assets/tiles/indoors_tiles.png" id="6_xo0bh"]
+[ext_resource type="Script" path="res://src/world/map_editor/MapProfile.gd" id="7_q0iai"]
+[ext_resource type="Script" path="res://src/world/map_editor/MapTileLayer.gd" id="8_y7iec"]
+[ext_resource type="Script" path="res://src/world/map_editor/MapLayer2D.gd" id="9_kgi6t"]
+[ext_resource type="Script" path="res://src/world/maps/IllustratedMapBackdrop.gd" id="10_c7wmu"]
+[ext_resource type="Script" path="res://src/world/map_editor/MapCollisionBody2D.gd" id="11_k8gbm"]
+[ext_resource type="Script" path="res://src/world/map_editor/MapMarker2D.gd" id="12_6jm42"]
+
+[sub_resource type="Resource" id="Resource_erb3q"]
+script = ExtResource("3_4q5gf")
+
+[sub_resource type="Resource" id="Resource_phdtj"]
+script = ExtResource("4_q76c7")
+preset_id = &"world_solid"
+display_name = "World Solid"
+
+[sub_resource type="Resource" id="Resource_xafci"]
+script = ExtResource("5_103uo")
+layer_id = &"ground"
+display_name = "Ground"
+required = true
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_fqmr8"]
+script = ExtResource("5_103uo")
+layer_id = &"terrain_overlay"
+display_name = "Terrain Overlay"
+default_z_index = 1
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_tx33r"]
+script = ExtResource("5_103uo")
+layer_id = &"decoration"
+display_name = "Decoration"
+kind = 1
+default_z_index = 2
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_2ge51"]
+script = ExtResource("5_103uo")
+layer_id = &"objects"
+display_name = "Objects"
+kind = 2
+required = true
+default_z_index = 10
+y_sort = true
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_46r0w"]
+script = ExtResource("5_103uo")
+layer_id = &"collision"
+display_name = "Collision"
+kind = 3
+required = true
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_ur4p4"]
+script = ExtResource("5_103uo")
+layer_id = &"markers"
+display_name = "Markers"
+kind = 4
+required = true
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_jc5v3"]
+texture = ExtResource("6_xo0bh")
+1:0/0 = 0
+0:0/0 = 0
+57:3/0 = 0
+3:0/0 = 0
+4:0/0 = 0
+18:0/0 = 0
+22:0/0 = 0
+44:1/0 = 0
+10:0/0 = 0
+32:1/0 = 0
+54:2/0 = 0
+16:0/0 = 0
+17:0/0 = 0
+19:0/0 = 0
+20:0/0 = 0
+21:0/0 = 0
+23:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_c271d"]
+resource_name = "indoors_tiles"
+sources/0 = SubResource("TileSetAtlasSource_jc5v3")
+
+[sub_resource type="Resource" id="Resource_iqrj4"]
+script = ExtResource("7_q0iai")
+profile_id = &"player_house"
+display_name = "Player House"
+default_size = Vector2i(12, 7)
+primary_tileset = SubResource("TileSet_c271d")
+layer_specs = Array[ExtResource("5_103uo")]([SubResource("Resource_xafci"), SubResource("Resource_fqmr8"), SubResource("Resource_tx33r"), SubResource("Resource_2ge51"), SubResource("Resource_46r0w"), SubResource("Resource_ur4p4")])
+asset_library = SubResource("Resource_erb3q")
+collision_presets = Array[ExtResource("4_q76c7")]([SubResource("Resource_phdtj")])
+required_marker_ids = PackedStringArray("player_spawn")
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_m5473"]
+size = Vector2(710, 38)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_0wiu2"]
+size = Vector2(25, 440)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_oekn1"]
+size = Vector2(25, 440)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_eq77x"]
+size = Vector2(320, 32)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ex7p6"]
+size = Vector2(320, 32)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_idxjv"]
+size = Vector2(150, 92)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_1g7kg"]
+size = Vector2(140, 64)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_xpgvo"]
+size = Vector2(105, 82)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_52ar5"]
+size = Vector2(105, 98)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_is1vl"]
+size = Vector2(115, 125)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_ft6yh"]
+size = Vector2(768, 48)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_cpsux"]
+size = Vector2(768, 48)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_p64kg"]
+size = Vector2(48, 448)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_8f00c"]
+size = Vector2(48, 448)
+
+[node name="PlayerHouseMap" type="Node2D" unique_id=1432146992]
+position = Vector2(45, 50)
+script = ExtResource("1_jmpjt")
+map_id = &"player_house"
+display_name = "Player House"
+size_in_tiles = Vector2i(12, 7)
+profile = SubResource("Resource_iqrj4")
+
+[node name="Ground" type="TileMapLayer" parent="." unique_id=1708454787]
+visible = false
+scale = Vector2(4, 4)
+tile_map_data = PackedByteArray("AAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAACAAAAAAAAAAAAAAADAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAFAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAAHAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAJAAAAAAAAAAAAAAAKAAAAAAAAAAAAAAALAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAABAAEAAAAAAAAAAAACAAEAAAAAAAAAAAADAAEAAAAAAAAAAAAEAAEAAAAAAAAAAAAFAAEAAAAAAAAAAAAGAAEAAAAAAAAAAAAHAAEAAAAAAAAAAAAIAAEAAAAAAAAAAAAJAAEAAAAAAAAAAAAKAAEAAAAAAAAAAAALAAEAAAAAAAAAAAAAAAIAAAAAAAAAAAABAAIAAAAAAAAAAAACAAIAAAAAAAAAAAADAAIAAAAAAAAAAAAEAAIAAAAAAAAAAAAFAAIAAAAAAAAAAAAGAAIAAAAAAAAAAAAHAAIAAAAAAAAAAAAIAAIAAAAAAAAAAAAJAAIAAAAAAAAAAAAKAAIAAAAAAAAAAAALAAIAAAAAAAAAAAAAAAMAAAAAAAAAAAABAAMAAAAAAAAAAAACAAMAAAAAAAAAAAADAAMAAAAAAAAAAAAEAAMAAAAAAAAAAAAFAAMAAAAAAAAAAAAGAAMAAAAAAAAAAAAHAAMAAAAAAAAAAAAIAAMAAAAAAAAAAAAJAAMAAAAAAAAAAAAKAAMAAAAAAAAAAAALAAMAAAAAAAAAAAAAAAQAAAAAAAAAAAABAAQAAAAAAAAAAAACAAQAAAAAAAAAAAADAAQAAAAAAAAAAAAEAAQAAAAAAAAAAAAFAAQAAAAAAAAAAAAGAAQAAAAAAAAAAAAHAAQAAAAAAAAAAAAIAAQAAAAAAAAAAAAJAAQAAAAAAAAAAAAKAAQAAAAAAAAAAAALAAQAAAAAAAAAAAAAAAUAAAAAAAAAAAABAAUAAAAAAAAAAAACAAUAAAAAAAAAAAADAAUAAAAAAAAAAAAEAAUAAAAAAAAAAAAFAAUAAAAAAAAAAAAGAAUAAAAAAAAAAAAHAAUAAAAAAAAAAAAIAAUAAAAAAAAAAAAJAAUAAAAAAAAAAAAKAAUAAAAAAAAAAAALAAUAAAAAAAAAAAAAAAYAAAAAAAAAAAABAAYAAAAAAAAAAAACAAYAAAAAAAAAAAADAAYAAAAAAAAAAAAEAAYAAAAAAAAAAAAFAAYAAAAAAAAAAAAGAAYAAAAAAAAAAAAHAAYAAAAAAAAAAAAIAAYAAAAAAAAAAAAJAAYAAAAAAAAAAAAKAAYAAAAAAAAAAAALAAYAAAAAAAAAAAA=")
+tile_set = SubResource("TileSet_c271d")
+script = ExtResource("8_y7iec")
+layer_id = &"ground"
+
+[node name="TerrainOverlay" type="TileMapLayer" parent="." unique_id=1690828606]
+visible = false
+z_index = 1
+scale = Vector2(4, 4)
+tile_set = SubResource("TileSet_c271d")
+script = ExtResource("8_y7iec")
+layer_id = &"terrain_overlay"
+
+[node name="Decoration" type="Node2D" parent="." unique_id=1036051525]
+z_index = 2
+script = ExtResource("9_kgi6t")
+layer_id = &"decoration"
+layer_kind = 1
+
+[node name="IllustratedBackdrop" type="Node2D" parent="Decoration" unique_id=903316693]
+z_index = -100
+position = Vector2(-45, -50)
+script = ExtResource("10_c7wmu")
+map_style = "house"
+
+[node name="Objects" type="Node2D" parent="." unique_id=1806164187]
+z_index = 10
+y_sort_enabled = true
+script = ExtResource("9_kgi6t")
+layer_id = &"objects"
+
+[node name="Collision" type="Node2D" parent="." unique_id=1871724149]
+script = ExtResource("9_kgi6t")
+layer_id = &"collision"
+layer_kind = 3
+
+[node name="HouseTopWall" type="StaticBody2D" parent="Collision" unique_id=1262095229]
+position = Vector2(355, 19)
+collision_mask = 0
+script = ExtResource("11_k8gbm")
+preset = SubResource("Resource_phdtj")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collision/HouseTopWall" unique_id=1440900414]
+shape = SubResource("RectangleShape2D_m5473")
+
+[node name="HouseLeftWall" type="StaticBody2D" parent="Collision" unique_id=2020131781]
+position = Vector2(12.5, 220)
+collision_mask = 0
+script = ExtResource("11_k8gbm")
+preset = SubResource("Resource_phdtj")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collision/HouseLeftWall" unique_id=756566286]
+shape = SubResource("RectangleShape2D_0wiu2")
+
+[node name="HouseRightWall" type="StaticBody2D" parent="Collision" unique_id=1010758507]
+position = Vector2(697.5, 220)
+collision_mask = 0
+script = ExtResource("11_k8gbm")
+preset = SubResource("Resource_phdtj")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collision/HouseRightWall" unique_id=1677433445]
+shape = SubResource("RectangleShape2D_oekn1")
+
+[node name="HouseBottomWallLeft" type="StaticBody2D" parent="Collision" unique_id=130329244]
+position = Vector2(160, 424)
+collision_mask = 0
+script = ExtResource("11_k8gbm")
+preset = SubResource("Resource_phdtj")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collision/HouseBottomWallLeft" unique_id=1954295897]
+shape = SubResource("RectangleShape2D_eq77x")
+
+[node name="HouseBottomWallRight" type="StaticBody2D" parent="Collision" unique_id=17726263]
+position = Vector2(550, 424)
+collision_mask = 0
+script = ExtResource("11_k8gbm")
+preset = SubResource("Resource_phdtj")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collision/HouseBottomWallRight" unique_id=1301636571]
+shape = SubResource("RectangleShape2D_ex7p6")
+
+[node name="Bed" type="StaticBody2D" parent="Collision" unique_id=195698412]
+position = Vector2(155, 116)
+collision_mask = 0
+script = ExtResource("11_k8gbm")
+preset = SubResource("Resource_phdtj")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collision/Bed" unique_id=117109167]
+shape = SubResource("RectangleShape2D_idxjv")
+
+[node name="Table" type="StaticBody2D" parent="Collision" unique_id=235219394]
+position = Vector2(380, 107)
+collision_mask = 0
+script = ExtResource("11_k8gbm")
+preset = SubResource("Resource_phdtj")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collision/Table" unique_id=2075790552]
+shape = SubResource("RectangleShape2D_1g7kg")
+
+[node name="Chest" type="StaticBody2D" parent="Collision" unique_id=1084217215]
+position = Vector2(602.5, 111)
+collision_mask = 0
+script = ExtResource("11_k8gbm")
+preset = SubResource("Resource_phdtj")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collision/Chest" unique_id=1913955529]
+shape = SubResource("RectangleShape2D_xpgvo")
+
+[node name="Stove" type="StaticBody2D" parent="Collision" unique_id=1423840067]
+position = Vector2(152.5, 314)
+collision_mask = 0
+script = ExtResource("11_k8gbm")
+preset = SubResource("Resource_phdtj")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collision/Stove" unique_id=651416725]
+shape = SubResource("RectangleShape2D_52ar5")
+
+[node name="Fireplace" type="StaticBody2D" parent="Collision" unique_id=505118411]
+position = Vector2(602.5, 312.5)
+collision_mask = 0
+script = ExtResource("11_k8gbm")
+preset = SubResource("Resource_phdtj")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collision/Fireplace" unique_id=437712632]
+shape = SubResource("RectangleShape2D_is1vl")
+
+[node name="NorthBoundary" type="StaticBody2D" parent="Collision" unique_id=1869042905]
+position = Vector2(384, -24)
+collision_mask = 0
+script = ExtResource("11_k8gbm")
+preset = SubResource("Resource_phdtj")
+is_world_boundary = true
+boundary_side = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collision/NorthBoundary" unique_id=1052490386]
+shape = SubResource("RectangleShape2D_ft6yh")
+
+[node name="SouthBoundary" type="StaticBody2D" parent="Collision" unique_id=267020482]
+position = Vector2(384, 472)
+collision_mask = 0
+script = ExtResource("11_k8gbm")
+preset = SubResource("Resource_phdtj")
+is_world_boundary = true
+boundary_side = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collision/SouthBoundary" unique_id=128489296]
+shape = SubResource("RectangleShape2D_cpsux")
+
+[node name="WestBoundary" type="StaticBody2D" parent="Collision" unique_id=235922995]
+position = Vector2(-24, 224)
+collision_mask = 0
+script = ExtResource("11_k8gbm")
+preset = SubResource("Resource_phdtj")
+is_world_boundary = true
+boundary_side = 3
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collision/WestBoundary" unique_id=681937758]
+shape = SubResource("RectangleShape2D_p64kg")
+
+[node name="EastBoundary" type="StaticBody2D" parent="Collision" unique_id=1444906774]
+position = Vector2(792, 224)
+collision_mask = 0
+script = ExtResource("11_k8gbm")
+preset = SubResource("Resource_phdtj")
+is_world_boundary = true
+boundary_side = 4
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Collision/EastBoundary" unique_id=1601126594]
+shape = SubResource("RectangleShape2D_8f00c")
+
+[node name="Markers" type="Node2D" parent="." unique_id=1554935507]
+script = ExtResource("9_kgi6t")
+layer_id = &"markers"
+layer_kind = 4
+
+[node name="PlayerSpawn" type="Marker2D" parent="Markers" unique_id=1311265635]
+position = Vector2(355, 250)
+script = ExtResource("12_6jm42")
+marker_id = &"player_spawn"
+marker_kind = 0
+
+[node name="ToFarm" type="Marker2D" parent="Markers" unique_id=1379863753]
+position = Vector2(355, 400)
+script = ExtResource("12_6jm42")
+marker_id = &"to_farm"
+marker_kind = 1
+target_scene = "res://src/world/maps/Farm.tscn"
+target_marker = &"player_spawn"
+
+[node name="Bed" type="Marker2D" parent="Markers" unique_id=1165505130]
+position = Vector2(155, 150)
+script = ExtResource("12_6jm42")
+marker_id = &"bed"
+
+[node name="Kitchen" type="Marker2D" parent="Markers" unique_id=199258913]
+position = Vector2(155, 300)
+script = ExtResource("12_6jm42")
+marker_id = &"kitchen"

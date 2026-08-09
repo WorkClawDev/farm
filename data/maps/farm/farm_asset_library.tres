@@ -1,0 +1,96 @@
+[gd_resource type="Resource" script_class="MapAssetLibrary" format=3 uid="uid://bsh1hta7etyf6"]
+
+[ext_resource type="Script" uid="uid://t6qn4u64vfh" path="res://src/world/map_editor/MapAssetEntry.gd" id="1_63haq"]
+[ext_resource type="TileSet" uid="uid://dxhij1xumhutj" path="res://assets/tiles/farm_tileset.tres" id="2_vat0j"]
+[ext_resource type="PackedScene" path="res://src/world/objects/ShippingBin.tscn" id="3_6j6ah"]
+[ext_resource type="PackedScene" path="res://src/world/objects/HouseExterior.tscn" id="4_d2i6f"]
+[ext_resource type="PackedScene" path="res://src/world/objects/Workbench.tscn" id="5_n16dt"]
+[ext_resource type="PackedScene" path="res://src/world/objects/FishingSpot.tscn" id="6_8jm18"]
+[ext_resource type="PackedScene" path="res://src/world/objects/Coop.tscn" id="7_w0x73"]
+[ext_resource type="PackedScene" path="res://src/world/objects/Barn.tscn" id="8_p2xoj"]
+[ext_resource type="PackedScene" path="res://src/world/objects/Ore.tscn" id="9_mwxwp"]
+[ext_resource type="Script" uid="uid://cmvrs1xg7e1mq" path="res://src/world/map_editor/MapAssetLibrary.gd" id="10_0otj0"]
+
+[sub_resource type="Resource" id="Resource_6qukn"]
+script = ExtResource("1_63haq")
+asset_id = &"farm_tileset"
+display_name = "农场 TileSet"
+kind = 0
+resource = ExtResource("2_vat0j")
+tags = PackedStringArray("farm", "tiles", "terrain")
+default_layer_id = &"ground"
+exposed_properties = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_o1bsj"]
+script = ExtResource("1_63haq")
+asset_id = &"shipping_bin"
+display_name = "出货箱"
+kind = 2
+resource = ExtResource("3_6j6ah")
+tags = PackedStringArray("farm", "object", "shipping_bin")
+default_layer_id = &"objects"
+exposed_properties = PackedStringArray("interaction_prompt", "is_interactable")
+
+[sub_resource type="Resource" id="Resource_l0g2j"]
+script = ExtResource("1_63haq")
+asset_id = &"player_house_exterior"
+display_name = "玩家房屋"
+kind = 2
+resource = ExtResource("4_d2i6f")
+tags = PackedStringArray("farm", "object", "player_house_exterior")
+default_layer_id = &"objects"
+exposed_properties = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_bcx7g"]
+script = ExtResource("1_63haq")
+asset_id = &"workbench"
+display_name = "工作台"
+kind = 2
+resource = ExtResource("5_n16dt")
+tags = PackedStringArray("farm", "object", "workbench")
+default_layer_id = &"objects"
+exposed_properties = PackedStringArray("workbench_type", "workbench_name", "interaction_prompt", "is_interactable")
+
+[sub_resource type="Resource" id="Resource_7h5bc"]
+script = ExtResource("1_63haq")
+asset_id = &"fishing_spot"
+display_name = "钓鱼点"
+kind = 2
+resource = ExtResource("6_8jm18")
+tags = PackedStringArray("farm", "object", "fishing_spot")
+default_layer_id = &"objects"
+exposed_properties = PackedStringArray("location_type")
+
+[sub_resource type="Resource" id="Resource_uunn7"]
+script = ExtResource("1_63haq")
+asset_id = &"coop"
+display_name = "鸡舍"
+kind = 2
+resource = ExtResource("7_w0x73")
+tags = PackedStringArray("farm", "object", "coop")
+default_layer_id = &"objects"
+exposed_properties = PackedStringArray("building_name", "max_animals")
+
+[sub_resource type="Resource" id="Resource_5iuks"]
+script = ExtResource("1_63haq")
+asset_id = &"barn"
+display_name = "牛棚"
+kind = 2
+resource = ExtResource("8_p2xoj")
+tags = PackedStringArray("farm", "object", "barn")
+default_layer_id = &"objects"
+exposed_properties = PackedStringArray("building_name", "max_animals")
+
+[sub_resource type="Resource" id="Resource_1etsb"]
+script = ExtResource("1_63haq")
+asset_id = &"ore"
+display_name = "矿石"
+kind = 2
+resource = ExtResource("9_mwxwp")
+tags = PackedStringArray("farm", "object", "ore")
+default_layer_id = &"objects"
+exposed_properties = PackedStringArray("ore_type", "max_health", "base_quantity", "quality_modifier")
+
+[resource]
+script = ExtResource("10_0otj0")
+entries = Array[ExtResource("1_63haq")]([SubResource("Resource_6qukn"), SubResource("Resource_o1bsj"), SubResource("Resource_l0g2j"), SubResource("Resource_bcx7g"), SubResource("Resource_7h5bc"), SubResource("Resource_uunn7"), SubResource("Resource_5iuks"), SubResource("Resource_1etsb")])

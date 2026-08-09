@@ -1,0 +1,129 @@
+[gd_scene load_steps=2 format=3 uid="uid://cdialog00000001"]
+
+[ext_resource type="Script" path="res://src/ui/dialogs/DialogueBox.gd" id="1"]
+
+[node name="DialogueBox" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1")
+
+[node name="Shade" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.03, 0.02, 0.01, 0.16)
+
+[node name="NinePatchRect" type="PanelContainer" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 72.0
+offset_top = -316.0
+offset_right = -72.0
+offset_bottom = -44.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_type_variation = &"PaperPanel"
+
+[node name="Layout" type="HBoxContainer" parent="NinePatchRect"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Portrait" type="TextureRect" parent="NinePatchRect/Layout"]
+visible = false
+custom_minimum_size = Vector2(176, 212)
+layout_mode = 2
+expand_mode = 3
+stretch_mode = 5
+
+[node name="VBoxContainer" type="VBoxContainer" parent="NinePatchRect/Layout"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 9
+
+[node name="Header" type="HBoxContainer" parent="NinePatchRect/Layout/VBoxContainer"]
+layout_mode = 2
+
+[node name="NameLabel" type="Label" parent="NinePatchRect/Layout/VBoxContainer/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"TitleLabel"
+theme_override_font_sizes/font_size = 25
+text = "角色"
+
+[node name="HistoryButton" type="Button" parent="NinePatchRect/Layout/VBoxContainer/Header"]
+custom_minimum_size = Vector2(92, 38)
+layout_mode = 2
+text = "记录"
+
+[node name="TextLabel" type="RichTextLabel" parent="NinePatchRect/Layout/VBoxContainer"]
+custom_minimum_size = Vector2(0, 92)
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+fit_content = false
+scroll_active = false
+text = "对话内容"
+
+[node name="ChoicesContainer" type="VBoxContainer" parent="NinePatchRect/Layout/VBoxContainer"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 7
+
+[node name="ContinueIndicator" type="Label" parent="NinePatchRect/Layout/VBoxContainer"]
+layout_mode = 2
+theme_type_variation = &"SubtitleLabel"
+text = "Space / A 继续"
+horizontal_alignment = 2
+
+[node name="HistoryPanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -410.0
+offset_top = -250.0
+offset_right = 410.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_type_variation = &"PaperPanel"
+
+[node name="VBox" type="VBoxContainer" parent="HistoryPanel"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Header" type="HBoxContainer" parent="HistoryPanel/VBox"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="HistoryPanel/VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"TitleLabel"
+theme_override_font_sizes/font_size = 28
+text = "对话记录"
+
+[node name="Close" type="Button" parent="HistoryPanel/VBox/Header"]
+custom_minimum_size = Vector2(46, 40)
+layout_mode = 2
+text = "×"
+
+[node name="HistoryText" type="RichTextLabel" parent="HistoryPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+scroll_following = true

@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "expected_map_id": "farm_main",
+  "allowed_region": {
+    "x": 32,
+    "y": 23,
+    "width": 10,
+    "height": 8
+  },
+  "operations": [
+    {
+      "op": "paint_rect",
+      "layer": "ground",
+      "from": [32, 23],
+      "to": [41, 30],
+      "tile": {"source": 0, "atlas": [0, 0]}
+    },
+    {
+      "op": "place_asset",
+      "asset": "ore",
+      "layer": "objects",
+      "at": [35, 26],
+      "space": "tile",
+      "name": "OrchardRock",
+      "properties": {"ore_type": 0}
+    },
+    {
+      "op": "collision_rect",
+      "at": [39, 26],
+      "space": "tile",
+      "size": [64, 256],
+      "preset": "world_solid",
+      "name": "OrchardFence"
+    },
+    {
+      "op": "marker",
+      "id": "orchard_anchor",
+      "kind": "anchor",
+      "at": [36, 27],
+      "space": "tile"
+    }
+  ]
+}

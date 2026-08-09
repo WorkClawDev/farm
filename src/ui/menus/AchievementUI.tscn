@@ -1,0 +1,95 @@
+[gd_scene load_steps=2 format=3 uid="uid://achievement_ui"]
+
+[ext_resource type="Script" path="res://src/ui/menus/AchievementUI.gd" id="1_achievement"]
+
+[node name="AchievementUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_achievement")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -350.0
+offset_top = -250.0
+offset_right = 350.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TitleLabel" type="Label" parent="Panel"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -100.0
+offset_top = 15.0
+offset_right = 100.0
+offset_bottom = 45.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 24
+text = "成就"
+horizontal_alignment = 1
+
+[node name="AchievementList" type="ItemList" parent="Panel"]
+layout_mode = 1
+offset_left = 20.0
+offset_top = 55.0
+offset_right = 300.0
+offset_bottom = 450.0
+
+[node name="Details" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -330.0
+offset_top = 55.0
+offset_right = -20.0
+offset_bottom = 300.0
+grow_horizontal = 0
+
+[node name="NameLabel" type="Label" parent="Panel/Details"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "选择成就"
+
+[node name="DescLabel" type="Label" parent="Panel/Details"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "点击左侧列表查看成就详情"
+autowrap_mode = 3
+
+[node name="ProgressBar" type="ProgressBar" parent="Panel/Details"]
+layout_mode = 2
+value = 50.0
+
+[node name="ProgressLabel" type="Label" parent="Panel/Details"]
+layout_mode = 2
+text = "0 / 0"
+
+[node name="StatusLabel" type="Label" parent="Panel/Details"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "状态"
+
+[node name="CloseButton" type="Button" parent="Panel"]
+layout_mode = 1
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -100.0
+offset_top = -50.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "关闭"

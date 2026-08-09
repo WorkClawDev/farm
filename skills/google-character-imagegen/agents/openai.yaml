@@ -1,0 +1,7 @@
+interface:
+  display_name: "Google Character Imagegen"
+  short_description: "Generate character art with configurable Google image APIs"
+  default_prompt: "Use $google-character-imagegen to generate a new game character sheet with a configurable Google image model."
+
+policy:
+  allow_implicit_invocation: false

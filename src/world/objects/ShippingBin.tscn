@@ -1,0 +1,29 @@
+[gd_scene load_steps=2 format=3 uid="uid://shipping_bin_001"]
+
+[ext_resource type="Script" path="res://src/world/objects/ShippingBin.gd" id="1_script"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_bin"]
+size = Vector2(32, 32)
+
+[node name="ShippingBin" type="Area2D"]
+collision_layer = 8
+collision_mask = 2
+script = ExtResource("1_script")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+modulate = Color(0.8, 0.6, 0.4, 1)
+scale = Vector2(1, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_bin")
+
+[node name="PromptLabel" type="Label" parent="."]
+offset_left = -50.0
+offset_top = -50.0
+offset_right = 50.0
+offset_bottom = -30.0
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "Press E to open shipping bin"
+horizontal_alignment = 1
+visible = false

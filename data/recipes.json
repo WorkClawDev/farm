@@ -1,0 +1,324 @@
+{
+  "recipes": [
+    {
+      "id": "fried_egg",
+      "name": "煎蛋",
+      "description": "简单美味的煎蛋，恢复少量体力。",
+      "category": "cooking",
+      "ingredients": [
+        {"item_id": "egg", "quantity": 1}
+      ],
+      "result_item": "fried_egg",
+      "result_quantity": 1,
+      "cooking_time": 0.5,
+      "energy_cost": 3,
+      "effects": {"energy": 35},
+      "sell_price": 50
+    },
+    {
+      "id": "boiled_egg",
+      "name": "水煮蛋",
+      "description": "营养保留最完整的水煮蛋。",
+      "category": "cooking",
+      "ingredients": [
+        {"item_id": "egg", "quantity": 1}
+      ],
+      "result_item": "boiled_egg",
+      "result_quantity": 1,
+      "cooking_time": 0.3,
+      "energy_cost": 2,
+      "effects": {"energy": 30, "health": 5},
+      "sell_price": 40
+    },
+    {
+      "id": "toast",
+      "name": "烤面包",
+      "description": "香脆的烤面包，早餐的好选择。",
+      "category": "cooking",
+      "ingredients": [
+        {"item_id": "bread", "quantity": 1}
+      ],
+      "result_item": "toast",
+      "result_quantity": 1,
+      "cooking_time": 0.2,
+      "energy_cost": 2,
+      "effects": {"energy": 40},
+      "sell_price": 35
+    },
+    {
+      "id": "vegetable_soup",
+      "name": "蔬菜汤",
+      "description": "营养丰富的蔬菜汤，恢复中量体力。",
+      "category": "cooking",
+      "ingredients": [
+        {"item_id": "turnip", "quantity": 1},
+        {"item_id": "potato", "quantity": 1},
+        {"item_id": "tomato", "quantity": 1}
+      ],
+      "result_item": "vegetable_soup",
+      "result_quantity": 1,
+      "cooking_time": 1.0,
+      "energy_cost": 5,
+      "effects": {"energy": 80},
+      "sell_price": 150
+    },
+    {
+      "id": "mashed_potato",
+      "name": "土豆泥",
+      "description": "绵软香甜的土豆泥。",
+      "category": "cooking",
+      "ingredients": [
+        {"item_id": "potato", "quantity": 2},
+        {"item_id": "milk", "quantity": 1}
+      ],
+      "result_item": "mashed_potato",
+      "result_quantity": 1,
+      "cooking_time": 0.5,
+      "energy_cost": 4,
+      "effects": {"energy": 60},
+      "sell_price": 100
+    },
+    {
+      "id": "tomato_soup",
+      "name": "番茄浓汤",
+      "description": "酸甜可口的番茄浓汤。",
+      "category": "cooking",
+      "ingredients": [
+        {"item_id": "tomato", "quantity": 3}
+      ],
+      "result_item": "tomato_soup",
+      "result_quantity": 1,
+      "cooking_time": 0.8,
+      "energy_cost": 4,
+      "effects": {"energy": 55},
+      "sell_price": 90
+    },
+    {
+      "id": "grilled_fish",
+      "name": "烤鱼",
+      "description": "鲜嫩多汁的烤鱼。",
+      "category": "cooking",
+      "ingredients": [
+        {"item_id": "fish_common", "quantity": 1}
+      ],
+      "result_item": "grilled_fish",
+      "result_quantity": 1,
+      "cooking_time": 0.6,
+      "energy_cost": 5,
+      "effects": {"energy": 75, "health": 10},
+      "sell_price": 80
+    },
+    {
+      "id": "sashimi",
+      "name": "生鱼片",
+      "description": "新鲜的生鱼片，保持原汁原味。",
+      "category": "cooking",
+      "ingredients": [
+        {"item_id": "fish_rare", "quantity": 1}
+      ],
+      "result_item": "sashimi",
+      "result_quantity": 1,
+      "cooking_time": 0.3,
+      "energy_cost": 3,
+      "effects": {"energy": 100, "health": 15, "buff": "fishing", "duration": 180},
+      "sell_price": 200
+    },
+    {
+      "id": "pumpkin_pie",
+      "name": "南瓜派",
+      "description": "香甜的南瓜派，秋天特色美食。",
+      "category": "baking",
+      "ingredients": [
+        {"item_id": "pumpkin", "quantity": 1},
+        {"item_id": "egg", "quantity": 2},
+        {"item_id": "wheat", "quantity": 1}
+      ],
+      "result_item": "pumpkin_pie",
+      "result_quantity": 1,
+      "cooking_time": 1.5,
+      "energy_cost": 8,
+      "effects": {"energy": 120},
+      "sell_price": 300
+    },
+    {
+      "id": "corn_on_cob",
+      "name": "煮玉米",
+      "description": "简单香甜的煮玉米。",
+      "category": "cooking",
+      "ingredients": [
+        {"item_id": "corn", "quantity": 1}
+      ],
+      "result_item": "corn_on_cob",
+      "result_quantity": 1,
+      "cooking_time": 0.3,
+      "energy_cost": 2,
+      "effects": {"energy": 30},
+      "sell_price": 45
+    },
+    {
+      "id": "popcorn",
+      "name": "爆米花",
+      "description": "看电影必备的爆米花。",
+      "category": "cooking",
+      "ingredients": [
+        {"item_id": "corn", "quantity": 2}
+      ],
+      "result_item": "popcorn",
+      "result_quantity": 1,
+      "cooking_time": 0.2,
+      "energy_cost": 3,
+      "effects": {"energy": 25},
+      "sell_price": 60
+    },
+    {
+      "id": "cheese_plate",
+      "name": "奶酪拼盘",
+      "description": "精致的奶酪拼盘，恢复大量体力。",
+      "category": "cooking",
+      "ingredients": [
+        {"item_id": "cheese", "quantity": 2},
+        {"item_id": "bread", "quantity": 1}
+      ],
+      "result_item": "cheese_plate",
+      "result_quantity": 1,
+      "cooking_time": 0.3,
+      "energy_cost": 3,
+      "effects": {"energy": 100, "buff": "mining", "duration": 300},
+      "sell_price": 180
+    },
+    {
+      "id": "farmers_breakfast",
+      "name": "农夫早餐",
+      "description": "丰盛的早餐，提供一整天的活力。",
+      "category": "cooking",
+      "ingredients": [
+        {"item_id": "egg", "quantity": 2},
+        {"item_id": "potato", "quantity": 1},
+        {"item_id": "bread", "quantity": 1}
+      ],
+      "result_item": "farmers_breakfast",
+      "result_quantity": 1,
+      "cooking_time": 1.0,
+      "energy_cost": 6,
+      "effects": {"energy": 150, "buff": "farming", "duration": 600},
+      "sell_price": 250
+    },
+    {
+      "id": "fish_stew",
+      "name": "鱼汤",
+      "description": "温暖的鱼汤，适合寒冷的日子。",
+      "category": "cooking",
+      "ingredients": [
+        {"item_id": "fish_common", "quantity": 2},
+        {"item_id": "potato", "quantity": 1},
+        {"item_id": "tomato", "quantity": 1}
+      ],
+      "result_item": "fish_stew",
+      "result_quantity": 1,
+      "cooking_time": 1.2,
+      "energy_cost": 7,
+      "effects": {"energy": 130, "health": 20},
+      "sell_price": 220
+    },
+    {
+      "id": "grilled_vegetables",
+      "name": "烤蔬菜",
+      "description": "健康的烤蔬菜拼盘。",
+      "category": "cooking",
+      "ingredients": [
+        {"item_id": "turnip", "quantity": 1},
+        {"item_id": "potato", "quantity": 1},
+        {"item_id": "corn", "quantity": 1},
+        {"item_id": "tomato", "quantity": 1}
+      ],
+      "result_item": "grilled_vegetables",
+      "result_quantity": 1,
+      "cooking_time": 0.8,
+      "energy_cost": 5,
+      "effects": {"energy": 90, "health": 10},
+      "sell_price": 170
+    },
+    {
+      "id": "omelet",
+      "name": "煎蛋卷",
+      "description": "松软的煎蛋卷，可以加入各种配料。",
+      "category": "cooking",
+      "ingredients": [
+        {"item_id": "egg", "quantity": 3},
+        {"item_id": "cheese", "quantity": 1}
+      ],
+      "result_item": "omelet",
+      "result_quantity": 1,
+      "cooking_time": 0.5,
+      "energy_cost": 5,
+      "effects": {"energy": 100},
+      "sell_price": 140
+    },
+    {
+      "id": "vegetable_salad",
+      "name": "蔬菜沙拉",
+      "description": "清脆爽口的蔬菜沙拉。",
+      "category": "cooking",
+      "ingredients": [
+        {"item_id": "tomato", "quantity": 1},
+        {"item_id": "turnip", "quantity": 1}
+      ],
+      "result_item": "vegetable_salad",
+      "result_quantity": 1,
+      "cooking_time": 0.2,
+      "energy_cost": 2,
+      "effects": {"energy": 40, "health": 5},
+      "sell_price": 70
+    },
+    {
+      "id": "baked_fish",
+      "name": "烤鱼料理",
+      "description": "精心烤制的鱼肉料理。",
+      "category": "cooking",
+      "ingredients": [
+        {"item_id": "fish_rare", "quantity": 1},
+        {"item_id": "tomato", "quantity": 1},
+        {"item_id": "cheese", "quantity": 1}
+      ],
+      "result_item": "baked_fish",
+      "result_quantity": 1,
+      "cooking_time": 1.0,
+      "energy_cost": 8,
+      "effects": {"energy": 180, "health": 30, "buff": "luck", "duration": 300},
+      "sell_price": 350
+    },
+    {
+      "id": "survival_burger",
+      "name": "生存汉堡",
+      "description": "超高热量的汉堡，冒险者必备。",
+      "category": "cooking",
+      "ingredients": [
+        {"item_id": "bread", "quantity": 2},
+        {"item_id": "egg", "quantity": 1},
+        {"item_id": "tomato", "quantity": 1},
+        {"item_id": "cheese", "quantity": 1}
+      ],
+      "result_item": "survival_burger",
+      "result_quantity": 1,
+      "cooking_time": 0.8,
+      "energy_cost": 6,
+      "effects": {"energy": 200, "buff": "max_energy", "duration": 600},
+      "sell_price": 280
+    },
+    {
+      "id": "triple_shot_espresso",
+      "name": "三倍浓缩咖啡",
+      "description": "超强的提神饮料，让你不知疲倦。",
+      "category": "brewing",
+      "ingredients": [
+        {"item_id": "coffee_beans", "quantity": 3}
+      ],
+      "result_item": "triple_shot_espresso",
+      "result_quantity": 1,
+      "cooking_time": 0.3,
+      "energy_cost": 3,
+      "effects": {"energy": 50, "buff": "speed", "duration": 300},
+      "sell_price": 120
+    }
+  ]
+}

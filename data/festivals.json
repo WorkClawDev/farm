@@ -1,0 +1,656 @@
+{
+  "festivals": [
+    {
+      "id": "spring_festival",
+      "name": "春节花祭",
+      "name_en": "Spring Flower Festival",
+      "season": "spring",
+      "day": 15,
+      "description": "春暖花开之际，村里举办盛大的花祭庆典。赏花、献花、祈求丰收。",
+      "description_en": "A grand flower festival celebrating the arrival of spring. Enjoy flowers, make offerings, and pray for a bountiful harvest.",
+      "location": "village_square",
+      "start_hour": 10,
+      "end_hour": 22,
+      "icon": "res://assets/sprites/ui/icons/season_spring.png",
+      "activities": [
+        {
+          "id": "flower_offering",
+          "name": "献花仪式",
+          "description": "向花神献上春天最美的花朵",
+          "type": "offering",
+          "requirements": {
+            "items": {"flower_spring": 5}
+          },
+          "rewards": {
+            "gold": 100,
+            "items": {"festival_coin": 3},
+            "friendship_bonus": 50
+          }
+        },
+        {
+          "id": "flower_crown_craft",
+          "name": "花环制作",
+          "description": "学习制作传统的春天花环",
+          "type": "crafting",
+          "minigame": "flower_crown",
+          "rewards": {
+            "gold": 50,
+            "items": {"flower_crown": 1, "festival_coin": 2}
+          }
+        },
+        {
+          "id": "flower_arrangement",
+          "name": "插花比赛",
+          "description": "参加插花比赛，展示你的艺术才能",
+          "type": "competition",
+          "minigame": "flower_arrange",
+          "rewards": {
+            "gold": 200,
+            "items": {"trophy_spring": 1, "festival_coin": 5}
+          }
+        },
+        {
+          "id": "spring_feast",
+          "name": "春日盛宴",
+          "description": "品尝春季特色美食",
+          "type": "social",
+          "rewards": {
+            "energy": 50,
+            "items": {"festival_coin": 1}
+          }
+        },
+        {
+          "id": "egg_hunt",
+          "name": "彩蛋寻宝",
+          "description": "在村庄各处寻找隐藏的彩蛋",
+          "type": "exploration",
+          "minigame": "egg_hunt",
+          "rewards": {
+            "gold": 150,
+            "items": {"golden_egg": 1, "festival_coin": 3}
+          }
+        }
+      ],
+      "rewards": [
+        {
+          "id": "spring_participation",
+          "name": "参与奖",
+          "description": "参与春节活动即可获得",
+          "requirements": {
+            "activities_completed": 1
+          },
+          "items": {"festival_coin": 5, "spring_bouquet": 1}
+        },
+        {
+          "id": "spring_enthusiast",
+          "name": "热情参与者",
+          "description": "完成3项春节活动",
+          "requirements": {
+            "activities_completed": 3
+          },
+          "items": {"gold": 500, "rare_seed_pack": 1, "festival_coin": 10}
+        },
+        {
+          "id": "spring_master",
+          "name": "春之大师",
+          "description": "完成所有春节活动",
+          "requirements": {
+            "activities_completed": 5
+          },
+          "items": {"gold": 1000, "flower_goddess_blessing": 1, "trophy_spring_master": 1}
+        }
+      ],
+      "vendors": [
+        {
+          "id": "spring_florist",
+          "name": "节日花商",
+          "items": [
+            {"id": "flower_spring", "price": 20, "currency": "gold"},
+            {"id": "flower_crown", "price": 3, "currency": "festival_coin"},
+            {"id": "spring_bouquet", "price": 5, "currency": "festival_coin"}
+          ]
+        }
+      ],
+      "special_items": [
+        {"id": "flower_goddess_blessing", "name": "花神祝福", "effect": "作物生长速度+20%（春季）"}
+      ]
+    },
+    {
+      "id": "summer_beach_festival",
+      "name": "夏季海滩节",
+      "name_en": "Summer Beach Festival",
+      "season": "summer",
+      "day": 20,
+      "description": "炎炎夏日，海滩上的盛大庆典！游泳、沙滩排球、烟花大会。",
+      "description_en": "A grand beach celebration in the heat of summer! Swimming, beach volleyball, and fireworks.",
+      "location": "beach",
+      "start_hour": 10,
+      "end_hour": 24,
+      "icon": "res://assets/sprites/ui/icons/season_summer.png",
+      "activities": [
+        {
+          "id": "swimming_race",
+          "name": "游泳比赛",
+          "description": "参加海滩游泳竞速赛",
+          "type": "competition",
+          "minigame": "swimming_race",
+          "rewards": {
+            "gold": 200,
+            "items": {"festival_coin": 4}
+          }
+        },
+        {
+          "id": "beach_volleyball",
+          "name": "沙滩排球",
+          "description": "组队参加沙滩排球比赛",
+          "type": "competition",
+          "minigame": "volleyball",
+          "rewards": {
+            "gold": 150,
+            "items": {"beach_ball": 1, "festival_coin": 3}
+          }
+        },
+        {
+          "id": "sandcastle_contest",
+          "name": "沙堡大赛",
+          "description": "建造最精美的沙堡",
+          "type": "crafting",
+          "minigame": "sandcastle",
+          "rewards": {
+            "gold": 100,
+            "items": {"sandcastle_kit": 1, "festival_coin": 2}
+          }
+        },
+        {
+          "id": "fishing_tournament",
+          "name": "钓鱼大赛",
+          "description": "在海滩边参加钓鱼比赛",
+          "type": "competition",
+          "minigame": "fishing_tournament",
+          "rewards": {
+            "gold": 300,
+            "items": {"golden_fishing_rod": 1, "festival_coin": 5}
+          }
+        },
+        {
+          "id": "fireworks_show",
+          "name": "烟花大会",
+          "description": "观赏绚烂的烟花表演",
+          "type": "social",
+          "rewards": {
+            "energy": 30,
+            "items": {"festival_coin": 2}
+          }
+        },
+        {
+          "id": "clam_digging",
+          "name": "挖蛤蜊",
+          "description": "在沙滩上挖掘蛤蜊",
+          "type": "exploration",
+          "minigame": "clam_digging",
+          "rewards": {
+            "gold": 80,
+            "items": {"clam": 10, "festival_coin": 1}
+          }
+        }
+      ],
+      "rewards": [
+        {
+          "id": "summer_participation",
+          "name": "参与奖",
+          "description": "参与夏日海滩节即可获得",
+          "requirements": {
+            "activities_completed": 1
+          },
+          "items": {"festival_coin": 5, "beach_towel": 1}
+        },
+        {
+          "id": "summer_enthusiast",
+          "name": "热情参与者",
+          "description": "完成3项夏日活动",
+          "requirements": {
+            "activities_completed": 3
+          },
+          "items": {"gold": 600, "swimsuit": 1, "festival_coin": 10}
+        },
+        {
+          "id": "summer_master",
+          "name": "夏之大师",
+          "description": "完成所有夏日活动",
+          "requirements": {
+            "activities_completed": 6
+          },
+          "items": {"gold": 1200, "sun_goddess_blessing": 1, "trophy_summer_master": 1}
+        }
+      ],
+      "vendors": [
+        {
+          "id": "beach_snack_bar",
+          "name": "海滩小吃摊",
+          "items": [
+            {"id": "ice_cream", "price": 30, "currency": "gold"},
+            {"id": "cold_drink", "price": 20, "currency": "gold"},
+            {"id": "beach_ball", "price": 4, "currency": "festival_coin"}
+          ]
+        },
+        {
+          "id": "beach_shop",
+          "name": "海滩用品店",
+          "items": [
+            {"id": "swimsuit", "price": 8, "currency": "festival_coin"},
+            {"id": "beach_towel", "price": 5, "currency": "festival_coin"},
+            {"id": "sunscreen", "price": 3, "currency": "festival_coin"}
+          ]
+        }
+      ],
+      "special_items": [
+        {"id": "sun_goddess_blessing", "name": "太阳女神祝福", "effect": "作物品质+1（夏季）"}
+      ]
+    },
+    {
+      "id": "fall_harvest_festival",
+      "name": "秋季收获节",
+      "name_en": "Fall Harvest Festival",
+      "season": "fall",
+      "day": 18,
+      "description": "秋收时节的感恩庆典！展示你的收获，参加各种农场比赛。",
+      "description_en": "A gratitude celebration during harvest season! Show off your harvest and compete in farming contests.",
+      "location": "farm",
+      "start_hour": 9,
+      "end_hour": 22,
+      "icon": "res://assets/sprites/ui/icons/season_fall.png",
+      "activities": [
+        {
+          "id": "crop_showcase",
+          "name": "农产品展示",
+          "description": "展示你最优秀的农产品",
+          "type": "competition",
+          "requirements": {
+            "items": {"crop_quality_high": 3}
+          },
+          "rewards": {
+            "gold": 500,
+            "items": {"trophy_best_crop": 1, "festival_coin": 5}
+          }
+        },
+        {
+          "id": "pumpkin_carving",
+          "name": "南瓜雕刻",
+          "description": "雕刻独特的南瓜灯",
+          "type": "crafting",
+          "minigame": "pumpkin_carve",
+          "rewards": {
+            "gold": 100,
+            "items": {"jack_o_lantern": 1, "festival_coin": 2}
+          }
+        },
+        {
+          "id": "cooking_contest",
+          "name": "烹饪大赛",
+          "description": "用新鲜食材制作美味料理",
+          "type": "competition",
+          "minigame": "cooking_contest",
+          "rewards": {
+            "gold": 300,
+            "items": {"chef_hat": 1, "festival_coin": 4}
+          }
+        },
+        {
+          "id": "scarecrow_contest",
+          "name": "稻草人比赛",
+          "description": "制作最有创意的稻草人",
+          "type": "crafting",
+          "minigame": "scarecrow_craft",
+          "rewards": {
+            "gold": 150,
+            "items": {"decorative_scarecrow": 1, "festival_coin": 3}
+          }
+        },
+        {
+          "id": "harvest_parade",
+          "name": "丰收游行",
+          "description": "参加庆祝丰收的盛大游行",
+          "type": "social",
+          "rewards": {
+            "energy": 40,
+            "items": {"festival_coin": 2}
+          }
+        },
+        {
+          "id": "apple_bobbing",
+          "name": "咬苹果游戏",
+          "description": "传统咬苹果游戏",
+          "type": "minigame",
+          "minigame": "apple_bobbing",
+          "rewards": {
+            "gold": 50,
+            "items": {"apple": 5, "festival_coin": 1}
+          }
+        },
+        {
+          "id": "hay_maze",
+          "name": "干草迷宫",
+          "description": "挑战干草搭建的巨大迷宫",
+          "type": "exploration",
+          "minigame": "maze",
+          "rewards": {
+            "gold": 200,
+            "items": {"golden_pumpkin": 1, "festival_coin": 3}
+          }
+        }
+      ],
+      "rewards": [
+        {
+          "id": "harvest_participation",
+          "name": "参与奖",
+          "description": "参与收获节即可获得",
+          "requirements": {
+            "activities_completed": 1
+          },
+          "items": {"festival_coin": 5, "harvest_basket": 1}
+        },
+        {
+          "id": "harvest_enthusiast",
+          "name": "热情参与者",
+          "description": "完成4项收获节活动",
+          "requirements": {
+            "activities_completed": 4
+          },
+          "items": {"gold": 800, "golden_sickle": 1, "festival_coin": 12}
+        },
+        {
+          "id": "harvest_master",
+          "name": "丰收大师",
+          "description": "完成所有收获节活动",
+          "requirements": {
+            "activities_completed": 7
+          },
+          "items": {"gold": 1500, "harvest_goddess_blessing": 1, "trophy_harvest_master": 1}
+        }
+      ],
+      "vendors": [
+        {
+          "id": "harvest_market",
+          "name": "丰收集市",
+          "items": [
+            {"id": "pumpkin_seed", "price": 50, "currency": "gold"},
+            {"id": "apple_seed", "price": 40, "currency": "gold"},
+            {"id": "harvest_basket", "price": 6, "currency": "festival_coin"}
+          ]
+        },
+        {
+          "id": "autumn_food_stall",
+          "name": "秋季美食摊",
+          "items": [
+            {"id": "pumpkin_pie", "price": 60, "currency": "gold"},
+            {"id": "apple_cider", "price": 40, "currency": "gold"},
+            {"id": "roasted_corn", "price": 30, "currency": "gold"}
+          ]
+        }
+      ],
+      "special_items": [
+        {"id": "harvest_goddess_blessing", "name": "丰收女神祝福", "effect": "收获产量+25%（秋季）"}
+      ]
+    },
+    {
+      "id": "winter_festival",
+      "name": "冬季冬季节",
+      "name_en": "Winter Festival",
+      "season": "winter",
+      "day": 25,
+      "description": "冬日里温暖的庆典！滑雪、冰雕、圣诞集市。",
+      "description_en": "A warm celebration in the cold winter! Skiing, ice carving, and Christmas market.",
+      "location": "village_square",
+      "start_hour": 10,
+      "end_hour": 24,
+      "icon": "res://assets/sprites/ui/icons/season_winter.png",
+      "activities": [
+        {
+          "id": "ice_sculpture",
+          "name": "冰雕比赛",
+          "description": "创作精美的冰雕作品",
+          "type": "crafting",
+          "minigame": "ice_sculpture",
+          "rewards": {
+            "gold": 250,
+            "items": {"ice_sculpture_deco": 1, "festival_coin": 4}
+          }
+        },
+        {
+          "id": "skiing_race",
+          "name": "滑雪比赛",
+          "description": "在雪道上竞速滑雪",
+          "type": "competition",
+          "minigame": "skiing",
+          "rewards": {
+            "gold": 300,
+            "items": {"ski_set": 1, "festival_coin": 5}
+          }
+        },
+        {
+          "id": "snowman_building",
+          "name": "堆雪人",
+          "description": "堆出最可爱的雪人",
+          "type": "crafting",
+          "minigame": "snowman",
+          "rewards": {
+            "gold": 80,
+            "items": {"snowman_deco": 1, "festival_coin": 2}
+          }
+        },
+        {
+          "id": "gift_exchange",
+          "name": "礼物交换",
+          "description": "与村民交换节日礼物",
+          "type": "social",
+          "requirements": {
+            "items": {"gift_item": 1}
+          },
+          "rewards": {
+            "gold": 100,
+            "items": {"mystery_gift": 1, "festival_coin": 3},
+            "friendship_bonus": 100
+          }
+        },
+        {
+          "id": "winter_feast",
+          "name": "冬日盛宴",
+          "description": "享用丰盛的节日大餐",
+          "type": "social",
+          "rewards": {
+            "energy": 60,
+            "items": {"festival_coin": 2}
+          }
+        },
+        {
+          "id": "christmas_tree",
+          "name": "装饰圣诞树",
+          "description": "帮忙装饰村庄的圣诞树",
+          "type": "crafting",
+          "minigame": "tree_decoration",
+          "rewards": {
+            "gold": 150,
+            "items": {"christmas_ornament": 5, "festival_coin": 3}
+          }
+        },
+        {
+          "id": "snowball_fight",
+          "name": "雪仗大战",
+          "description": "参加激烈的雪仗比赛",
+          "type": "competition",
+          "minigame": "snowball_fight",
+          "rewards": {
+            "gold": 200,
+            "items": {"snowball_launcher": 1, "festival_coin": 4}
+          }
+        },
+        {
+          "id": "aurora_watching",
+          "name": "观赏极光",
+          "description": "欣赏绚丽的北极光",
+          "type": "social",
+          "time": "night",
+          "rewards": {
+            "energy": 20,
+            "items": {"aurora_photo": 1, "festival_coin": 2}
+          }
+        }
+      ],
+      "rewards": [
+        {
+          "id": "winter_participation",
+          "name": "参与奖",
+          "description": "参与冬季节即可获得",
+          "requirements": {
+            "activities_completed": 1
+          },
+          "items": {"festival_coin": 5, "winter_scarf": 1}
+        },
+        {
+          "id": "winter_enthusiast",
+          "name": "热情参与者",
+          "description": "完成4项冬季节活动",
+          "requirements": {
+            "activities_completed": 4
+          },
+          "items": {"gold": 700, "winter_coat": 1, "festival_coin": 12}
+        },
+        {
+          "id": "winter_master",
+          "name": "冬之大师",
+          "description": "完成所有冬季节活动",
+          "requirements": {
+            "activities_completed": 8
+          },
+          "items": {"gold": 1500, "frost_spirit_blessing": 1, "trophy_winter_master": 1}
+        }
+      ],
+      "vendors": [
+        {
+          "id": "winter_market",
+          "name": "圣诞集市",
+          "items": [
+            {"id": "hot_cocoa", "price": 30, "currency": "gold"},
+            {"id": "gingerbread", "price": 40, "currency": "gold"},
+            {"id": "winter_scarf", "price": 5, "currency": "festival_coin"}
+          ]
+        },
+        {
+          "id": "winter_craft_shop",
+          "name": "冬季工艺品店",
+          "items": [
+            {"id": "christmas_ornament", "price": 3, "currency": "festival_coin"},
+            {"id": "snowman_deco", "price": 6, "currency": "festival_coin"},
+            {"id": "winter_coat", "price": 10, "currency": "festival_coin"}
+          ]
+        }
+      ],
+      "special_items": [
+        {"id": "frost_spirit_blessing", "name": "霜精灵祝福", "effect": "冬季种植的作物抗寒能力+100%"}
+      ]
+    }
+  ],
+  "festival_items": [
+    {
+      "id": "festival_coin",
+      "name": "节日代币",
+      "type": "currency",
+      "description": "可在节日商店兑换特殊物品",
+      "max_stack": 999
+    },
+    {
+      "id": "spring_bouquet",
+      "name": "春日花束",
+      "type": "decoration",
+      "description": "用春天鲜花扎成的美丽花束"
+    },
+    {
+      "id": "flower_crown",
+      "name": "花环",
+      "type": "accessory",
+      "description": "用鲜花编织的头饰，戴上后心情愉悦"
+    },
+    {
+      "id": "beach_towel",
+      "name": "海滩毛巾",
+      "type": "decoration",
+      "description": "色彩鲜艳的海滩用毛巾"
+    },
+    {
+      "id": "swimsuit",
+      "name": "泳装",
+      "type": "clothing",
+      "description": "时尚的泳装，适合海滩活动"
+    },
+    {
+      "id": "jack_o_lantern",
+      "name": "南瓜灯",
+      "type": "decoration",
+      "description": "精心雕刻的南瓜灯，照亮秋夜"
+    },
+    {
+      "id": "harvest_basket",
+      "name": "丰收篮",
+      "type": "tool",
+      "description": "收获季专用的编织篮，增加收获效率"
+    },
+    {
+      "id": "winter_scarf",
+      "name": "冬季围巾",
+      "type": "clothing",
+      "description": "温暖的羊毛围巾"
+    },
+    {
+      "id": "snowman_deco",
+      "name": "雪人装饰",
+      "type": "decoration",
+      "description": "可爱的雪人雕像"
+    },
+    {
+      "id": "golden_fishing_rod",
+      "name": "黄金钓竿",
+      "type": "tool",
+      "description": "用黄金打造的钓竿，钓鱼成功率+20%"
+    },
+    {
+      "id": "golden_sickle",
+      "name": "黄金镰刀",
+      "type": "tool",
+      "description": "闪闪发光的镰刀，收割范围+1"
+    }
+  ],
+  "blessings": [
+    {
+      "id": "flower_goddess_blessing",
+      "name": "花神祝福",
+      "season": "spring",
+      "effect_type": "growth_speed",
+      "effect_value": 1.2,
+      "description": "春季作物生长速度+20%"
+    },
+    {
+      "id": "sun_goddess_blessing",
+      "name": "太阳女神祝福",
+      "season": "summer",
+      "effect_type": "quality_boost",
+      "effect_value": 1,
+      "description": "夏季作物品质+1级"
+    },
+    {
+      "id": "harvest_goddess_blessing",
+      "name": "丰收女神祝福",
+      "season": "fall",
+      "effect_type": "yield_boost",
+      "effect_value": 1.25,
+      "description": "秋季收获产量+25%"
+    },
+    {
+      "id": "frost_spirit_blessing",
+      "name": "霜精灵祝福",
+      "season": "winter",
+      "effect_type": "cold_resistance",
+      "effect_value": 1.0,
+      "description": "冬季作物抗寒能力+100%"
+    }
+  ]
+}

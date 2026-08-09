@@ -1,0 +1,131 @@
+[gd_scene load_steps=12 format=3 uid="uid://dp5y8hqm2x8nr"]
+
+[ext_resource type="Script" path="res://src/entities/player/Player.gd" id="1_player"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/player_spritesheet_nanobanana2.png" id="2_sprite"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_player"]
+radius = 12.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_interaction"]
+radius = 72.0
+
+[sub_resource type="Animation" id="Animation_down_walk"]
+resource_name = "down_walk"
+length = 0.3
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.15),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [0, 1]
+}
+
+[sub_resource type="Animation" id="Animation_left_walk"]
+resource_name = "left_walk"
+length = 0.3
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.15),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [2, 3]
+}
+
+[sub_resource type="Animation" id="Animation_right_walk"]
+resource_name = "right_walk"
+length = 0.3
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.15),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [4, 5]
+}
+
+[sub_resource type="Animation" id="Animation_up_walk"]
+resource_name = "up_walk"
+length = 0.3
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sprite2D:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.15),
+"transitions": PackedFloat32Array(1, 1),
+"update": 1,
+"values": [6, 7]
+}
+
+[sub_resource type="Animation" id="Animation_down_idle"]
+resource_name = "down_idle"
+length = 0.3
+
+[sub_resource type="Animation" id="Animation_left_idle"]
+resource_name = "left_idle"
+length = 0.3
+
+[sub_resource type="Animation" id="Animation_right_idle"]
+resource_name = "right_idle"
+length = 0.3
+
+[sub_resource type="Animation" id="Animation_up_idle"]
+resource_name = "up_idle"
+length = 0.3
+
+[node name="Player" type="CharacterBody2D"]
+collision_layer = 2
+collision_mask = 5
+script = ExtResource("1_player")
+speed = 150.0
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(2, 2)
+texture = ExtResource("2_sprite")
+hframes = 8
+vframes = 1
+frame = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_player")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+anims/down_idle = SubResource("Animation_down_idle")
+anims/down_walk = SubResource("Animation_down_walk")
+anims/left_idle = SubResource("Animation_left_idle")
+anims/left_walk = SubResource("Animation_left_walk")
+anims/right_idle = SubResource("Animation_right_idle")
+anims/right_walk = SubResource("Animation_right_walk")
+anims/up_idle = SubResource("Animation_up_idle")
+anims/up_walk = SubResource("Animation_up_walk")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+enabled = true
+zoom = Vector2(1, 1)
+
+[node name="InteractionArea" type="Area2D" parent="."]
+collision_layer = 0
+collision_mask = 28
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="InteractionArea"]
+shape = SubResource("CircleShape2D_interaction")

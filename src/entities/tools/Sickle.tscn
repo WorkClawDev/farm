@@ -1,0 +1,15 @@
+[gd_scene load_steps=4 format=3 uid="uid://sickle_tool_001"]
+
+[ext_resource type="Script" path="res://src/entities/tools/Sickle.gd" id="1_sickle"]
+[ext_resource type="Texture2D" path="res://assets/sprites/tools/sickle.png" id="2_sprite"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_sickle"]
+size = Vector2(16, 16)
+
+[node name="Sickle" type="Node2D"]
+script = ExtResource("1_sickle")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+texture = ExtResource("2_sprite")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]

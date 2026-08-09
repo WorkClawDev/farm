@@ -1,0 +1,165 @@
+[gd_scene load_steps=2 format=3 uid="uid://toolupgradeui"]
+
+[ext_resource type="Script" path="res://src/ui/menus/ToolUpgradeUI.gd" id="1"]
+
+[node name="ToolUpgradeUI" type="CanvasLayer"]
+script = ExtResource("1")
+layer = 10
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="Panel" parent="CenterContainer"]
+custom_minimum_size = Vector2(800, 600)
+size_flags_horizontal = 4
+size_flags_vertical = 4
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Header" type="HBoxContainer" parent="CenterContainer/Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="CenterContainer/Panel/VBoxContainer/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"HeaderLarge"
+text = "工具升级"
+
+[node name="CloseButton" type="Button" parent="CenterContainer/Panel/VBoxContainer/Header"]
+layout_mode = 2
+size_flags_horizontal = 8
+text = "X"
+
+[node name="ScrollContainer" type="ScrollContainer" parent="CenterContainer/Panel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 200)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ToolsList" type="VBoxContainer" parent="CenterContainer/Panel/VBoxContainer/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="HSeparator" type="HSeparator" parent="CenterContainer/Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="CenterContainer/Panel/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="InfoPanel" type="Panel" parent="CenterContainer/Panel/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/Panel/VBoxContainer/HBoxContainer/InfoPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ToolNameLabel" type="Label" parent="CenterContainer/Panel/VBoxContainer/HBoxContainer/InfoPanel/VBoxContainer"]
+layout_mode = 2
+text = "选择工具"
+theme_type_variation = &"HeaderMedium"
+
+[node name="ToolTierLabel" type="Label" parent="CenterContainer/Panel/VBoxContainer/HBoxContainer/InfoPanel/VBoxContainer"]
+layout_mode = 2
+text = ""
+
+[node name="ToolStatsLabel" type="Label" parent="CenterContainer/Panel/VBoxContainer/HBoxContainer/InfoPanel/VBoxContainer"]
+layout_mode = 2
+text = ""
+autowrap_mode = 2
+
+[node name="UpgradeEffectsLabel" type="Label" parent="CenterContainer/Panel/VBoxContainer/HBoxContainer/InfoPanel/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+text = ""
+autowrap_mode = 2
+
+[node name="MaterialsPanel" type="Panel" parent="CenterContainer/Panel/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/Panel/VBoxContainer/HBoxContainer/MaterialsPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TitleLabel" type="Label" parent="CenterContainer/Panel/VBoxContainer/HBoxContainer/MaterialsPanel/VBoxContainer"]
+layout_mode = 2
+text = "所需材料"
+
+[node name="MaterialsList" type="VBoxContainer" parent="CenterContainer/Panel/VBoxContainer/HBoxContainer/MaterialsPanel/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ControlsPanel" type="Panel" parent="CenterContainer/Panel/VBoxContainer/HBoxContainer"]
+custom_minimum_size = Vector2(150, 0)
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer/Panel/VBoxContainer/HBoxContainer/ControlsPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 10.0
+offset_top = 10.0
+offset_right = -10.0
+offset_bottom = -10.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="UpgradeButton" type="Button" parent="CenterContainer/Panel/VBoxContainer/HBoxContainer/ControlsPanel/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 6
+text = "选择工具"
+disabled = true
+
+[node name="HSeparator2" type="HSeparator" parent="CenterContainer/Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="Footer" type="HBoxContainer" parent="CenterContainer/Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="MessageLabel" type="Label" parent="CenterContainer/Panel/VBoxContainer/Footer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = ""
+
+[node name="UpgradeParticles" type="GPUParticles2D" parent="."]
+position = Vector2(576, 324)
+emitting = false
+amount = 20
+one_shot = true
+explosiveness = 0.8
+lifetime = 0.5

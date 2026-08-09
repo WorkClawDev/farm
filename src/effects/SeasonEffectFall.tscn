@@ -1,0 +1,3 @@
+[gd_scene format=3 uid="uid://season_effect_${season,,}"]
+
+[node name="SeasonEffect" type="Node2D"]

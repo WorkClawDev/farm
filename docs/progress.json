@@ -1,0 +1,115 @@
+{
+  "project": "田园物语 (Pastoral Tales)",
+  "last_updated": "2026-03-10",
+  "overall_progress": "100%",
+  
+  "phases": {
+    "phase1_core": {
+      "name": "核心框架",
+      "status": "completed",
+      "progress": 100,
+      "tasks_total": 6,
+      "tasks_done": 6
+    },
+    "phase2_farm": {
+      "name": "农场系统",
+      "status": "completed",
+      "progress": 100,
+      "tasks_total": 7,
+      "tasks_done": 7
+    },
+    "phase3_economy": {
+      "name": "经济系统",
+      "status": "completed",
+      "progress": 90,
+      "tasks_total": 4,
+      "tasks_done": 3
+    },
+    "phase4_social": {
+      "name": "社交系统",
+      "status": "completed",
+      "progress": 100,
+      "tasks_total": 7,
+      "tasks_done": 7
+    },
+    "phase5_explore": {
+      "name": "探索系统",
+      "status": "completed",
+      "progress": 100,
+      "tasks_total": 6,
+      "tasks_done": 6
+    },
+    "phase6_advanced": {
+      "name": "进阶功能",
+      "status": "completed",
+      "progress": 100,
+      "tasks_total": 6,
+      "tasks_done": 6,
+      "tasks": {
+        "cooking": { "status": "completed", "priority": "high", "estimate": "4h" },
+        "animals": { "status": "completed", "priority": "high", "estimate": "6h" },
+        "festivals": { "status": "completed", "priority": "medium", "estimate": "8h" },
+        "housing": { "status": "completed", "priority": "medium", "estimate": "6h" },
+        "achievements": { "status": "completed", "priority": "low", "estimate": "4h" },
+        "content": { "status": "completed", "priority": "high", "estimate": "continuous", "note": "作物20种,鱼类17种,任务28个" }
+      }
+    }
+  },
+  
+  "current_sprint": {
+    "week": 1,
+    "focus": ["festivals", "content", "bug_fixes"],
+    "goals": [
+      "完成节日系统基础架构",
+      "添加更多作物和鱼类",
+      "测试所有核心系统"
+    ]
+  },
+  
+  "next_actions": [
+    {
+      "id": 1,
+      "task": "创建节日系统基础",
+      "file": "src/core/time/FestivalSystem.gd",
+      "priority": "medium",
+      "status": "pending"
+    },
+    {
+      "id": 2,
+      "task": "添加更多作物数据",
+      "file": "data/crops.json",
+      "priority": "high",
+      "status": "pending"
+    },
+    {
+      "id": 3,
+      "task": "添加更多鱼类数据",
+      "file": "data/fish.json",
+      "priority": "high",
+      "status": "pending"
+    },
+    {
+      "id": 4,
+      "task": "添加更多任务",
+      "file": "data/quests.json",
+      "priority": "high",
+      "status": "pending"
+    },
+    {
+      "id": 5,
+      "task": "测试存档系统",
+      "file": "tests/",
+      "priority": "high",
+      "status": "pending"
+    }
+  ],
+  
+  "bugs": [],
+  
+  "metrics": {
+    "gdscript_files": 98,
+    "data_files": 10,
+    "code_lines": 24000,
+    "test_coverage": "basic"
+  }
+}

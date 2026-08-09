@@ -1,0 +1,594 @@
+{
+  "npcs": [
+    {
+      "id": "mayor",
+      "name": "镇长·威廉",
+      "portrait": "res://assets/sprites/portraits/mayor.png",
+      "default_location": "village",
+      "description": "村庄的镇长，负责管理村庄事务。",
+      "birthday": {
+        "season": "Spring",
+        "day": 14
+      },
+      "personality": "friendly",
+      "gift_preferences": {
+        "love": [
+          "flower_spring",
+          "cheese"
+        ],
+        "like": [
+          "bread",
+          "wood"
+        ],
+        "dislike": [
+          "fiber"
+        ]
+      },
+      "schedule": [
+        {
+          "start_time": 6.0,
+          "end_time": 9.0,
+          "activity": 0,
+          "location_id": "mayor_home",
+          "location_position": {
+            "x": 200,
+            "y": 150
+          },
+          "dialog_override": ""
+        },
+        {
+          "start_time": 9.0,
+          "end_time": 12.0,
+          "activity": 1,
+          "location_id": "town_hall",
+          "location_position": {
+            "x": 400,
+            "y": 300
+          }
+        },
+        {
+          "start_time": 12.0,
+          "end_time": 13.0,
+          "activity": 3,
+          "location_id": "plaza",
+          "location_position": {
+            "x": 500,
+            "y": 400
+          }
+        },
+        {
+          "start_time": 13.0,
+          "end_time": 17.0,
+          "activity": 1,
+          "location_id": "town_hall",
+          "location_position": {
+            "x": 400,
+            "y": 300
+          }
+        },
+        {
+          "start_time": 17.0,
+          "end_time": 21.0,
+          "activity": 2,
+          "location_id": "plaza",
+          "location_position": {
+            "x": 500,
+            "y": 400
+          }
+        },
+        {
+          "start_time": 21.0,
+          "end_time": 24.0,
+          "activity": 0,
+          "location_id": "mayor_home",
+          "location_position": {
+            "x": 200,
+            "y": 150
+          }
+        },
+        {
+          "start_time": 0.0,
+          "end_time": 6.0,
+          "activity": 0,
+          "location_id": "mayor_home",
+          "location_position": {
+            "x": 200,
+            "y": 150
+          }
+        }
+      ],
+      "sprite": "res://assets/sprites/characters/npc_sheets/mayor_sheet.png"
+    },
+    {
+      "id": "farmer_joe",
+      "name": "农夫·乔",
+      "portrait": "res://assets/sprites/portraits/farmer_joe.png",
+      "default_location": "farm",
+      "description": "经验丰富的农夫，总是乐于分享种植技巧。",
+      "birthday": {
+        "season": "Summer",
+        "day": 7
+      },
+      "personality": "helpful",
+      "gift_preferences": {
+        "love": [
+          "corn",
+          "tomato"
+        ],
+        "like": [
+          "turnip",
+          "potato"
+        ],
+        "dislike": [
+          "fish_common"
+        ]
+      },
+      "schedule": [
+        {
+          "start_time": 5.0,
+          "end_time": 6.0,
+          "activity": 0,
+          "location_id": "farm_house",
+          "location_position": {
+            "x": 100,
+            "y": 100
+          }
+        },
+        {
+          "start_time": 6.0,
+          "end_time": 12.0,
+          "activity": 1,
+          "location_id": "farm_field",
+          "location_position": {
+            "x": 150,
+            "y": 200
+          }
+        },
+        {
+          "start_time": 12.0,
+          "end_time": 13.0,
+          "activity": 3,
+          "location_id": "farm_house",
+          "location_position": {
+            "x": 100,
+            "y": 100
+          }
+        },
+        {
+          "start_time": 13.0,
+          "end_time": 18.0,
+          "activity": 1,
+          "location_id": "farm_field",
+          "location_position": {
+            "x": 150,
+            "y": 200
+          }
+        },
+        {
+          "start_time": 18.0,
+          "end_time": 20.0,
+          "activity": 2,
+          "location_id": "tavern",
+          "location_position": {
+            "x": 600,
+            "y": 350
+          }
+        },
+        {
+          "start_time": 20.0,
+          "end_time": 22.0,
+          "activity": 0,
+          "location_id": "farm_house",
+          "location_position": {
+            "x": 100,
+            "y": 100
+          }
+        },
+        {
+          "start_time": 22.0,
+          "end_time": 5.0,
+          "activity": 0,
+          "location_id": "farm_house",
+          "location_position": {
+            "x": 100,
+            "y": 100
+          }
+        }
+      ],
+      "sprite": "res://assets/sprites/characters/npc_sheets/farmer_joe_sheet.png"
+    },
+    {
+      "id": "shopkeeper_lily",
+      "name": "店主·莉莉",
+      "portrait": "res://assets/sprites/portraits/shopkeeper_lily.png",
+      "default_location": "village",
+      "description": "杂货店的老板娘，消息灵通。",
+      "birthday": {
+        "season": "Fall",
+        "day": 21
+      },
+      "personality": "cheerful",
+      "gift_preferences": {
+        "love": [
+          "flower_spring",
+          "pumpkin"
+        ],
+        "like": [
+          "bread",
+          "cheese"
+        ],
+        "dislike": [
+          "fiber",
+          "wood"
+        ]
+      },
+      "schedule": [
+        {
+          "start_time": 6.0,
+          "end_time": 8.0,
+          "activity": 0,
+          "location_id": "shop_backroom",
+          "location_position": {
+            "x": 300,
+            "y": 200
+          }
+        },
+        {
+          "start_time": 8.0,
+          "end_time": 12.0,
+          "activity": 1,
+          "location_id": "general_store",
+          "location_position": {
+            "x": 350,
+            "y": 220
+          }
+        },
+        {
+          "start_time": 12.0,
+          "end_time": 13.0,
+          "activity": 3,
+          "location_id": "plaza",
+          "location_position": {
+            "x": 500,
+            "y": 400
+          }
+        },
+        {
+          "start_time": 13.0,
+          "end_time": 18.0,
+          "activity": 1,
+          "location_id": "general_store",
+          "location_position": {
+            "x": 350,
+            "y": 220
+          }
+        },
+        {
+          "start_time": 18.0,
+          "end_time": 21.0,
+          "activity": 2,
+          "location_id": "plaza",
+          "location_position": {
+            "x": 500,
+            "y": 400
+          }
+        },
+        {
+          "start_time": 21.0,
+          "end_time": 24.0,
+          "activity": 0,
+          "location_id": "shop_backroom",
+          "location_position": {
+            "x": 300,
+            "y": 200
+          }
+        },
+        {
+          "start_time": 0.0,
+          "end_time": 6.0,
+          "activity": 0,
+          "location_id": "shop_backroom",
+          "location_position": {
+            "x": 300,
+            "y": 200
+          }
+        }
+      ],
+      "sprite": "res://assets/sprites/characters/npc_sheets/shopkeeper_lily_sheet.png"
+    },
+    {
+      "id": "blacksmith_tom",
+      "name": "铁匠·汤姆",
+      "portrait": "res://assets/sprites/portraits/blacksmith_tom.png",
+      "default_location": "village",
+      "description": "村庄的铁匠，擅长打造和升级工具。",
+      "birthday": {
+        "season": "Winter",
+        "day": 3
+      },
+      "personality": "gruff_but_kind",
+      "gift_preferences": {
+        "love": [
+          "stone",
+          "fish_rare"
+        ],
+        "like": [
+          "wood",
+          "iron_ore"
+        ],
+        "dislike": [
+          "flower_spring"
+        ]
+      },
+      "schedule": [
+        {
+          "start_time": 7.0,
+          "end_time": 8.0,
+          "activity": 0,
+          "location_id": "blacksmith_home",
+          "location_position": {
+            "x": 450,
+            "y": 180
+          }
+        },
+        {
+          "start_time": 8.0,
+          "end_time": 12.0,
+          "activity": 1,
+          "location_id": "blacksmith_shop",
+          "location_position": {
+            "x": 480,
+            "y": 220
+          }
+        },
+        {
+          "start_time": 12.0,
+          "end_time": 13.0,
+          "activity": 3,
+          "location_id": "tavern",
+          "location_position": {
+            "x": 600,
+            "y": 350
+          }
+        },
+        {
+          "start_time": 13.0,
+          "end_time": 17.0,
+          "activity": 1,
+          "location_id": "blacksmith_shop",
+          "location_position": {
+            "x": 480,
+            "y": 220
+          }
+        },
+        {
+          "start_time": 17.0,
+          "end_time": 20.0,
+          "activity": 2,
+          "location_id": "tavern",
+          "location_position": {
+            "x": 600,
+            "y": 350
+          }
+        },
+        {
+          "start_time": 20.0,
+          "end_time": 22.0,
+          "activity": 0,
+          "location_id": "blacksmith_home",
+          "location_position": {
+            "x": 450,
+            "y": 180
+          }
+        },
+        {
+          "start_time": 22.0,
+          "end_time": 7.0,
+          "activity": 0,
+          "location_id": "blacksmith_home",
+          "location_position": {
+            "x": 450,
+            "y": 180
+          }
+        }
+      ],
+      "sprite": "res://assets/sprites/characters/npc_sheets/blacksmith_tom_sheet.png"
+    },
+    {
+      "id": "fisherman_old_jack",
+      "name": "老渔夫·杰克",
+      "portrait": "res://assets/sprites/portraits/fisherman_jack.png",
+      "default_location": "beach",
+      "description": "退休的老渔夫，喜欢在海滩钓鱼。",
+      "birthday": {
+        "season": "Spring",
+        "day": 28
+      },
+      "personality": "wise",
+      "gift_preferences": {
+        "love": [
+          "fish_rare"
+        ],
+        "like": [
+          "fish_common",
+          "bread"
+        ],
+        "dislike": [
+          "stone",
+          "wood"
+        ]
+      },
+      "schedule": [
+        {
+          "start_time": 5.0,
+          "end_time": 6.0,
+          "activity": 0,
+          "location_id": "beach_hut",
+          "location_position": {
+            "x": 100,
+            "y": 500
+          }
+        },
+        {
+          "start_time": 6.0,
+          "end_time": 11.0,
+          "activity": 1,
+          "location_id": "beach_pier",
+          "location_position": {
+            "x": 200,
+            "y": 550
+          }
+        },
+        {
+          "start_time": 11.0,
+          "end_time": 12.0,
+          "activity": 2,
+          "location_id": "beach",
+          "location_position": {
+            "x": 150,
+            "y": 520
+          }
+        },
+        {
+          "start_time": 12.0,
+          "end_time": 13.0,
+          "activity": 3,
+          "location_id": "beach_hut",
+          "location_position": {
+            "x": 100,
+            "y": 500
+          }
+        },
+        {
+          "start_time": 13.0,
+          "end_time": 18.0,
+          "activity": 1,
+          "location_id": "beach_pier",
+          "location_position": {
+            "x": 200,
+            "y": 550
+          }
+        },
+        {
+          "start_time": 18.0,
+          "end_time": 21.0,
+          "activity": 2,
+          "location_id": "tavern",
+          "location_position": {
+            "x": 600,
+            "y": 350
+          }
+        },
+        {
+          "start_time": 21.0,
+          "end_time": 5.0,
+          "activity": 0,
+          "location_id": "beach_hut",
+          "location_position": {
+            "x": 100,
+            "y": 500
+          }
+        }
+      ],
+      "sprite": "res://assets/sprites/characters/npc_sheets/fisherman_jack_sheet.png"
+    },
+    {
+      "id": "doctor_mary",
+      "name": "医生·玛丽",
+      "portrait": "res://assets/sprites/portraits/doctor_mary.png",
+      "default_location": "village",
+      "description": "村庄的医生，温柔细心。",
+      "birthday": {
+        "season": "Summer",
+        "day": 15
+      },
+      "personality": "caring",
+      "gift_preferences": {
+        "love": [
+          "flower_spring",
+          "cheese"
+        ],
+        "like": [
+          "bread",
+          "tomato"
+        ],
+        "dislike": [
+          "fish_common"
+        ]
+      },
+      "schedule": [
+        {
+          "start_time": 6.0,
+          "end_time": 8.0,
+          "activity": 0,
+          "location_id": "clinic_backroom",
+          "location_position": {
+            "x": 550,
+            "y": 250
+          }
+        },
+        {
+          "start_time": 8.0,
+          "end_time": 12.0,
+          "activity": 1,
+          "location_id": "clinic",
+          "location_position": {
+            "x": 520,
+            "y": 280
+          }
+        },
+        {
+          "start_time": 12.0,
+          "end_time": 13.0,
+          "activity": 3,
+          "location_id": "plaza",
+          "location_position": {
+            "x": 500,
+            "y": 400
+          }
+        },
+        {
+          "start_time": 13.0,
+          "end_time": 17.0,
+          "activity": 1,
+          "location_id": "clinic",
+          "location_position": {
+            "x": 520,
+            "y": 280
+          }
+        },
+        {
+          "start_time": 17.0,
+          "end_time": 20.0,
+          "activity": 2,
+          "location_id": "beach",
+          "location_position": {
+            "x": 180,
+            "y": 520
+          }
+        },
+        {
+          "start_time": 20.0,
+          "end_time": 22.0,
+          "activity": 0,
+          "location_id": "clinic_backroom",
+          "location_position": {
+            "x": 550,
+            "y": 250
+          }
+        },
+        {
+          "start_time": 22.0,
+          "end_time": 6.0,
+          "activity": 0,
+          "location_id": "clinic_backroom",
+          "location_position": {
+            "x": 550,
+            "y": 250
+          }
+        }
+      ],
+      "sprite": "res://assets/sprites/characters/npc_sheets/doctor_mary_sheet.png"
+    }
+  ]
+}

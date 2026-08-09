@@ -1,0 +1,474 @@
+{
+  "quests": [
+    {
+      "id": "tutorial_farming",
+      "title": "农场入门",
+      "description": "学习基本的农场技能，开始你的农场生活。",
+      "quest_giver": "mayor",
+      "prerequisites": [],
+      "objectives": [
+        {
+          "type": "harvest",
+          "target": "turnip",
+          "required": 1,
+          "description": "收获1个芜菁"
+        },
+        {
+          "type": "collect",
+          "target": "turnip",
+          "required": 3,
+          "description": "收集3个芜菁"
+        }
+      ],
+      "rewards": {
+        "money": 100,
+        "items": [
+          {"id": "potato_seed", "quantity": 5}
+        ],
+        "experience": 50
+      },
+      "time_limit": -1,
+      "repeatable": false,
+      "priority": 100
+    },
+    {
+      "id": "first_harvest",
+      "title": "第一次收获",
+      "description": "种下希望，收获成果。完成你的第一次作物收获。",
+      "quest_giver": "mayor",
+      "prerequisites": ["tutorial_farming"],
+      "objectives": [
+        {
+          "type": "harvest",
+          "target": "turnip",
+          "required": 3,
+          "description": "收获3个芜菁"
+        },
+        {
+          "type": "harvest",
+          "target": "potato",
+          "required": 2,
+          "description": "收获2个土豆"
+        }
+      ],
+      "rewards": {
+        "money": 200,
+        "items": [
+          {"id": "tomato_seed", "quantity": 3},
+          {"id": "corn_seed", "quantity": 3}
+        ],
+        "experience": 100
+      },
+      "time_limit": -1,
+      "repeatable": false,
+      "priority": 90
+    },
+    {
+      "id": "village_introduction",
+      "title": "认识村民",
+      "description": "去村子里认识一下友善的村民们。",
+      "quest_giver": "mayor",
+      "prerequisites": [],
+      "objectives": [
+        {
+          "type": "talk_to",
+          "target": "shopkeeper",
+          "required": 1,
+          "description": "与店主交谈"
+        },
+        {
+          "type": "talk_to",
+          "target": "farmer",
+          "required": 1,
+          "description": "与农夫交谈"
+        },
+        {
+          "type": "talk_to",
+          "target": "fisherman",
+          "required": 1,
+          "description": "与渔夫交谈"
+        }
+      ],
+      "rewards": {
+        "money": 50,
+        "experience": 30
+      },
+      "time_limit": 7,
+      "repeatable": false,
+      "priority": 95
+    },
+    {
+      "id": "shopkeeper_request",
+      "title": "店主的请求",
+      "description": "店主需要一些新鲜的蔬菜来补充库存。",
+      "quest_giver": "shopkeeper",
+      "prerequisites": ["village_introduction"],
+      "objectives": [
+        {
+          "type": "deliver",
+          "target": "turnip",
+          "required": 5,
+          "npc_id": "shopkeeper",
+          "description": "将5个芜菁交给店主"
+        }
+      ],
+      "rewards": {
+        "money": 300,
+        "items": [
+          {"id": "bread", "quantity": 3}
+        ],
+        "experience": 80
+      },
+      "time_limit": 14,
+      "repeatable": true,
+      "priority": 70
+    },
+    {
+      "id": "fisherman_catch",
+      "title": "渔夫的挑战",
+      "description": "渔夫想看看你的钓鱼技术。",
+      "quest_giver": "fisherman",
+      "prerequisites": ["village_introduction"],
+      "objectives": [
+        {
+          "type": "fish",
+          "target": "any",
+          "required": 3,
+          "description": "钓到3条鱼"
+        }
+      ],
+      "rewards": {
+        "money": 150,
+        "items": [
+          {"id": "fish_common", "quantity": 2}
+        ],
+        "experience": 60
+      },
+      "time_limit": 7,
+      "repeatable": true,
+      "priority": 60
+    },
+    {
+      "id": "friendship_beginner",
+      "title": "建立友谊",
+      "description": "送礼是增进感情的好方法，试试送给村民一份礼物。",
+      "quest_giver": "mayor",
+      "prerequisites": ["village_introduction"],
+      "objectives": [
+        {
+          "type": "gift_to",
+          "target": "shopkeeper",
+          "required": 1,
+          "description": "送给店主一份礼物"
+        },
+        {
+          "type": "gift_to",
+          "target": "farmer",
+          "required": 1,
+          "description": "送给农夫一份礼物"
+        }
+      ],
+      "rewards": {
+        "money": 100,
+        "experience": 50
+      },
+      "time_limit": -1,
+      "repeatable": false,
+      "priority": 80
+    },
+    {
+      "id": "deep_friendship",
+      "title": "深厚友谊",
+      "description": "继续与村民交流，建立更深的关系。",
+      "quest_giver": "mayor",
+      "prerequisites": ["friendship_beginner"],
+      "objectives": [
+        {
+          "type": "reach_hearts",
+          "target": "hearts",
+          "required": 3,
+          "npc_id": "shopkeeper",
+          "description": "与店主达到3心好感度"
+        },
+        {
+          "type": "reach_hearts",
+          "target": "hearts",
+          "required": 3,
+          "npc_id": "farmer",
+          "description": "与农夫达到3心好感度"
+        }
+      ],
+      "rewards": {
+        "money": 500,
+        "items": [
+          {"id": "flower_spring", "quantity": 3}
+        ],
+        "experience": 150
+      },
+      "time_limit": -1,
+      "repeatable": false,
+      "priority": 50
+    },
+    {
+      "id": "resource_gathering",
+      "title": "资源收集",
+      "description": "收集基础资源是农场发展的重要一步。",
+      "quest_giver": "farmer",
+      "prerequisites": ["village_introduction"],
+      "objectives": [
+        {
+          "type": "collect",
+          "target": "wood",
+          "required": 50,
+          "description": "收集50个木材"
+        },
+        {
+          "type": "collect",
+          "target": "stone",
+          "required": 30,
+          "description": "收集30个石头"
+        }
+      ],
+      "rewards": {
+        "money": 200,
+        "items": [
+          {"id": "pickaxe", "quantity": 1}
+        ],
+        "experience": 70
+      },
+      "time_limit": 14,
+      "repeatable": true,
+      "priority": 75
+    },
+    {
+      "id": "mining_intro",
+      "title": "矿洞探险",
+      "description": "探索矿洞，寻找珍贵的矿石。",
+      "quest_giver": "blacksmith",
+      "prerequisites": ["resource_gathering"],
+      "objectives": [
+        {
+          "type": "mine",
+          "target": "any",
+          "required": 10,
+          "description": "在矿洞中挖掘10次"
+        }
+      ],
+      "rewards": {
+        "money": 250,
+        "items": [
+          {"id": "stone", "quantity": 20}
+        ],
+        "experience": 100
+      },
+      "time_limit": -1,
+      "repeatable": true,
+      "priority": 65
+    },
+    {
+      "id": "autumn_harvest",
+      "title": "秋日收获",
+      "description": "秋天是收获的季节，收集各种秋季作物。",
+      "quest_giver": "farmer",
+      "prerequisites": ["first_harvest"],
+      "objectives": [
+        {
+          "type": "harvest",
+          "target": "pumpkin",
+          "required": 3,
+          "description": "收获3个南瓜"
+        },
+        {
+          "type": "collect",
+          "target": "pumpkin",
+          "required": 5,
+          "description": "收集5个南瓜"
+        }
+      ],
+      "rewards": {
+        "money": 800,
+        "items": [
+          {"id": "bread", "quantity": 5},
+          {"id": "cheese", "quantity": 2}
+        ],
+        "experience": 200
+      },
+      "time_limit": 28,
+      "repeatable": false,
+      "priority": 40
+    },
+    {
+      "id": "village_hero",
+      "title": "村庄英雄",
+      "description": "通过努力工作成为村民信赖的人。",
+      "quest_giver": "mayor",
+      "prerequisites": ["deep_friendship", "mining_intro", "autumn_harvest"],
+      "objectives": [
+        {
+          "type": "reach_hearts",
+          "target": "hearts",
+          "required": 5,
+          "npc_id": "mayor",
+          "description": "与村长达到5心好感度"
+        },
+        {
+          "type": "reach_hearts",
+          "target": "hearts",
+          "required": 5,
+          "npc_id": "shopkeeper",
+          "description": "与店主达到5心好感度"
+        },
+        {
+          "type": "reach_hearts",
+          "target": "hearts",
+          "required": 5,
+          "npc_id": "farmer",
+          "description": "与农夫达到5心好感度"
+        }
+      ],
+      "rewards": {
+        "money": 2000,
+        "items": [
+          {"id": "letter", "quantity": 1}
+        ],
+        "experience": 500
+      },
+      "time_limit": -1,
+      "repeatable": false,
+      "priority": 10
+    },
+    {
+      "id": "fisherman_master",
+      "title": "钓鱼大师",
+      "description": "证明你的钓鱼技术已经达到大师级别。",
+      "quest_giver": "fisherman",
+      "prerequisites": ["fisherman_catch"],
+      "objectives": [
+        {
+          "type": "fish",
+          "target": "any",
+          "required": 10,
+          "description": "钓到10条鱼"
+        },
+        {
+          "type": "collect",
+          "target": "fish_rare",
+          "required": 1,
+          "description": "收集1条金枪鱼"
+        }
+      ],
+      "rewards": {
+        "money": 500,
+        "experience": 200
+      },
+      "time_limit": -1,
+      "repeatable": true,
+      "priority": 45
+    },
+    {
+      "id": "weekly_vegetables",
+      "title": "每周蔬菜供应",
+      "description": "每周向店主提供新鲜的蔬菜。",
+      "quest_giver": "shopkeeper",
+      "prerequisites": ["shopkeeper_request"],
+      "objectives": [
+        {
+          "type": "deliver",
+          "target": "turnip",
+          "required": 10,
+          "npc_id": "shopkeeper",
+          "description": "将10个芜菁交给店主"
+        },
+        {
+          "type": "deliver",
+          "target": "potato",
+          "required": 5,
+          "npc_id": "shopkeeper",
+          "description": "将5个土豆交给店主"
+        }
+      ],
+      "rewards": {
+        "money": 600,
+        "items": [
+          {"id": "tomato_seed", "quantity": 5}
+        ],
+        "experience": 100
+      },
+      "time_limit": 7,
+      "repeatable": true,
+      "priority": 55
+    },
+    {
+      "id": "blacksmith_delivery",
+      "title": "铁匠的委托",
+      "description": "铁匠需要一些矿石来打造新工具。",
+      "quest_giver": "blacksmith",
+      "prerequisites": ["mining_intro"],
+      "objectives": [
+        {
+          "type": "deliver",
+          "target": "stone",
+          "required": 20,
+          "npc_id": "blacksmith",
+          "description": "将20个石头交给铁匠"
+        }
+      ],
+      "rewards": {
+        "money": 300,
+        "experience": 80
+      },
+      "time_limit": 14,
+      "repeatable": true,
+      "priority": 60
+    },
+    {
+      "id": "social_butterfly",
+      "title": "社交达人",
+      "description": "与所有村民建立良好的关系。",
+      "quest_giver": "mayor",
+      "prerequisites": ["deep_friendship"],
+      "objectives": [
+        {
+          "type": "gift_to",
+          "target": "mayor",
+          "required": 1,
+          "description": "送给村长一份礼物"
+        },
+        {
+          "type": "gift_to",
+          "target": "shopkeeper",
+          "required": 1,
+          "description": "送给店主一份礼物"
+        },
+        {
+          "type": "gift_to",
+          "target": "farmer",
+          "required": 1,
+          "description": "送给农夫一份礼物"
+        },
+        {
+          "type": "gift_to",
+          "target": "fisherman",
+          "required": 1,
+          "description": "送给渔夫一份礼物"
+        },
+        {
+          "type": "gift_to",
+          "target": "blacksmith",
+          "required": 1,
+          "description": "送给铁匠一份礼物"
+        }
+      ],
+      "rewards": {
+        "money": 400,
+        "items": [
+          {"id": "flower_spring", "quantity": 5}
+        ],
+        "experience": 150
+      },
+      "time_limit": 28,
+      "repeatable": false,
+      "priority": 30
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "expected_map_id": "farm_main",
+  "operations": [
+    {"op": "set_map_metadata", "map_id": "pastoral_valley", "display_name": "牧歌谷示例农场"},
+    {"op": "paint_rect", "layer": "ground", "from": [0, 0], "to": [49, 34], "tile": {"source": 0, "atlas": [0, 0]}},
+    {"op": "erase_rect", "layer": "terrain_overlay", "from": [0, 0], "to": [49, 34]},
+
+    {"op": "paint_rect", "layer": "ground", "from": [13, 21], "to": [29, 31], "tile": {"source": 0, "atlas": [22, 0]}},
+    {"op": "paint_rect", "layer": "ground", "from": [15, 23], "to": [27, 29], "tile": {"source": 0, "atlas": [23, 0]}},
+    {"op": "paint_rect", "layer": "ground", "from": [33, 3], "to": [47, 15], "tile": {"source": 0, "atlas": [1, 0]}},
+    {"op": "paint_rect", "layer": "ground", "from": [2, 21], "to": [10, 31], "tile": {"source": 0, "atlas": [2, 0]}},
+    {"op": "paint_rect", "layer": "ground", "from": [17, 2], "to": [33, 2], "tile": {"source": 0, "atlas": [24, 0]}},
+
+    {"op": "paint_rect", "layer": "terrain_overlay", "from": [0, 17], "to": [49, 17], "tile": {"source": 0, "atlas": [3, 0]}},
+    {"op": "paint_rect", "layer": "terrain_overlay", "from": [9, 6], "to": [9, 20], "tile": {"source": 0, "atlas": [4, 0]}},
+    {"op": "paint_rect", "layer": "terrain_overlay", "from": [20, 17], "to": [20, 34], "tile": {"source": 0, "atlas": [4, 0]}},
+    {"op": "paint_rect", "layer": "terrain_overlay", "from": [30, 9], "to": [48, 9], "tile": {"source": 0, "atlas": [3, 0]}},
+    {"op": "paint_rect", "layer": "terrain_overlay", "from": [39, 9], "to": [39, 17], "tile": {"source": 0, "atlas": [4, 0]}},
+
+    {"op": "paint_rect", "layer": "terrain_overlay", "from": [35, 23], "to": [44, 31], "tile": {"source": 0, "atlas": [10, 0]}},
+    {"op": "paint_rect", "layer": "terrain_overlay", "from": [13, 20], "to": [30, 20], "tile": {"source": 0, "atlas": [19, 0]}},
+    {"op": "paint_rect", "layer": "terrain_overlay", "from": [13, 32], "to": [30, 32], "tile": {"source": 0, "atlas": [19, 0]}},
+    {"op": "paint_rect", "layer": "terrain_overlay", "from": [13, 20], "to": [13, 32], "tile": {"source": 0, "atlas": [20, 0]}},
+    {"op": "paint_rect", "layer": "terrain_overlay", "from": [30, 20], "to": [30, 32], "tile": {"source": 0, "atlas": [20, 0]}},
+    {"op": "erase_rect", "layer": "terrain_overlay", "from": [20, 20], "to": [21, 20]},
+
+    {"op": "move_node", "path": "Objects/PlayerHouseExterior", "to": [8, 5], "space": "tile"},
+    {"op": "move_node", "path": "Objects/ShippingBin", "to": [12, 7], "space": "tile"},
+    {"op": "move_node", "path": "Objects/Workbench", "to": [14, 7], "space": "tile"},
+    {"op": "move_node", "path": "Objects/Coop", "to": [36, 7], "space": "tile"},
+    {"op": "move_node", "path": "Objects/Barn", "to": [43, 13], "space": "tile"},
+    {"op": "move_node", "path": "Objects/FishingSpot", "to": [34, 27], "space": "tile"},
+    {"op": "move_node", "path": "Objects/OreNorth", "to": [45, 28], "space": "tile"},
+    {"op": "move_node", "path": "Objects/OreSouth", "to": [47, 30], "space": "tile"},
+    {"op": "place_asset", "asset": "ore", "layer": "objects", "at": [43, 29], "space": "tile", "name": "PondOre", "properties": {"ore_type": 0}},
+    {"op": "place_asset", "asset": "ore", "layer": "objects", "at": [5, 27], "space": "tile", "name": "WestFieldOre", "properties": {"ore_type": 0}},
+
+    {"op": "collision_rect", "at": [25, 2], "space": "tile", "size": [1024, 64], "preset": "world_solid", "name": "NorthernRidge"},
+    {"op": "marker", "id": "player_spawn", "kind": "spawn", "at": [9, 8], "space": "tile", "replace": true},
+    {"op": "marker", "id": "from_village", "kind": "spawn", "at": [48, 17], "space": "tile", "replace": true},
+    {"op": "marker", "id": "field_anchor", "kind": "anchor", "at": [21, 26], "space": "tile"},
+    {"op": "marker", "id": "pond_anchor", "kind": "anchor", "at": [39, 27], "space": "tile"},
+    {"op": "marker", "id": "orchard_anchor", "kind": "anchor", "at": [40, 6], "space": "tile"}
+  ]
+}

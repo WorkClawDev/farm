@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="128" viewBox="0 0 160 128">
+  <defs>
+    <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#B96C36"/>
+      <stop offset="1" stop-color="#75401F"/>
+    </linearGradient>
+    <linearGradient id="lid" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#D4934F"/>
+      <stop offset="1" stop-color="#8B4A24"/>
+    </linearGradient>
+    <filter id="shadow" x="-25%" y="-30%" width="150%" height="170%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dy="4"/>
+      <feComponentTransfer><feFuncA type="linear" slope=".28"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g filter="url(#shadow)" stroke="#432615" stroke-linejoin="round">
+    <path d="M25 45h110l-8 67H33z" fill="url(#wood)" stroke-width="5"/>
+    <path d="M18 43 37 17h89l17 26-13 14H29z" fill="url(#lid)" stroke-width="5"/>
+    <path d="M38 19 29 45h102l-7-26" fill="none" stroke="#F2BE6A" stroke-width="5" opacity=".7"/>
+    <path d="M50 48v61M80 48v64M110 48v61" fill="none" stroke="#512D19" stroke-width="4" opacity=".75"/>
+    <path d="M25 76h106" fill="none" stroke="#E2A25A" stroke-width="4" opacity=".55"/>
+    <rect x="67" y="63" width="26" height="25" rx="5" fill="#E7B84D" stroke-width="4"/>
+    <path d="M74 70h12v11H74z" fill="#5B351A" stroke="none"/>
+    <path d="M35 110h18v9H35zM107 110h18v9h-18z" fill="#563018" stroke-width="4"/>
+  </g>
+  <path d="M18 35c-7-5-8-13-5-20 8 1 14 6 16 14M141 35c7-5 8-13 5-20-8 1-14 6-16 14"
+        fill="#6E9B4F" stroke="#36592D" stroke-width="3" stroke-linecap="round"/>
+</svg>

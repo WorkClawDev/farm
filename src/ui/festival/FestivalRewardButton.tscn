@@ -1,0 +1,4 @@
+[gd_scene format=3 uid="uid://cln1rewardbtn"]
+
+[node name="FestivalRewardButton" type="Button"]
+text = "奖励"

@@ -1,0 +1,114 @@
+[gd_scene load_steps=2 format=3 uid="uid://furniture_shop_ui"]
+
+[ext_resource type="Script" path="res://src/ui/menus/FurnitureShopUI.gd" id="1_furniture"]
+
+[node name="FurnitureShopUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_furniture")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -300.0
+offset_top = -200.0
+offset_right = 300.0
+offset_bottom = 200.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TitleLabel" type="Label" parent="Panel"]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -100.0
+offset_top = 15.0
+offset_right = 100.0
+offset_bottom = 45.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 24
+text = "家具商店"
+horizontal_alignment = 1
+
+[node name="MoneyLabel" type="Label" parent="Panel"]
+layout_mode = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -200.0
+offset_top = 15.0
+offset_right = -20.0
+offset_bottom = 40.0
+grow_horizontal = 0
+theme_override_font_sizes/font_size = 16
+text = "持有: 0G"
+horizontal_alignment = 2
+
+[node name="FurnitureList" type="ItemList" parent="Panel"]
+layout_mode = 1
+offset_left = 20.0
+offset_top = 55.0
+offset_right = 280.0
+offset_bottom = 350.0
+
+[node name="ItemDetails" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -280.0
+offset_top = 55.0
+offset_right = -20.0
+offset_bottom = 250.0
+grow_horizontal = 0
+
+[node name="NameLabel" type="Label" parent="Panel/ItemDetails"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "选择家具"
+
+[node name="DescLabel" type="Label" parent="Panel/ItemDetails"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "点击左侧列表选择家具"
+autowrap_mode = 3
+
+[node name="PriceLabel" type="Label" parent="Panel/ItemDetails"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "价格: 0G"
+
+[node name="BuyButton" type="Button" parent="Panel"]
+layout_mode = 1
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -150.0
+offset_top = -50.0
+offset_right = -80.0
+offset_bottom = -20.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "购买"
+
+[node name="CloseButton" type="Button" parent="Panel"]
+layout_mode = 1
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -70.0
+offset_top = -50.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "关闭"

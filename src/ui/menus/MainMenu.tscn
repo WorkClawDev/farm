@@ -1,0 +1,209 @@
+[gd_scene load_steps=5 format=3 uid="uid://cmainmenu"]
+
+[ext_resource type="Script" path="res://src/ui/menus/MainMenu.gd" id="1"]
+[ext_resource type="Texture2D" path="res://assets/ui/backgrounds/menu_spring.png" id="2"]
+[ext_resource type="Texture2D" path="res://assets/ui/icons/logo_mark.svg" id="3"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_brand"]
+content_margin_left = 26.0
+content_margin_top = 20.0
+content_margin_right = 26.0
+content_margin_bottom = 20.0
+bg_color = Color(0.105882, 0.141176, 0.0823529, 0.82)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.929412, 0.780392, 0.380392, 0.62)
+corner_radius_top_left = 24
+corner_radius_top_right = 24
+corner_radius_bottom_right = 24
+corner_radius_bottom_left = 24
+shadow_color = Color(0.054902, 0.0352941, 0.0156863, 0.42)
+shadow_size = 12
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+layout_direction = 2
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2")
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Vignette" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.078, 0.047, 0.02, 0.2)
+
+[node name="SafeArea" type="MarginContainer" parent="."]
+layout_mode = 1
+layout_direction = 2
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 44.0
+offset_top = 36.0
+offset_right = -44.0
+offset_bottom = -32.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 18
+
+[node name="Layout" type="Control" parent="SafeArea"]
+layout_mode = 2
+layout_direction = 2
+
+[node name="BrandBackdrop" type="PanelContainer" parent="SafeArea/Layout"]
+layout_mode = 1
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_brand")
+
+[node name="BrandColumn" type="VBoxContainer" parent="SafeArea/Layout"]
+layout_mode = 1
+layout_direction = 2
+alignment = 1
+theme_override_constants/separation = 8
+
+[node name="LogoMark" type="TextureRect" parent="SafeArea/Layout/BrandColumn"]
+custom_minimum_size = Vector2(126, 102)
+layout_mode = 2
+size_flags_horizontal = 4
+texture = ExtResource("3")
+expand_mode = 3
+stretch_mode = 5
+
+[node name="Title" type="Label" parent="SafeArea/Layout/BrandColumn"]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+theme_override_colors/font_color = Color(0.996, 0.953, 0.792, 1)
+theme_override_colors/font_outline_color = Color(0.117647, 0.0745098, 0.0313725, 0.95)
+theme_override_colors/font_shadow_color = Color(0.16, 0.09, 0.035, 0.9)
+theme_override_constants/outline_size = 6
+theme_override_constants/shadow_offset_x = 3
+theme_override_constants/shadow_offset_y = 4
+theme_override_font_sizes/font_size = 68
+text = "田园物语"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="SafeArea/Layout/BrandColumn"]
+layout_mode = 2
+theme_type_variation = &"SubtitleLabel"
+theme_override_colors/font_color = Color(1, 0.91, 0.69, 1)
+theme_override_colors/font_outline_color = Color(0.117647, 0.0745098, 0.0313725, 0.9)
+theme_override_colors/font_shadow_color = Color(0.16, 0.09, 0.035, 0.9)
+theme_override_constants/outline_size = 3
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+theme_override_font_sizes/font_size = 20
+text = "P A S T O R A L   T A L E S"
+horizontal_alignment = 1
+
+[node name="SeasonNote" type="Label" parent="SafeArea/Layout/BrandColumn"]
+layout_mode = 2
+theme_type_variation = &"HUDText"
+theme_override_font_sizes/font_size = 15
+text = "春日的农场正等你回家"
+horizontal_alignment = 1
+
+[node name="MenuCard" type="PanelContainer" parent="SafeArea/Layout"]
+custom_minimum_size = Vector2(390, 0)
+layout_mode = 1
+layout_direction = 2
+theme_type_variation = &"PaperPanel"
+
+[node name="Menu" type="VBoxContainer" parent="SafeArea/Layout/MenuCard"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Heading" type="Label" parent="SafeArea/Layout/MenuCard/Menu"]
+layout_mode = 2
+theme_type_variation = &"TitleLabel"
+theme_override_font_sizes/font_size = 30
+text = "今天，也从田间开始"
+
+[node name="SaveSummary" type="Label" parent="SafeArea/Layout/MenuCard/Menu"]
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+theme_type_variation = &"SubtitleLabel"
+text = "还没有农场记录"
+autowrap_mode = 2
+
+[node name="Divider" type="HSeparator" parent="SafeArea/Layout/MenuCard/Menu"]
+layout_mode = 2
+
+[node name="ContinueBtn" type="Button" parent="SafeArea/Layout/MenuCard/Menu"]
+custom_minimum_size = Vector2(0, 52)
+layout_mode = 2
+theme_type_variation = &"PrimaryButton"
+text = "继续游戏"
+
+[node name="NewGameBtn" type="Button" parent="SafeArea/Layout/MenuCard/Menu"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+text = "创建农场"
+
+[node name="LoadGameBtn" type="Button" parent="SafeArea/Layout/MenuCard/Menu"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+text = "读取进度"
+
+[node name="SettingsBtn" type="Button" parent="SafeArea/Layout/MenuCard/Menu"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+text = "设置"
+
+[node name="CreditsBtn" type="Button" parent="SafeArea/Layout/MenuCard/Menu"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+text = "制作人员"
+
+[node name="QuitBtn" type="Button" parent="SafeArea/Layout/MenuCard/Menu"]
+custom_minimum_size = Vector2(0, 48)
+layout_mode = 2
+text = "退出游戏"
+
+[node name="InputHint" type="Label" parent="SafeArea/Layout/MenuCard/Menu"]
+layout_mode = 2
+theme_type_variation = &"SubtitleLabel"
+text = "方向键 / 摇杆选择  ·  Enter / A 确认"
+horizontal_alignment = 1
+
+[node name="VersionLabel" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -280.0
+offset_top = -28.0
+offset_right = -28.0
+offset_bottom = -8.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_type_variation = &"HUDText"
+theme_override_font_sizes/font_size = 13
+text = "版本 0.3 · 界面焕新"
+horizontal_alignment = 2

@@ -1,0 +1,136 @@
+[gd_resource type="Theme" format=3 uid="uid://bp3pty5a3dmuj"]
+
+[sub_resource type="StyleBoxFlat" id="Focus"]
+bg_color = Color(0, 0, 0, 0)
+border_width_left = 4
+border_width_top = 4
+border_width_right = 4
+border_width_bottom = 4
+border_color = Color(0.2, 0.8, 1, 1)
+corner_radius_top_left = 11
+corner_radius_top_right = 11
+corner_radius_bottom_right = 11
+corner_radius_bottom_left = 11
+expand_margin_left = 3.0
+expand_margin_top = 3.0
+expand_margin_right = 3.0
+expand_margin_bottom = 3.0
+
+[sub_resource type="StyleBoxFlat" id="Hover"]
+content_margin_left = 18.0
+content_margin_top = 10.0
+content_margin_right = 18.0
+content_margin_bottom = 10.0
+bg_color = Color(1, 0.862745, 0.266667, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0, 0, 0, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="Button"]
+content_margin_left = 18.0
+content_margin_top = 10.0
+content_margin_right = 18.0
+content_margin_bottom = 10.0
+bg_color = Color(0.0784314, 0.0784314, 0.0784314, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="Panel"]
+content_margin_left = 24.0
+content_margin_top = 20.0
+content_margin_right = 24.0
+content_margin_bottom = 20.0
+bg_color = Color(0.0352941, 0.0352941, 0.0352941, 0.98)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.862745, 0.266667, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_right = 10
+corner_radius_bottom_left = 10
+
+[sub_resource type="StyleBoxFlat" id="Progress"]
+bg_color = Color(0.180392, 0.843137, 0.376471, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="SystemFont" id="Font"]
+font_names = PackedStringArray("Microsoft YaHei UI", "Noto Sans CJK SC", "PingFang SC", "Arial")
+
+[resource]
+default_font = SubResource("Font")
+default_font_size = 20
+Button/colors/font_color = Color(1, 1, 1, 1)
+Button/colors/font_hover_color = Color(0, 0, 0, 1)
+Button/colors/font_pressed_color = Color(0, 0, 0, 1)
+Button/styles/focus = SubResource("Focus")
+Button/styles/hover = SubResource("Hover")
+Button/styles/normal = SubResource("Button")
+Button/styles/pressed = SubResource("Hover")
+DangerButton/base_type = &"Button"
+DangerButton/styles/focus = SubResource("Focus")
+DangerButton/styles/hover = SubResource("Hover")
+DangerButton/styles/normal = SubResource("Button")
+DangerButton/styles/pressed = SubResource("Hover")
+HUDPanel/base_type = &"PanelContainer"
+HUDPanel/styles/panel = SubResource("Panel")
+HUDText/base_type = &"Label"
+HUDText/colors/font_color = Color(1, 1, 1, 1)
+ItemList/colors/font_color = Color(1, 1, 1, 1)
+ItemList/styles/focus = SubResource("Focus")
+ItemList/styles/panel = SubResource("Panel")
+Label/colors/font_color = Color(1, 1, 1, 1)
+LineEdit/colors/font_color = Color(1, 1, 1, 1)
+LineEdit/styles/focus = SubResource("Focus")
+LineEdit/styles/normal = SubResource("Button")
+Panel/styles/panel = SubResource("Panel")
+PanelContainer/styles/panel = SubResource("Panel")
+PaperPanel/base_type = &"PanelContainer"
+PaperPanel/styles/panel = SubResource("Panel")
+PopupMenu/colors/font_color = Color(1, 1, 1, 1)
+PopupMenu/styles/panel = SubResource("Panel")
+PrimaryButton/base_type = &"Button"
+PrimaryButton/styles/focus = SubResource("Focus")
+PrimaryButton/styles/hover = SubResource("Hover")
+PrimaryButton/styles/normal = SubResource("Button")
+PrimaryButton/styles/pressed = SubResource("Hover")
+ProgressBar/styles/background = SubResource("Button")
+ProgressBar/styles/fill = SubResource("Progress")
+SaveCard/base_type = &"Button"
+ScrollContainer/styles/panel = SubResource("Panel")
+SubtitleLabel/base_type = &"Label"
+SubtitleLabel/colors/font_color = Color(1, 1, 1, 1)
+TabBar/colors/font_selected_color = Color(0, 0, 0, 1)
+TabBar/colors/font_unselected_color = Color(1, 1, 1, 1)
+TabBar/styles/tab_focus = SubResource("Focus")
+TabBar/styles/tab_hovered = SubResource("Hover")
+TabBar/styles/tab_selected = SubResource("Hover")
+TabBar/styles/tab_unselected = SubResource("Button")
+TabButton/base_type = &"Button"
+TextEdit/colors/font_color = Color(1, 1, 1, 1)
+TextEdit/styles/normal = SubResource("Button")
+TitleLabel/base_type = &"Label"
+TitleLabel/colors/font_color = Color(1, 1, 1, 1)
+TitleLabel/font_sizes/font_size = 42
+ToastPanel/base_type = &"PanelContainer"
+ToastPanel/styles/panel = SubResource("Panel")
+Tree/colors/font_color = Color(1, 1, 1, 1)
+Tree/styles/focus = SubResource("Focus")
+Tree/styles/panel = SubResource("Panel")

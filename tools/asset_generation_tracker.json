@@ -1,0 +1,352 @@
+{
+  "metadata": {
+    "created": "2026-03-10",
+    "api_provider": "dashscope",
+    "model": "qwen-image-2.0-pro",
+    "status": "completed"
+  },
+  "todo": {
+    "crops": {},
+    "items": {},
+    "dead_crops": []
+  },
+  "completed": {
+    "crops": {
+      "tomato": [
+        0,
+        1,
+        3,
+        2
+      ],
+      "corn": [
+        1,
+        2,
+        3,
+        0
+      ],
+      "turnip": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "potato": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "pumpkin": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "cauliflower": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "green_bean": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "strawberry": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "melon": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "blueberry": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "hot_pepper": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "radish": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "eggplant": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "cranberry": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "grape": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "sweet_potato": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "carrot": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "winter_root": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "cabbage": [
+        3,
+        0,
+        1,
+        2
+      ],
+      "winter_melon": [
+        3,
+        0,
+        1,
+        2
+      ]
+    },
+    "items": {
+      "turnip": [
+        "item",
+        "seed"
+      ],
+      "potato": [
+        "item",
+        "seed"
+      ],
+      "tomato": [
+        "item",
+        "seed"
+      ],
+      "corn": [
+        "item",
+        "seed"
+      ],
+      "pumpkin": [
+        "item",
+        "seed"
+      ],
+      "cauliflower": [
+        "item",
+        "seed"
+      ],
+      "green_bean": [
+        "item",
+        "seed"
+      ],
+      "strawberry": [
+        "item",
+        "seed"
+      ],
+      "melon": [
+        "item",
+        "seed"
+      ],
+      "blueberry": [
+        "item",
+        "seed"
+      ],
+      "hot_pepper": [
+        "item",
+        "seed"
+      ],
+      "radish": [
+        "item",
+        "seed"
+      ],
+      "eggplant": [
+        "item",
+        "seed"
+      ],
+      "cranberry": [
+        "item",
+        "seed"
+      ],
+      "grape": [
+        "item",
+        "seed"
+      ],
+      "sweet_potato": [
+        "item",
+        "seed"
+      ],
+      "carrot": [
+        "item",
+        "seed"
+      ],
+      "winter_root": [
+        "item",
+        "seed"
+      ],
+      "cabbage": [
+        "item",
+        "seed"
+      ],
+      "winter_melon": [
+        "item",
+        "seed"
+      ]
+    },
+    "dead_crops": [
+      "turnip",
+      "potato",
+      "tomato",
+      "corn",
+      "pumpkin",
+      "cauliflower",
+      "green_bean",
+      "strawberry",
+      "melon",
+      "blueberry",
+      "hot_pepper",
+      "radish",
+      "eggplant",
+      "cranberry",
+      "grape",
+      "sweet_potato",
+      "carrot",
+      "winter_root",
+      "cabbage",
+      "winter_melon"
+    ]
+  },
+  "prompts": {
+    "crop_stage_0": "Pixel art {name} ({id}) plant, tiny seedling just sprouting from soil, top-down view for farming game, 32x32 pixel sprite style, Stardew Valley inspired, {color} colors, transparent background, detailed pixel art, game asset",
+    "crop_stage_1": "Pixel art {name} ({id}) plant, small plant with a few leaves growing, top-down view for farming game, 32x32 pixel sprite style, Stardew Valley inspired, {color} colors, transparent background, detailed pixel art, game asset",
+    "crop_stage_2": "Pixel art {name} ({id}) plant, medium sized plant with developing fruit, top-down view for farming game, 32x32 pixel sprite style, Stardew Valley inspired, {color} colors, transparent background, detailed pixel art, game asset",
+    "crop_stage_3": "Pixel art {name} ({id}) plant, mature plant with ripe {color} {shape} ready to harvest, top-down view for farming game, 32x32 pixel sprite style, Stardew Valley inspired, {color} colors, transparent background, detailed pixel art, game asset",
+    "crop_dead": "Pixel art withered dead {name} ({id}) plant, brown dried leaves, top-down view for farming game, 32x32 pixel sprite style, Stardew Valley inspired, brown colors, transparent background, detailed pixel art, game asset",
+    "item": "Pixel art {name} ({color} {shape}) icon, top-down view, 16x16 pixel style, farming game inventory item, transparent background, detailed pixel art, vibrant {color}",
+    "seed": "Pixel art {name} seed packet icon, small bag of seeds, top-down view, 16x16 pixel style, farming game inventory item, transparent background, brown paper bag with {color} accent"
+  },
+  "crop_data": {
+    "turnip": {
+      "name": "芜菁",
+      "color": "purple and white",
+      "shape": "round root vegetable"
+    },
+    "potato": {
+      "name": "土豆",
+      "color": "brown",
+      "shape": "lumpy tuber"
+    },
+    "tomato": {
+      "name": "番茄",
+      "color": "red",
+      "shape": "round juicy fruit"
+    },
+    "corn": {
+      "name": "玉米",
+      "color": "yellow",
+      "shape": "tall stalk with ears"
+    },
+    "pumpkin": {
+      "name": "南瓜",
+      "color": "orange",
+      "shape": "large round gourd"
+    },
+    "cauliflower": {
+      "name": "花椰菜",
+      "color": "white",
+      "shape": "compact white curd"
+    },
+    "green_bean": {
+      "name": "青豆",
+      "color": "green",
+      "shape": "long pods"
+    },
+    "strawberry": {
+      "name": "草莓",
+      "color": "red",
+      "shape": "heart-shaped berry"
+    },
+    "melon": {
+      "name": "甜瓜",
+      "color": "green striped",
+      "shape": "round large fruit"
+    },
+    "blueberry": {
+      "name": "蓝莓",
+      "color": "blue",
+      "shape": "small round berries"
+    },
+    "hot_pepper": {
+      "name": "辣椒",
+      "color": "red",
+      "shape": "elongated spicy pepper"
+    },
+    "radish": {
+      "name": "萝卜",
+      "color": "pink and white",
+      "shape": "small round root"
+    },
+    "eggplant": {
+      "name": "茄子",
+      "color": "purple",
+      "shape": "elongated glossy"
+    },
+    "cranberry": {
+      "name": "蔓越莓",
+      "color": "red",
+      "shape": "small round tart berries"
+    },
+    "grape": {
+      "name": "葡萄",
+      "color": "purple",
+      "shape": "cluster of round berries"
+    },
+    "sweet_potato": {
+      "name": "红薯",
+      "color": "orange",
+      "shape": "elongated root"
+    },
+    "carrot": {
+      "name": "胡萝卜",
+      "color": "orange",
+      "shape": "long tapered root"
+    },
+    "winter_root": {
+      "name": "冬根",
+      "color": "brown",
+      "shape": "knobby root"
+    },
+    "cabbage": {
+      "name": "卷心菜",
+      "color": "green",
+      "shape": "round leafy head"
+    },
+    "winter_melon": {
+      "name": "冬瓜",
+      "color": "green",
+      "shape": "large oblong gourd"
+    }
+  }
+}

@@ -1,0 +1,101 @@
+[gd_resource type="Resource" script_class="MapProfile" format=3]
+
+[ext_resource type="Script" path="res://src/world/map_editor/MapAssetEntry.gd" id="1_bpsh0"]
+[ext_resource type="Script" path="res://src/world/map_editor/MapAssetLibrary.gd" id="2_b6e5v"]
+[ext_resource type="Script" path="res://src/world/map_editor/CollisionPreset.gd" id="3_r5qq2"]
+[ext_resource type="Script" path="res://src/world/map_editor/MapLayerSpec.gd" id="4_j0c2j"]
+[ext_resource type="Texture2D" path="res://assets/tiles/beach_tiles.png" id="5_vg7dk"]
+[ext_resource type="Script" path="res://src/world/map_editor/MapProfile.gd" id="6_imkov"]
+
+[sub_resource type="Resource" id="Resource_v5lrr"]
+script = ExtResource("2_b6e5v")
+
+[sub_resource type="Resource" id="Resource_0aoe6"]
+script = ExtResource("3_r5qq2")
+preset_id = &"world_solid"
+display_name = "World Solid"
+
+[sub_resource type="Resource" id="Resource_uqljq"]
+script = ExtResource("4_j0c2j")
+layer_id = &"ground"
+display_name = "Ground"
+required = true
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_k0rcn"]
+script = ExtResource("4_j0c2j")
+layer_id = &"terrain_overlay"
+display_name = "Terrain Overlay"
+default_z_index = 1
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_qffkd"]
+script = ExtResource("4_j0c2j")
+layer_id = &"decoration"
+display_name = "Decoration"
+kind = 1
+default_z_index = 2
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_022p7"]
+script = ExtResource("4_j0c2j")
+layer_id = &"objects"
+display_name = "Objects"
+kind = 2
+required = true
+default_z_index = 10
+y_sort = true
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_a5s3i"]
+script = ExtResource("4_j0c2j")
+layer_id = &"collision"
+display_name = "Collision"
+kind = 3
+required = true
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_7hs8k"]
+script = ExtResource("4_j0c2j")
+layer_id = &"markers"
+display_name = "Markers"
+kind = 4
+required = true
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_sw4hr"]
+texture = ExtResource("5_vg7dk")
+0:0/0 = 0
+1:0/0 = 0
+2:0/0 = 0
+3:0/0 = 0
+54:3/0 = 0
+55:3/0 = 0
+56:3/0 = 0
+57:3/0 = 0
+58:3/0 = 0
+59:3/0 = 0
+10:0/0 = 0
+11:0/0 = 0
+12:0/0 = 0
+13:0/0 = 0
+14:0/0 = 0
+15:0/0 = 0
+16:0/0 = 0
+17:0/0 = 0
+18:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_bouks"]
+resource_name = "beach_tiles"
+sources/0 = SubResource("TileSetAtlasSource_sw4hr")
+
+[resource]
+script = ExtResource("6_imkov")
+profile_id = &"beach_main"
+display_name = "Beach"
+default_size = Vector2i(31, 15)
+primary_tileset = SubResource("TileSet_bouks")
+layer_specs = Array[ExtResource("4_j0c2j")]([SubResource("Resource_uqljq"), SubResource("Resource_k0rcn"), SubResource("Resource_qffkd"), SubResource("Resource_022p7"), SubResource("Resource_a5s3i"), SubResource("Resource_7hs8k")])
+asset_library = SubResource("Resource_v5lrr")
+collision_presets = Array[ExtResource("3_r5qq2")]([SubResource("Resource_0aoe6")])
+required_marker_ids = PackedStringArray("player_spawn")

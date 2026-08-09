@@ -1,0 +1,99 @@
+[gd_resource type="Resource" script_class="MapProfile" format=3]
+
+[ext_resource type="Script" path="res://src/world/map_editor/MapAssetEntry.gd" id="1_srkra"]
+[ext_resource type="Script" path="res://src/world/map_editor/MapAssetLibrary.gd" id="2_33ccq"]
+[ext_resource type="Script" path="res://src/world/map_editor/CollisionPreset.gd" id="3_am2tw"]
+[ext_resource type="Script" path="res://src/world/map_editor/MapLayerSpec.gd" id="4_um636"]
+[ext_resource type="Texture2D" path="res://assets/tiles/mine_tiles.png" id="5_slwh0"]
+[ext_resource type="Script" path="res://src/world/map_editor/MapProfile.gd" id="6_vd1cy"]
+
+[sub_resource type="Resource" id="Resource_hvism"]
+script = ExtResource("2_33ccq")
+
+[sub_resource type="Resource" id="Resource_gi8a6"]
+script = ExtResource("3_am2tw")
+preset_id = &"world_solid"
+display_name = "World Solid"
+
+[sub_resource type="Resource" id="Resource_3870d"]
+script = ExtResource("4_um636")
+layer_id = &"ground"
+display_name = "Ground"
+required = true
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_kvnop"]
+script = ExtResource("4_um636")
+layer_id = &"terrain_overlay"
+display_name = "Terrain Overlay"
+default_z_index = 1
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_vo01o"]
+script = ExtResource("4_um636")
+layer_id = &"decoration"
+display_name = "Decoration"
+kind = 1
+default_z_index = 2
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_50pbm"]
+script = ExtResource("4_um636")
+layer_id = &"objects"
+display_name = "Objects"
+kind = 2
+required = true
+default_z_index = 10
+y_sort = true
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_l4d2g"]
+script = ExtResource("4_um636")
+layer_id = &"collision"
+display_name = "Collision"
+kind = 3
+required = true
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="Resource" id="Resource_s65jr"]
+script = ExtResource("4_um636")
+layer_id = &"markers"
+display_name = "Markers"
+kind = 4
+required = true
+allowed_asset_tags = PackedStringArray()
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_nnokl"]
+texture = ExtResource("5_slwh0")
+1:0/0 = 0
+2:0/0 = 0
+3:0/0 = 0
+4:0/0 = 0
+5:0/0 = 0
+6:0/0 = 0
+7:0/0 = 0
+8:0/0 = 0
+24:2/0 = 0
+19:1/0 = 0
+58:1/0 = 0
+16:0/0 = 0
+51:17/0 = 0
+56:5/0 = 0
+14:0/0 = 0
+15:0/0 = 0
+17:0/0 = 0
+
+[sub_resource type="TileSet" id="TileSet_51sdt"]
+resource_name = "mine_tiles"
+sources/0 = SubResource("TileSetAtlasSource_nnokl")
+
+[resource]
+script = ExtResource("6_vd1cy")
+profile_id = &"mine_main"
+display_name = "Mine"
+default_size = Vector2i(16, 11)
+primary_tileset = SubResource("TileSet_51sdt")
+layer_specs = Array[ExtResource("4_um636")]([SubResource("Resource_3870d"), SubResource("Resource_kvnop"), SubResource("Resource_vo01o"), SubResource("Resource_50pbm"), SubResource("Resource_l4d2g"), SubResource("Resource_s65jr")])
+asset_library = SubResource("Resource_hvism")
+collision_presets = Array[ExtResource("3_am2tw")]([SubResource("Resource_gi8a6")])
+required_marker_ids = PackedStringArray("player_spawn")

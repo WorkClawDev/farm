@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://cb7j3mdr8e58x"]
+
+[node name="FestivalNotificationPopup" type="PanelContainer"]
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+offset_right = 300.0
+offset_bottom = 80.0
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="VBox" type="VBoxContainer" parent="MarginContainer"]
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/VBox"]
+text = "通知标题"
+horizontal_alignment = 1
+
+[node name="DescriptionLabel" type="Label" parent="MarginContainer/VBox"]
+text = "通知内容"
+horizontal_alignment = 1
