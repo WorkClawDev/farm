@@ -23,6 +23,8 @@ func setup(coord: Vector2i) -> void:
 		Vector2(SIZE / 2.0, SIZE / 2.0),
 		Vector2(-SIZE / 2.0, SIZE / 2.0),
 	])
+	# Farm Y-sort draws same-z canvas items by origin Y. Keep soil under the player.
+	_ground.z_index = -1
 	add_child(_ground)
 	_outline = Line2D.new()
 	_outline.points = PackedVector2Array([
@@ -34,6 +36,7 @@ func setup(coord: Vector2i) -> void:
 	])
 	_outline.width = 2.0
 	_outline.default_color = Color(0.25, 0.16, 0.1, 0.65)
+	_outline.z_index = -1
 	add_child(_outline)
 
 	var collision := CollisionShape2D.new()
@@ -43,7 +46,7 @@ func setup(coord: Vector2i) -> void:
 	add_child(collision)
 
 	_crop_sprite = Sprite2D.new()
-	_crop_sprite.scale = Vector2(2.0, 2.0)
+	_crop_sprite.centered = true
 	_crop_sprite.z_index = 2
 	add_child(_crop_sprite)
 
@@ -76,6 +79,7 @@ func refresh() -> void:
 
 	var crop: Dictionary = cell.get("crop", {})
 	_crop_sprite.texture = null
+	_crop_sprite.scale = Vector2.ONE
 	_label.text = ""
 	if crop.is_empty():
 		return
@@ -88,6 +92,13 @@ func refresh() -> void:
 		sprite_path = crop_data.stage_sprites[mini(stage, crop_data.stage_sprites.size() - 1)]
 	if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
 		_crop_sprite.texture = load(sprite_path)
+		if _crop_sprite.texture != null:
+			var tex_size: Vector2 = _crop_sprite.texture.get_size()
+			var max_dim := maxf(tex_size.x, tex_size.y)
+			if max_dim > 0.0:
+				# Fit inside the plot: 1024px -> ~0.05, 32px -> ~1.59.
+				var fitted := (SIZE * 0.85) / max_dim
+				_crop_sprite.scale = Vector2(fitted, fitted)
 	else:
 		_label.text = str(crop_data.crop_name).substr(0, 1)
 	if bool(crop.get("mature", false)):

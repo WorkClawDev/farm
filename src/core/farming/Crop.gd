@@ -252,6 +252,12 @@ func _update_sprite() -> void:
 	# 加载精灵（如果路径有效）
 	if sprite_path != "" and ResourceLoader.exists(sprite_path):
 		sprite.texture = load(sprite_path)
+		if sprite.texture != null:
+			var tex_size: Vector2 = sprite.texture.get_size()
+			var max_dim := maxf(tex_size.x, tex_size.y)
+			if max_dim > 0.0:
+				var fitted := 48.0 / max_dim
+				sprite.scale = Vector2(fitted, fitted)
 
 	# 如果有浇水效果，可以在这里添加调制颜色
 	if is_watered:
