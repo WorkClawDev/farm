@@ -33,7 +33,13 @@ var notification_label: Label
 var _house_entrance: Area2D
 var _village_exit: Area2D
 
-const PLOT_ORIGIN := Vector2(160, 640)
+# Draw order on the farm. Farm.tscn offsets the FarmMap instance by z -3, so its
+# profile layers (ground 0, terrain_overlay 1, decoration 2, objects 10) end up at:
+#   Ground -3 < TerrainOverlay (paths/fences) -2 < TilledArea soil -1
+#   < Player 0 == crop sprites 0 (Y-sorted together via Farm/TilledArea/FarmPlot y_sort)
+#   < Objects 7 (buildings, unchanged relative to the player).
+# Plot centres sit on tile centres of the fenced field interior (tiles x 2..11, y 10..17).
+const PLOT_ORIGIN := Vector2(160, 672)
 const PLOT_SPACING := 64.0
 
 func _ready() -> void:

@@ -9,7 +9,7 @@
 			"season": ["Spring"],
 			"regrow": false,
 			"regrow_days": 0,
-			"stages_sprites": ["res://assets/sprites/crops/turnip_stage0.png", "res://assets/sprites/crops/turnip_stage1.png", "res://assets/sprites/crops/turnip_stage2.png", "res://assets/sprites/crops/turnip_stage3.png"],
+			"stages_sprites": ["res://assets/sprites/crops/turnip_stage1.png", "res://assets/sprites/crops/turnip_stage2.png", "res://assets/sprites/crops/turnip_stage3.png", "res://assets/sprites/crops/turnip_stage4.png"],
 			"sell_price": 35,
 			"exp": 8,
 			"min_harvest": 1,

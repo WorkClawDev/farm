@@ -13,6 +13,8 @@ var _label: Label
 func setup(coord: Vector2i) -> void:
 	grid_coord = coord
 	name = "FarmPlot_%d_%d" % [coord.x, coord.y]
+	# Let the crop sprite join the Farm Y-sort with the player.
+	y_sort_enabled = true
 	collision_layer = 2
 	collision_mask = 0
 
@@ -23,8 +25,8 @@ func setup(coord: Vector2i) -> void:
 		Vector2(SIZE / 2.0, SIZE / 2.0),
 		Vector2(-SIZE / 2.0, SIZE / 2.0),
 	])
-	# Farm Y-sort draws same-z canvas items by origin Y. Keep soil under the player.
-	_ground.z_index = -1
+	# Soil inherits TilledArea z (-1): above grass/paths (-3/-2), below the player (0).
+	_ground.z_index = 0
 	add_child(_ground)
 	_outline = Line2D.new()
 	_outline.points = PackedVector2Array([
@@ -36,7 +38,7 @@ func setup(coord: Vector2i) -> void:
 	])
 	_outline.width = 2.0
 	_outline.default_color = Color(0.25, 0.16, 0.1, 0.65)
-	_outline.z_index = -1
+	_outline.z_index = 0
 	add_child(_outline)
 
 	var collision := CollisionShape2D.new()
@@ -47,7 +49,10 @@ func setup(coord: Vector2i) -> void:
 
 	_crop_sprite = Sprite2D.new()
 	_crop_sprite.centered = true
-	_crop_sprite.z_index = 2
+	# TilledArea z -1 + 1 = 0, same as the player, so they Y-sort by feet position.
+	_crop_sprite.z_index = 1
+	# Origin near the plot bottom edge so the Y-sort compares "feet".
+	_crop_sprite.position = Vector2(0, SIZE * 0.42)
 	add_child(_crop_sprite)
 
 	_label = Label.new()
@@ -80,6 +85,7 @@ func refresh() -> void:
 	var crop: Dictionary = cell.get("crop", {})
 	_crop_sprite.texture = null
 	_crop_sprite.scale = Vector2.ONE
+	_crop_sprite.offset = Vector2.ZERO
 	_label.text = ""
 	if crop.is_empty():
 		return
@@ -99,6 +105,8 @@ func refresh() -> void:
 				# Fit inside the plot: 1024px -> ~0.05, 32px -> ~1.59.
 				var fitted := (SIZE * 0.85) / max_dim
 				_crop_sprite.scale = Vector2(fitted, fitted)
+				# Bottom-align the texture on the sprite origin (offset is in texture px).
+				_crop_sprite.offset = Vector2(0, -tex_size.y / 2.0)
 	else:
 		_label.text = str(crop_data.crop_name).substr(0, 1)
 	if bool(crop.get("mature", false)):
