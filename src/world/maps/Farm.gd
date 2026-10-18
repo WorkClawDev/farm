@@ -209,12 +209,20 @@ func perform_farm_action(coord: Vector2i, tool_type: ToolManager.ToolType) -> vo
 				success = FarmState.till(coord)
 				message = "土地已翻好" if success else "这里已经翻过了"
 			ToolManager.ToolType.WATERING_CAN:
-				var player_node = get_tree().get_first_node_in_group("player")
-				if player_node and player_node.tool_manager.has_watering_charge():
-					success = FarmState.water(coord)
-					if success:
-						player_node.tool_manager.consume_watering_charge()
-				message = "浇水完成" if success else "无法浇水或水壶已空"
+				# 水量只在 FarmState 里记；只有真正浇上水才扣水、扣体力。
+				match FarmState.water_with_can(coord):
+					FarmState.WaterResult.WATERED_OK:
+						success = true
+						message = "浇水完成（水壶 %d/%d）" % [
+							FarmState.get_watering_can_uses_left(),
+							FarmState.get_watering_can_max_uses(),
+						]
+					FarmState.WaterResult.ALREADY_WATERED:
+						message = "这块地今天已经浇过水了"
+					FarmState.WaterResult.CAN_EMPTY:
+						message = "水壶空了，去池塘边按空格装水"
+					_:
+						message = "这里不能浇水，先用锄头翻地"
 			ToolManager.ToolType.SICKLE:
 				var result := FarmState.harvest(coord)
 				success = not result.is_empty()

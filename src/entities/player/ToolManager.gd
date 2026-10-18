@@ -130,12 +130,11 @@ func use_tool(target: Node = null) -> bool:
 				success = tool.use(target)
 		
 		ToolType.WATERING_CAN:
-			if tool.has_method("use"):
-				# 水壶需要目标位置
-				var target_pos = _get_target_position()
-				success = tool.use(target_pos)
-				# 同时尝试给土壤浇水
-				if target is Soil:
+			# 只有真的对着可浇水的土壤才用水；对着空地/草地按空格不再白白扣水。
+			# 农场地块走 Farm.perform_farm_action -> FarmState.water_with_can。
+			if tool.has_method("use") and target is Soil and target.can_water():
+				success = tool.use(_get_target_position())
+				if success:
 					target.water()
 		
 		ToolType.AXE, ToolType.PICKAXE, ToolType.SICKLE:
@@ -194,21 +193,18 @@ func get_current_tool_type() -> ToolType:
 func has_tool(tool_type: ToolType) -> bool:
 	return tools.has(tool_type)
 
+## 水壶水量统一由 FarmState 管理（跨场景、进存档），这里只是转发。
 func consume_watering_charge() -> bool:
-	var watering_can = tools.get(ToolType.WATERING_CAN)
-	if watering_can == null or not "current_water" in watering_can:
-		return true
-	if watering_can.current_water < watering_can.water_per_use:
+	if not FarmState.has_watering_charge():
 		return false
-	watering_can.current_water -= watering_can.water_per_use
+	FarmState.set_watering_can_water(
+		FarmState.get_watering_can_water() - FarmState.WATERING_CAN_WATER_PER_USE
+	)
 	return true
 
 func has_watering_charge() -> bool:
-	var watering_can = tools.get(ToolType.WATERING_CAN)
-	return watering_can == null or not "current_water" in watering_can \
-		or watering_can.current_water >= watering_can.water_per_use
+	return FarmState.has_watering_charge()
 
-func refill_tools() -> void:
-	var watering_can = tools.get(ToolType.WATERING_CAN)
-	if watering_can and watering_can.has_method("refill"):
-		watering_can.refill()
+## 装满水壶；返回 false 表示本来就是满的。
+func refill_tools() -> bool:
+	return FarmState.refill_watering_can()

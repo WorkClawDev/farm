@@ -54,6 +54,7 @@ func _ready() -> void:
 
 	await _exercise_actor_collisions()
 	await _exercise_golden_path()
+	await _exercise_watering_can()
 	await _exercise_json_save_compatibility()
 	_finish()
 
@@ -586,6 +587,108 @@ func _exercise_golden_path() -> void:
 	MoneySystem.load_state(money_snapshot)
 	_record("背包状态可恢复", Inventory.get_item_count("turnip") == 0)
 	_record("金钱状态可恢复", MoneySystem.get_money() > money_before)
+
+
+func _spawn_farm() -> Node:
+	var farm := (load("res://src/world/maps/Farm.tscn") as PackedScene).instantiate()
+	add_child(farm)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	return farm
+
+
+func _exercise_watering_can() -> void:
+	print("------------------------------------------------------------")
+	print("BUG-12 水壶：按次扣水、空了不浇不扣体力、跨场景保留、水边装满")
+	TimeManager.reset()
+	Inventory.reset_with_starter_items()
+	FarmState.reset()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	_record("水壶场景有玩家", player != null)
+	if player == null:
+		farm.queue_free()
+		return
+	player.tool_manager.equip_tool(ToolManager.ToolType.WATERING_CAN)
+	# 快捷栏选一个空格子，只测浇水（选种子时的行为见 BUG-14 用例）。
+	Inventory.set_selected_hotbar_index(Inventory.HOTBAR_SIZE - 1)
+	var can_type := ToolManager.ToolType.WATERING_CAN
+	var max_uses := FarmState.get_watering_can_max_uses()
+	_record("新档水壶是满的(%d次)" % max_uses, max_uses > 0 and FarmState.get_watering_can_uses_left() == max_uses)
+	var can_node = player.tool_manager.tools.get(can_type)
+	_record("WateringCan 节点水量与 FarmState 一致", can_node != null and can_node.current_water == FarmState.get_watering_can_water())
+
+	var coords: Array[Vector2i] = []
+	for i in range(max_uses + 1):
+		var coord := Vector2i(i % FarmState.GRID_WIDTH, i / FarmState.GRID_WIDTH)
+		FarmState.till(coord)
+		coords.append(coord)
+
+	var stamina := StaminaManager.current_stamina
+	farm.perform_farm_action(Vector2i(FarmState.GRID_WIDTH - 1, FarmState.GRID_HEIGHT - 1), can_type)
+	_record("浇未翻的地不扣水不扣体力",
+		FarmState.get_watering_can_uses_left() == max_uses and StaminaManager.current_stamina == stamina)
+
+	player.tool_manager.use_tool(null)
+	_record("对着空地用水壶不扣水", FarmState.get_watering_can_uses_left() == max_uses)
+
+	var decreased_each_time := true
+	for i in range(max_uses):
+		farm.perform_farm_action(coords[i], can_type)
+		decreased_each_time = decreased_each_time and FarmState.get_watering_can_uses_left() == max_uses - i - 1 \
+			and int(FarmState.get_cell(coords[i]).state) == FarmState.WATERED
+	_record("每浇一格水壶少一次", decreased_each_time)
+	_record("浇满%d格后水壶空了" % max_uses, FarmState.get_watering_can_uses_left() == 0 and not FarmState.has_watering_charge())
+	_record("成功浇水才扣体力", is_equal_approx(StaminaManager.current_stamina, stamina - 2.0 * max_uses))
+
+	stamina = StaminaManager.current_stamina
+	farm.perform_farm_action(coords[max_uses], can_type)
+	_record("空水壶不浇水", int(FarmState.get_cell(coords[max_uses]).state) == FarmState.TILLED)
+	_record("空水壶不扣体力", StaminaManager.current_stamina == stamina)
+
+	FarmState.refill_watering_can()
+	farm.perform_farm_action(coords[0], can_type)
+	_record("已浇过的格子再浇不扣水不扣体力",
+		FarmState.get_watering_can_uses_left() == max_uses and StaminaManager.current_stamina == stamina)
+	FarmState.set_watering_can_water(0)
+
+	farm.queue_free()
+	await get_tree().process_frame
+	farm = await _spawn_farm()
+	player = farm.find_child("Player", true, false) as Player
+	_record("切场景后水壶不会被重新灌满", FarmState.get_watering_can_uses_left() == 0)
+
+	var spot := farm.find_child("FishingSpot", true, false) as FishingSpot
+	_record("农场池塘有水源", spot != null)
+	if spot != null and player != null:
+		player.tool_manager.equip_tool(ToolManager.ToolType.WATERING_CAN)
+		spot.current_player = player
+		spot.is_player_in_range = true
+		spot._start_fishing()
+		spot.is_player_in_range = false
+		spot.current_player = null
+	_record("拿水壶在池塘边可装满", FarmState.get_watering_can_uses_left() == max_uses)
+	farm.perform_farm_action(coords[max_uses], can_type)
+	_record("装满后可以继续浇水", int(FarmState.get_cell(coords[max_uses]).state) == FarmState.WATERED
+		and FarmState.get_watering_can_uses_left() == max_uses - 1)
+
+	var snapshot := FarmState.get_save_state()
+	FarmState.reset()
+	FarmState.load_save_state(_json_round_trip(snapshot))
+	_record("水壶水量随存档恢复", FarmState.get_watering_can_uses_left() == max_uses - 1)
+	_record("旧存档没有水量字段时按满水", (func():
+		var legacy := snapshot.duplicate(true)
+		legacy.erase("watering_can_water")
+		FarmState.set_watering_can_water(0)
+		FarmState.load_save_state(legacy)
+		return FarmState.get_watering_can_uses_left() == max_uses).call())
+
+	farm.queue_free()
+	await get_tree().process_frame
+	FarmState.reset()
+	Inventory.reset_with_starter_items()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
 
 
 func _exercise_json_save_compatibility() -> void:

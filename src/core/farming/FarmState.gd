@@ -6,6 +6,7 @@ extends Node
 signal farm_reset
 signal cell_changed(coord: Vector2i)
 signal day_advanced
+signal watering_can_changed(current: int, maximum: int)
 
 const GRID_WIDTH := 10
 const GRID_HEIGHT := 8
@@ -13,7 +14,15 @@ const UNTILLED := 0
 const TILLED := 1
 const WATERED := 2
 
+## 水壶水量也存在这里（唯一来源）：玩家/工具节点每个场景都会重建，
+## 如果水量只放在 WateringCan 节点上，切场景就会被重置成满水。
+const WATERING_CAN_MAX_WATER := 100
+const WATERING_CAN_WATER_PER_USE := 5
+
+enum WaterResult { WATERED_OK, NOT_TILLED, ALREADY_WATERED, CAN_EMPTY }
+
 var _cells: Dictionary = {}
+var _watering_can_water: int = WATERING_CAN_MAX_WATER
 
 
 func _ready() -> void:
@@ -28,6 +37,7 @@ func reset() -> void:
 		for x in range(GRID_WIDTH):
 			var coord := Vector2i(x, y)
 			_cells[_key(coord)] = _new_cell(coord)
+	set_watering_can_water(WATERING_CAN_MAX_WATER)
 	farm_reset.emit()
 
 
@@ -91,6 +101,58 @@ func water(coord: Vector2i) -> bool:
 	return true
 
 
+## 用水壶浇一格地：先判断这格能不能浇，再判断水够不够；只有真正浇上水才扣水。
+## 已经浇过的格子不扣水（体力也由调用方按结果决定不扣）。
+func water_with_can(coord: Vector2i) -> int:
+	var cell := _cell_ref(coord)
+	if cell.is_empty() or int(cell.state) == UNTILLED:
+		return WaterResult.NOT_TILLED
+	if int(cell.state) == WATERED:
+		return WaterResult.ALREADY_WATERED
+	if not has_watering_charge():
+		return WaterResult.CAN_EMPTY
+	if not water(coord):
+		return WaterResult.NOT_TILLED
+	set_watering_can_water(_watering_can_water - WATERING_CAN_WATER_PER_USE)
+	return WaterResult.WATERED_OK
+
+
+func get_watering_can_water() -> int:
+	return _watering_can_water
+
+
+func get_watering_can_max_water() -> int:
+	return WATERING_CAN_MAX_WATER
+
+
+func get_watering_can_uses_left() -> int:
+	return _watering_can_water / WATERING_CAN_WATER_PER_USE
+
+
+func get_watering_can_max_uses() -> int:
+	return WATERING_CAN_MAX_WATER / WATERING_CAN_WATER_PER_USE
+
+
+func has_watering_charge() -> bool:
+	return _watering_can_water >= WATERING_CAN_WATER_PER_USE
+
+
+func set_watering_can_water(value: int) -> void:
+	var clamped := clampi(value, 0, WATERING_CAN_MAX_WATER)
+	if clamped == _watering_can_water:
+		return
+	_watering_can_water = clamped
+	watering_can_changed.emit(_watering_can_water, WATERING_CAN_MAX_WATER)
+
+
+## 装满水壶；返回 false 表示本来就是满的。
+func refill_watering_can() -> bool:
+	if _watering_can_water >= WATERING_CAN_MAX_WATER:
+		return false
+	set_watering_can_water(WATERING_CAN_MAX_WATER)
+	return true
+
+
 func can_harvest(coord: Vector2i) -> bool:
 	var cell := _cell_ref(coord)
 	return not cell.is_empty() and not cell.crop.is_empty() and bool(cell.crop.get("mature", false))
@@ -148,6 +210,7 @@ func get_save_state() -> Dictionary:
 		"width": GRID_WIDTH,
 		"height": GRID_HEIGHT,
 		"cells": cells,
+		"watering_can_water": _watering_can_water,
 	}
 
 
@@ -164,6 +227,7 @@ func load_save_state(data: Dictionary) -> bool:
 			return false
 		restored[_key(coord)] = _sanitize_cell(raw_cell, coord)
 	_cells = restored
+	set_watering_can_water(int(data.get("watering_can_water", WATERING_CAN_MAX_WATER)))
 	farm_reset.emit()
 	return true
 

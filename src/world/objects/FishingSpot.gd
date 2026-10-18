@@ -45,7 +45,7 @@ func _show_fishing_prompt() -> void:
 		return
 	var prompt := Label.new()
 	prompt.name = "FishingPrompt"
-	prompt.text = "[E] 钓鱼"
+	prompt.text = "[E] 钓鱼 / 水壶装水"
 	prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	prompt.z_index = 10
 	# 显示在钓鱼点上方
@@ -79,6 +79,19 @@ func _start_fishing() -> void:
 				rod.use(global_position, location_type)
 				fishing_started.emit(self)
 				print("[FishingSpot] Started fishing at ", location_type)
+		elif current_tool is WateringCan:
+			_refill_watering_can()
 		else:
 			print("[FishingSpot] Need to equip fishing rod first!")
 			# 可以在这里显示提示UI
+
+
+## 拿着水壶在水边按空格/E：把水壶装满（水量存在 FarmState）。
+func _refill_watering_can() -> void:
+	var refilled := FarmState.refill_watering_can()
+	var message := (
+		"水壶已装满（%d/%d）" % [FarmState.get_watering_can_uses_left(), FarmState.get_watering_can_max_uses()]
+		if refilled else "水壶已经是满的"
+	)
+	UIManager.show_toast(message, {}, "info")
+	print("[FishingSpot] ", message)
