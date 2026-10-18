@@ -219,11 +219,13 @@ func _build_overlay() -> void:
 	_overlay_layer.add_child(_screen_root)
 	_toast_root = VBoxContainer.new()
 	_toast_root.name = "ToastRoot"
-	_toast_root.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_toast_root.offset_left = -380
-	_toast_root.offset_top = 24
-	_toast_root.offset_right = -24
-	_toast_root.offset_bottom = 500
+	# Top-center, clear of the top-left quest panel, the top-right date/gold
+	# panel and the bottom hotbar/tool display (BUG-4). Width stays 356px as before.
+	_toast_root.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_toast_root.offset_left = -178
+	_toast_root.offset_top = 32
+	_toast_root.offset_right = 178
+	_toast_root.offset_bottom = 400
 	_toast_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_toast_root.add_theme_constant_override("separation", 10)
 	_overlay_layer.add_child(_toast_root)
