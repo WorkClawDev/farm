@@ -27,7 +27,7 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
 	if _stamina_panel and _stamina_panel.visible and Time.get_ticks_msec() / 1000.0 > _stamina_hide_at:
-		var ratio: float = float(StaminaManager.get_stamina_percentage()) if StaminaManager else 1.0
+		var ratio: float = float(StaminaManager.get_stamina_percent()) if StaminaManager else 1.0
 		if ratio > 0.3:
 			_stamina_panel.visible = false
 
