@@ -47,6 +47,7 @@ func _ready() -> void:
 	await _test_input_conflict()
 	await _test_save_summaries()
 	await _test_dialogue_long_text()
+	await _test_toast_eviction_timers()
 	print("============================================================")
 	print("RESULTS: %d/%d passed" % [_passed, _passed + _failed])
 	if _failed == 0:
@@ -234,6 +235,18 @@ func _test_dialogue_long_text() -> void:
 	_record("长对话可完整显示", dialogue.text_label.text.length() == long_text.length())
 	dialogue.queue_free()
 	await get_tree().process_frame
+
+
+func _test_toast_eviction_timers() -> void:
+	# BUG-10 cap evicts old toasts; their dismiss timers must fire quietly (no
+	# "Cannot convert argument 1 from Object to Object" — check.sh fails on ERROR lines).
+	for i in range(UIManager.MAX_VISIBLE_TOASTS + 4):
+		UIManager.show_toast("toast eviction %d" % i)
+	await get_tree().process_frame
+	_record("Toast 上限挤掉旧提示", UIManager.get_visible_toast_count() == UIManager.MAX_VISIBLE_TOASTS)
+	await get_tree().create_timer(UIManager.TOAST_DURATION + 0.6, true, false, true).timeout
+	await get_tree().process_frame
+	_record("被挤掉的 Toast 计时器到点后全部消失", UIManager.get_visible_toast_count() == 0)
 
 
 func _record(label: String, passed: bool) -> void:

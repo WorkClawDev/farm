@@ -197,10 +197,12 @@ func _schedule_toast_dismiss(panel: Control) -> void:
 	timer.timeout.connect(_on_toast_timeout.bind(panel, gen, reduce_motion))
 
 
-func _on_toast_timeout(panel: Control, gen: int, reduce_motion: bool) -> void:
-	if not is_instance_valid(panel) or int(panel.get_meta("toast_gen", 0)) != gen:
+func _on_toast_timeout(panel: Variant, gen: int, reduce_motion: bool) -> void:
+	# panel 不能写成 Control 类型：被挤掉（BUG-10 上限）的旧 Toast 已经释放，计时器到点时
+	# 绑定参数是个已释放的对象，带类型的参数会在进函数前报 "Cannot convert argument 1"。
+	if not is_instance_valid(panel) or int((panel as Control).get_meta("toast_gen", 0)) != gen:
 		return
-	_dismiss_toast(panel, reduce_motion)
+	_dismiss_toast(panel as Control, reduce_motion)
 
 
 func show_confirmation(config: Dictionary) -> Control:
