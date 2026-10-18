@@ -23,6 +23,9 @@ var _confirmation: Control
 var _confirmation_owns_pause := false
 var _pause_owned := false
 
+const MAX_VISIBLE_TOASTS := 4
+const TOAST_DURATION := 3.0
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -116,6 +119,29 @@ func close_all() -> void:
 func show_toast(message_key: String, args := {}, variant := "info") -> void:
 	if _toast_root == null:
 		return
+	var text := _format_message(message_key, args)
+	# BUG-10: merge identical live toasts instead of stacking duplicates.
+	for child in _toast_root.get_children():
+		if child.is_queued_for_deletion() or bool(child.get_meta("toast_dismissing", false)):
+			continue
+		if str(child.get_meta("toast_text", "")) == text and str(child.get_meta("toast_variant", "")) == variant:
+			var count := int(child.get_meta("toast_count", 1)) + 1
+			child.set_meta("toast_count", count)
+			var existing_label := child.get_meta("toast_label") as Label
+			if is_instance_valid(existing_label):
+				existing_label.text = "%s ×%d" % [text, count]
+			child.modulate.a = 1.0
+			_schedule_toast_dismiss(child)
+			return
+	# BUG-10: cap visible toasts, dropping the oldest.
+	var live: Array[Node] = []
+	for child in _toast_root.get_children():
+		if not child.is_queued_for_deletion():
+			live.append(child)
+	while live.size() >= MAX_VISIBLE_TOASTS:
+		var oldest: Node = live.pop_front()
+		_toast_root.remove_child(oldest)
+		oldest.queue_free()
 	var panel := UIFactory.hud_panel()
 	panel.theme_type_variation = &"ToastPanel"
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -134,10 +160,14 @@ func show_toast(message_key: String, args := {}, variant := "info") -> void:
 	row.add_child(marker)
 	var label := Label.new()
 	label.theme_type_variation = &"HUDText"
-	label.text = _format_message(message_key, args)
+	label.text = text
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.custom_minimum_size.x = 260
 	row.add_child(label)
+	panel.set_meta("toast_text", text)
+	panel.set_meta("toast_variant", variant)
+	panel.set_meta("toast_count", 1)
+	panel.set_meta("toast_label", label)
 	_toast_root.add_child(panel)
 
 	var reduce_motion: bool = bool(UserSettings.get_value("accessibility", "reduce_motion", false))
@@ -146,8 +176,31 @@ func show_toast(message_key: String, args := {}, variant := "info") -> void:
 	else:
 		var intro := panel.create_tween()
 		intro.tween_property(panel, "modulate:a", 1.0, 0.12)
-	var timer := get_tree().create_timer(3.0, true, false, true)
-	timer.timeout.connect(_dismiss_toast.bind(panel, reduce_motion))
+	_schedule_toast_dismiss(panel)
+
+
+func get_visible_toast_count() -> int:
+	if _toast_root == null:
+		return 0
+	var n := 0
+	for child in _toast_root.get_children():
+		if not child.is_queued_for_deletion():
+			n += 1
+	return n
+
+
+func _schedule_toast_dismiss(panel: Control) -> void:
+	var gen := int(panel.get_meta("toast_gen", 0)) + 1
+	panel.set_meta("toast_gen", gen)
+	var reduce_motion: bool = bool(UserSettings.get_value("accessibility", "reduce_motion", false))
+	var timer := get_tree().create_timer(TOAST_DURATION, true, false, true)
+	timer.timeout.connect(_on_toast_timeout.bind(panel, gen, reduce_motion))
+
+
+func _on_toast_timeout(panel: Control, gen: int, reduce_motion: bool) -> void:
+	if not is_instance_valid(panel) or int(panel.get_meta("toast_gen", 0)) != gen:
+		return
+	_dismiss_toast(panel, reduce_motion)
 
 
 func show_confirmation(config: Dictionary) -> Control:
@@ -299,6 +352,7 @@ func _close_confirmation() -> void:
 func _dismiss_toast(panel: Control, reduce_motion: bool) -> void:
 	if not is_instance_valid(panel):
 		return
+	panel.set_meta("toast_dismissing", true)
 	if reduce_motion:
 		panel.queue_free()
 		return
