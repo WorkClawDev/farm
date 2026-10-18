@@ -165,6 +165,10 @@ func get_stamina_manager():
 
 
 func _change_scene(scene_path: String) -> void:
+	# change_scene_to_file 会立刻把当前场景移出场景树。门口/出口是 Area2D.body_entered
+	# 触发的（物理回调里），这时移除 CollisionObject 会报错（BUG-16），先等到空闲帧再切。
+	if Engine.is_in_physics_frame():
+		await get_tree().process_frame
 	var error := get_tree().change_scene_to_file(scene_path)
 	if error != OK:
 		notification_requested.emit("无法加载场景")
