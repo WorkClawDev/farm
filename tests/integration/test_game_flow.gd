@@ -55,6 +55,7 @@ func _ready() -> void:
 	await _exercise_actor_collisions()
 	await _exercise_golden_path()
 	await _exercise_watering_can()
+	await _exercise_tool_vs_hotbar_dispatch()
 	await _exercise_json_save_compatibility()
 	_finish()
 
@@ -683,6 +684,76 @@ func _exercise_watering_can() -> void:
 		FarmState.set_watering_can_water(0)
 		FarmState.load_save_state(legacy)
 		return FarmState.get_watering_can_uses_left() == max_uses).call())
+
+	farm.queue_free()
+	await get_tree().process_frame
+	FarmState.reset()
+	Inventory.reset_with_starter_items()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+
+
+func _find_hotkey_bar(node: Node) -> HotkeyBar:
+	if node is HotkeyBar:
+		return node
+	for child in node.get_children():
+		var found := _find_hotkey_bar(child)
+		if found:
+			return found
+	return null
+
+
+func _exercise_tool_vs_hotbar_dispatch() -> void:
+	print("------------------------------------------------------------")
+	print("BUG-14 拿着工具只用工具；按数字键选种子才播种")
+	TimeManager.reset()
+	Inventory.reset_with_starter_items()
+	FarmState.reset()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	var hotbar := _find_hotkey_bar(farm)
+	_record("调度用例有玩家和快捷栏", player != null and hotbar != null)
+	if player == null or hotbar == null:
+		farm.queue_free()
+		return
+	var tm: ToolManager = player.tool_manager
+	var hoe := ToolManager.ToolType.HOE
+	var seeds := Inventory.get_item_count("turnip_seed")
+	_record("开局拿锄头且快捷栏选着种子",
+		tm.get_current_tool_type() == hoe and Inventory.get_selected_item_id() == "turnip_seed")
+
+	var a := Vector2i(0, 0)
+	farm.perform_farm_action(a, tm.get_current_tool_type())
+	_record("锄头翻地", int(FarmState.get_cell(a).state) == FarmState.TILLED)
+	var stamina := StaminaManager.current_stamina
+	for i in range(3):
+		farm.perform_farm_action(a, tm.get_current_tool_type())
+	_record("选着种子时锄头对耕地按空格不播种",
+		Dictionary(FarmState.get_cell(a).crop).is_empty() and Inventory.get_item_count("turnip_seed") == seeds)
+	_record("锄头对已翻的地不扣体力", StaminaManager.current_stamina == stamina)
+
+	tm.equip_tool(ToolManager.ToolType.WATERING_CAN)
+	farm.perform_farm_action(a, tm.get_current_tool_type())
+	_record("选着种子时水壶只浇水不播种",
+		int(FarmState.get_cell(a).state) == FarmState.WATERED
+			and Dictionary(FarmState.get_cell(a).crop).is_empty()
+			and Inventory.get_item_count("turnip_seed") == seeds)
+
+	hotbar._select(0)
+	_record("按数字键选种子会收起工具", tm.get_current_tool_type() == ToolManager.ToolType.NONE)
+	farm.perform_farm_action(a, tm.get_current_tool_type())
+	_record("手持种子对耕地播种",
+		not Dictionary(FarmState.get_cell(a).crop).is_empty() and Inventory.get_item_count("turnip_seed") == seeds - 1)
+	var b := Vector2i(1, 0)
+	farm.perform_farm_action(b, tm.get_current_tool_type())
+	_record("手持种子不能在未翻的地上播种",
+		Dictionary(FarmState.get_cell(b).crop).is_empty() and Inventory.get_item_count("turnip_seed") == seeds - 1)
+
+	tm.next_tool()
+	_record("收起工具后按 R 拿回上次的工具(水壶)", tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN)
+	hotbar._select(0)
+	tm.previous_tool()
+	_record("收起工具后按 Q 也拿回上次的工具", tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN)
 
 	farm.queue_free()
 	await get_tree().process_frame

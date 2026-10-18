@@ -130,6 +130,8 @@ func _update_slot(index: int) -> void:
 	else:
 		button.tooltip_text = "快捷栏 %d · 空" % (index + 1)
 	_selection_frames[index].visible = index == Inventory.get_selected_hotbar_index()
+	# 拿着工具时快捷栏选中框变淡：表示按空格用的是工具，不是这个物品。
+	_selection_frames[index].modulate.a = 0.35 if _is_tool_equipped() else 1.0
 	if index == Inventory.get_selected_hotbar_index():
 		button.scale = Vector2(1.08, 1.08)
 		button.pivot_offset = button.size * 0.5
@@ -137,6 +139,31 @@ func _update_slot(index: int) -> void:
 
 func _select(index: int) -> void:
 	Inventory.set_selected_hotbar_index(index)
+	# 选快捷栏物品 = 收起工具改拿这个物品（BUG-14：锄头不会顺手把种子种下去）。
+	var tool_manager := _get_tool_manager()
+	if tool_manager:
+		tool_manager.put_away_tool()
+	_refresh()
+
+
+func _get_tool_manager() -> ToolManager:
+	var player := get_tree().get_first_node_in_group("player") if is_inside_tree() else null
+	if player == null:
+		return null
+	var tool_manager = player.get("tool_manager")
+	if tool_manager is ToolManager:
+		if not tool_manager.tool_changed.is_connected(_on_tool_changed):
+			tool_manager.tool_changed.connect(_on_tool_changed)
+		return tool_manager
+	return null
+
+
+func _is_tool_equipped() -> bool:
+	var tool_manager := _get_tool_manager()
+	return tool_manager != null and not tool_manager.is_using_hotbar_item()
+
+
+func _on_tool_changed(_tool_type: int, _tool_name: String) -> void:
 	_refresh()
 
 

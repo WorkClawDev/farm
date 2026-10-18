@@ -20,6 +20,7 @@ var _icon_card: PanelContainer
 var _switch_tween: Tween
 
 var current_tool_name: String = ""
+var _current_tool_type: int = ToolManager.ToolType.NONE
 
 func _ready() -> void:
 	_build_ui()
@@ -30,6 +31,9 @@ func _ready() -> void:
 			player.tool_manager.tool_changed.connect(_on_tool_changed)
 			var tool_type: int = player.tool_manager.get_current_tool_type()
 			_on_tool_changed(tool_type, player.tool_manager._get_tool_name(tool_type))
+	# 收起工具时这里显示快捷栏选中的物品，选中格或数量变化时要跟着刷新。
+	Inventory.slot_changed.connect(func(_index: int): _refresh_hand_item())
+	Inventory.inventory_changed.connect(_refresh_hand_item)
 
 
 func _build_ui() -> void:
@@ -89,9 +93,12 @@ func _build_ui() -> void:
 	labels.add_child(_hint_label)
 
 func _on_tool_changed(tool_type: int, tool_name: String) -> void:
+	_current_tool_type = tool_type
 	current_tool_name = tool_name
 	tool_name_label.text = tool_name
+	_hint_label.text = "Q / R  切换工具"
 	_update_tool_icon(tool_type)
+	_refresh_hand_item()
 	if not UserSettings.get_value("accessibility", "reduce_motion", false):
 		if _switch_tween and _switch_tween.is_valid():
 			_switch_tween.kill()
@@ -100,6 +107,22 @@ func _on_tool_changed(tool_type: int, tool_name: String) -> void:
 		_switch_tween = create_tween()
 		_switch_tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		_switch_tween.tween_property(_icon_card, "scale", Vector2.ONE, 0.16)
+
+## 没拿工具时显示手里的快捷栏物品（例如“手持 芜菁种子”）。
+func _refresh_hand_item() -> void:
+	if _current_tool_type != ToolManager.ToolType.NONE or tool_name_label == null:
+		return
+	var item_id := Inventory.get_selected_item_id()
+	if item_id.is_empty():
+		current_tool_name = "空手"
+		tool_icon.texture = null
+	else:
+		current_tool_name = "手持 %s" % Inventory.get_item_name(item_id)
+		tool_icon.texture = ItemDatabase.load_icon_texture(item_id)
+	tool_name_label.text = current_tool_name
+	tool_icon.modulate = Color.WHITE if tool_icon.texture else Color(0.65, 0.62, 0.55)
+	_hint_label.text = "Q / R  拿回工具"
+
 
 func _update_tool_icon(tool_type: int) -> void:
 	var item_id := str(TOOL_ICON_IDS.get(tool_type, ""))

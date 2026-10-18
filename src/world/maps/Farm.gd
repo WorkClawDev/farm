@@ -198,16 +198,29 @@ func perform_farm_action(coord: Vector2i, tool_type: ToolManager.ToolType) -> vo
 	var selected_data = ItemDatabase.get_item(selected_item) if not selected_item.is_empty() else null
 	var cell := FarmState.get_cell(coord)
 
-	if selected_data and selected_data.type == ItemDatabase.ItemType.SEED \
-			and int(cell.get("state", FarmState.UNTILLED)) != FarmState.UNTILLED \
-			and Dictionary(cell.get("crop", {})).is_empty():
-		success = FarmState.plant(coord, selected_item)
-		message = "已播种" if success else "这里不能种植"
+	# 规则（BUG-14）：手里拿的东西决定动作。
+	# - 拿着工具（Q/R 切换）时只执行该工具的动作，快捷栏里选着种子也不会播种；
+	# - 按数字键选快捷栏物品会收起工具（ToolType.NONE），这时选中的是种子才播种。
+	if tool_type == ToolManager.ToolType.NONE:
+		if selected_data and selected_data.type == ItemDatabase.ItemType.SEED:
+			if int(cell.get("state", FarmState.UNTILLED)) == FarmState.UNTILLED:
+				message = "先用锄头翻地再播种"
+			elif not Dictionary(cell.get("crop", {})).is_empty():
+				message = "这里已经种了作物"
+			else:
+				success = FarmState.plant(coord, selected_item)
+				message = "已播种" if success else "这里不能种植"
+		else:
+			message = "选择种子，或按 Q/R 拿工具"
 	else:
 		match tool_type:
 			ToolManager.ToolType.HOE:
 				success = FarmState.till(coord)
-				message = "土地已翻好" if success else "这里已经翻过了"
+				message = "土地已翻好" if success else (
+					"这里已经翻过了（按数字键选种子播种）"
+					if Dictionary(cell.get("crop", {})).is_empty() and not cell.is_empty()
+					else "这里已经翻过了"
+				)
 			ToolManager.ToolType.WATERING_CAN:
 				# 水量只在 FarmState 里记；只有真正浇上水才扣水、扣体力。
 				match FarmState.water_with_can(coord):

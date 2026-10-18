@@ -15,8 +15,11 @@ enum ToolType {
 	FISHING_ROD    # 鱼竿
 }
 
-# 当前工具类型
+# 当前工具类型。NONE 表示“收起工具、手里拿的是快捷栏选中的物品”（如种子）。
 var current_tool_type: ToolType = ToolType.NONE
+
+# 最近一次拿的工具：从“手持物品”按 Q/R 时先回到它。
+var last_tool_type: ToolType = ToolType.HOE
 
 # 工具实例
 var tools: Dictionary = {}
@@ -71,6 +74,8 @@ func equip_tool(tool_type: ToolType) -> void:
 		tools[current_tool_type].visible = false
 	
 	current_tool_type = tool_type
+	if tool_type != ToolType.NONE:
+		last_tool_type = tool_type
 	
 	# 显示新工具
 	if tool_type != ToolType.NONE and tools.has(tool_type):
@@ -163,8 +168,19 @@ func _get_target_position() -> Vector2:
 	
 	return player.global_position + direction * 32.0
 
+## 收起工具，改用快捷栏选中的物品（按数字键选物品时调用）
+func put_away_tool() -> void:
+	equip_tool(ToolType.NONE)
+
+## 是否收起了工具（手持快捷栏物品）
+func is_using_hotbar_item() -> bool:
+	return current_tool_type == ToolType.NONE
+
 ## 切换到下一个工具
 func next_tool() -> void:
+	if current_tool_type == ToolType.NONE:
+		equip_tool(last_tool_type)
+		return
 	var tool_list = [ToolType.HOE, ToolType.WATERING_CAN, ToolType.AXE, 
 					 ToolType.PICKAXE, ToolType.SICKLE, ToolType.FISHING_ROD]
 	var current_index = tool_list.find(current_tool_type)
@@ -173,6 +189,9 @@ func next_tool() -> void:
 
 ## 切换到上一个工具
 func previous_tool() -> void:
+	if current_tool_type == ToolType.NONE:
+		equip_tool(last_tool_type)
+		return
 	var tool_list = [ToolType.HOE, ToolType.WATERING_CAN, ToolType.AXE, 
 					 ToolType.PICKAXE, ToolType.SICKLE, ToolType.FISHING_ROD]
 	var current_index = tool_list.find(current_tool_type)
