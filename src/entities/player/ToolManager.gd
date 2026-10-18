@@ -48,8 +48,19 @@ func _ready() -> void:
 func initialize(player_ref: CharacterBody2D) -> void:
 	player = player_ref
 	_load_tools()
-	# 默认选择锄头
-	equip_tool(ToolType.HOE)
+	# 恢复切换场景前手上的东西（BUG-15）：工具 / 手持快捷栏物品，以及 Q/R 要回到的工具。
+	# 选中的快捷栏格子本来就存在 Inventory 里。新游戏默认是锄头。
+	var saved_last: int = Inventory.get_last_tool() if Inventory else ToolType.HOE
+	if TOOL_SCENES.has(saved_last):
+		last_tool_type = saved_last as ToolType
+	var saved_tool: int = Inventory.get_equipped_tool() if Inventory else ToolType.HOE
+	if saved_tool != ToolType.NONE and not TOOL_SCENES.has(saved_tool):
+		saved_tool = ToolType.HOE
+	if saved_tool == ToolType.NONE:
+		# current_tool_type 初始就是 NONE，equip_tool 会提前 return，这里直接广播一次。
+		tool_changed.emit(ToolType.NONE, _get_tool_name(ToolType.NONE))
+	else:
+		equip_tool(saved_tool as ToolType)
 
 ## 加载所有工具
 func _load_tools() -> void:
@@ -60,6 +71,8 @@ func _load_tools() -> void:
 			var tool_instance = scene.instantiate()
 			tools[tool_type] = tool_instance
 			add_child(tool_instance)
+			# 只显示装备中的那一把，其余先藏起来（equip_tool 会把选中的显示出来）。
+			tool_instance.visible = false
 			print("[ToolManager] Loaded tool: ", _get_tool_name(tool_type))
 		else:
 			push_warning("[ToolManager] Tool scene not found: " + scene_path)
@@ -76,6 +89,8 @@ func equip_tool(tool_type: ToolType) -> void:
 	current_tool_type = tool_type
 	if tool_type != ToolType.NONE:
 		last_tool_type = tool_type
+	if Inventory:
+		Inventory.set_equipped_tool(current_tool_type, last_tool_type)
 	
 	# 显示新工具
 	if tool_type != ToolType.NONE and tools.has(tool_type):

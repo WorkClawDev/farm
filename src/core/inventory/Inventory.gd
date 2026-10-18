@@ -35,6 +35,12 @@ class InventorySlot extends RefCounted:
 var _slots: Array[InventorySlot] = []
 var _selected_hotbar_index: int = 0
 
+# 手上拿的是什么（BUG-15）：Player/ToolManager 每个场景都会重建，所以放在这个常驻 autoload 里。
+# 值是 ToolManager.ToolType 的整数；0 (NONE) 表示收起工具、手持快捷栏选中的物品。
+const DEFAULT_EQUIPPED_TOOL := 1  # ToolManager.ToolType.HOE
+var _equipped_tool: int = DEFAULT_EQUIPPED_TOOL
+var _last_tool: int = DEFAULT_EQUIPPED_TOOL
+
 # 数据库引用
 var _item_database: ItemDatabase = null
 
@@ -289,6 +295,8 @@ func clear_inventory() -> void:
 func reset_with_starter_items() -> void:
 	clear_inventory()
 	_selected_hotbar_index = 0
+	_equipped_tool = DEFAULT_EQUIPPED_TOOL
+	_last_tool = DEFAULT_EQUIPPED_TOOL
 	add_item("turnip_seed", 15)
 
 ## 获取空槽位数量
@@ -308,6 +316,20 @@ func set_selected_hotbar_index(index: int) -> void:
 	if index >= 0 and index < HOTBAR_SIZE:
 		_selected_hotbar_index = index
 		slot_changed.emit(index)
+
+## 当前装备的工具（ToolManager.ToolType 整数，0 = 手持快捷栏物品）
+func get_equipped_tool() -> int:
+	return _equipped_tool
+
+## 最近一次拿的工具（从手持物品按 Q/R 时回到它）
+func get_last_tool() -> int:
+	return _last_tool
+
+## ToolManager 装备/收起工具时调用，跨场景保留。
+func set_equipped_tool(tool_type: int, last_tool: int) -> void:
+	_equipped_tool = maxi(tool_type, 0)
+	if last_tool > 0:
+		_last_tool = last_tool
 
 ## 获取选中的物品ID
 func get_selected_item_id() -> String:
@@ -329,6 +351,8 @@ func save_state() -> Dictionary:
 	return {
 		"slots": get_save_data(),
 		"selected_hotbar_index": _selected_hotbar_index,
+		"equipped_tool": _equipped_tool,
+		"last_tool": _last_tool,
 	}
 
 ## 加载背包数据（用于读档）
@@ -344,6 +368,8 @@ func load_save_data(data: Array) -> void:
 func load_state(data: Dictionary) -> void:
 	load_save_data(data.get("slots", []))
 	set_selected_hotbar_index(int(data.get("selected_hotbar_index", 0)))
+	set_equipped_tool(int(data.get("equipped_tool", DEFAULT_EQUIPPED_TOOL)),
+		int(data.get("last_tool", DEFAULT_EQUIPPED_TOOL)))
 
 ## 发射槽位变化信号
 func _emit_slot_changes() -> void:

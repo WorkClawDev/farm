@@ -56,6 +56,7 @@ func _ready() -> void:
 	await _exercise_golden_path()
 	await _exercise_watering_can()
 	await _exercise_tool_vs_hotbar_dispatch()
+	await _exercise_tool_selection_across_scenes()
 	await _exercise_json_save_compatibility()
 	_finish()
 
@@ -760,6 +761,64 @@ func _exercise_tool_vs_hotbar_dispatch() -> void:
 	FarmState.reset()
 	Inventory.reset_with_starter_items()
 	StaminaManager.set_stamina(StaminaManager.max_stamina)
+
+
+func _exercise_tool_selection_across_scenes() -> void:
+	print("------------------------------------------------------------")
+	print("BUG-15 切换场景后保留手上的工具 / 手持物品")
+	Inventory.reset_with_starter_items()
+	FarmState.reset()
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	_record("BUG-15 用例有玩家", player != null)
+	if player == null:
+		farm.queue_free()
+		return
+	_record("新游戏默认拿锄头", player.tool_manager.get_current_tool_type() == ToolManager.ToolType.HOE)
+	player.tool_manager.equip_tool(ToolManager.ToolType.WATERING_CAN)
+
+	farm.queue_free()
+	await get_tree().process_frame
+	farm = await _spawn_farm()
+	player = farm.find_child("Player", true, false) as Player
+	var tm: ToolManager = player.tool_manager
+	_record("切场景后仍拿着水壶", tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN)
+	_record("切场景后只显示水壶节点", (func():
+		for tool_type in tm.tools.keys():
+			if tm.tools[tool_type].visible != (tool_type == ToolManager.ToolType.WATERING_CAN):
+				return false
+		return true).call())
+
+	var hotbar := _find_hotkey_bar(farm)
+	if hotbar:
+		hotbar._select(0)
+	else:
+		Inventory.set_selected_hotbar_index(0)
+		tm.put_away_tool()
+	_record("选种子后手持物品", tm.get_current_tool_type() == ToolManager.ToolType.NONE)
+
+	farm.queue_free()
+	await get_tree().process_frame
+	farm = await _spawn_farm()
+	player = farm.find_child("Player", true, false) as Player
+	tm = player.tool_manager
+	_record("切场景后仍手持快捷栏物品(种子)",
+		tm.get_current_tool_type() == ToolManager.ToolType.NONE and Inventory.get_selected_item_id() == "turnip_seed")
+	tm.next_tool()
+	_record("切场景后按 R 回到上次的工具(水壶)", tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN)
+
+	tm.equip_tool(ToolManager.ToolType.AXE)
+	var inventory_snapshot := Inventory.save_state()
+	Inventory.reset_with_starter_items()
+	_record("新游戏重置回锄头", Inventory.get_equipped_tool() == ToolManager.ToolType.HOE)
+	Inventory.load_state(_json_round_trip(inventory_snapshot))
+	_record("手上工具随存档恢复", Inventory.get_equipped_tool() == ToolManager.ToolType.AXE
+		and Inventory.get_last_tool() == ToolManager.ToolType.AXE)
+
+	farm.queue_free()
+	await get_tree().process_frame
+	FarmState.reset()
+	Inventory.reset_with_starter_items()
 
 
 func _exercise_json_save_compatibility() -> void:
