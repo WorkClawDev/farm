@@ -1,4 +1,4 @@
-extends Node
+extends Node2D
 class_name ToolManager
 
 ## ToolManager - 玩家工具管理器
@@ -96,21 +96,42 @@ func equip_tool(tool_type: ToolType) -> void:
 	if tool_type != ToolType.NONE and tools.has(tool_type):
 		tools[tool_type].visible = true
 		
-		# 根据玩家方向调整工具位置
-		var tool_offset = Vector2(16, 0)
-		if player and player.has_method("get"):
-			var current_direction = player.get("current_direction")
-			if current_direction != null:
-				match current_direction:
-					0: tool_offset = Vector2(0, 16)   # DOWN
-					1: tool_offset = Vector2(0, -16)  # UP
-					2: tool_offset = Vector2(-16, 0)  # LEFT
-					3: tool_offset = Vector2(16, 0)   # RIGHT
-		
-		tools[tool_type].position = tool_offset
+		update_pose()
 	
 	tool_changed.emit(tool_type, _get_tool_name(tool_type))
 	print("[ToolManager] Equipped: ", _get_tool_name(tool_type))
+
+## 手持工具的姿态：放在角色手边，跟着朝向翻转；朝上时画在身体后面。
+## ToolManager 是 Player 的子节点（Node2D），工具会跟着玩家移动。
+## 偏移是 Player 本地坐标（角色 Sprite 以原点为中心、64×64）。
+const HOLD_SCALE := 2.0  # 和角色 Sprite 相同的像素倍率
+const HOLD_OFFSETS = {
+	0: Vector2(14, -2),   # DOWN：右手在画面右侧
+	1: Vector2(-14, -4),  # UP：背对镜头，右手在画面左侧（画在身后）
+	2: Vector2(-12, -2),  # LEFT
+	3: Vector2(12, -2),   # RIGHT
+}
+
+func update_pose() -> void:
+	var direction := 0
+	if player:
+		var d = player.get("current_direction")
+		if d != null:
+			direction = int(d)
+	var tool := get_current_tool() as Node2D
+	if tool:
+		tool.position = HOLD_OFFSETS.get(direction, HOLD_OFFSETS[0])
+		var mirror := -1.0 if direction == 2 else 1.0
+		tool.scale = Vector2(HOLD_SCALE * mirror, HOLD_SCALE)
+	# 朝上时把工具挪到角色 Sprite 前面（先画 = 在身后），其他方向画在身前。
+	var parent := get_parent()
+	var body_sprite: Node = parent.get_node_or_null("Sprite2D") if parent else null
+	if parent and body_sprite:
+		var behind := direction == 1
+		if behind and get_index() > body_sprite.get_index():
+			parent.move_child(self, body_sprite.get_index())
+		elif not behind and get_index() < body_sprite.get_index():
+			parent.move_child(self, body_sprite.get_index())
 
 ## 获取工具名称
 func _get_tool_name(tool_type: ToolType) -> String:

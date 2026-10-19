@@ -188,6 +188,19 @@ func _dry_all_soil() -> void:
 func get_player_spawn_position() -> Vector2:
 	return player_spawn.global_position
 
+## Plot the player works on: the grid cell next to the one they stand in, in the
+## facing direction (-1,-1 when that is outside the field). Picking it by a point
+## 32px ahead (less than the 64px plot pitch) hit the player's own plot for some
+## directions, so 4 directions only tilled 3 plots, and from a plot centre the
+## point fell in the 4px gap between plots and hit nothing.
+func get_facing_plot_coord(world_position: Vector2, facing: Vector2) -> Vector2i:
+	var local := (world_position - global_position - PLOT_ORIGIN) / PLOT_SPACING
+	var standing := Vector2i(roundi(local.x), roundi(local.y))
+	var target := standing + Vector2i(roundi(facing.x), roundi(facing.y))
+	if target.x < 0 or target.y < 0 or target.x >= FarmState.GRID_WIDTH or target.y >= FarmState.GRID_HEIGHT:
+		return Vector2i(-1, -1)
+	return target
+
 func perform_farm_action(coord: Vector2i, tool_type: ToolManager.ToolType) -> void:
 	if StaminaManager.current_stamina < 2.0:
 		_show_notification("体力不足")
