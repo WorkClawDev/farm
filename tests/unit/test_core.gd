@@ -323,9 +323,9 @@ func run_player_visual_tests():
 	if player_sprite:
 		var frame_width: int = int(player_sprite.texture.get_width() / player_sprite.hframes)
 		var frame_height: int = int(player_sprite.texture.get_height() / player_sprite.vframes)
-		assert_true(frame_width == 32, "Player sprite frame width should be 32")
-		assert_true(frame_height == 32, "Player sprite frame height should be 32")
-		assert_true(player_sprite.scale == Vector2(2, 2), "Player sprite scale should be 2x")
+		assert_true(frame_width == 64, "Player sprite frame width should be 64 (16px art ×4)")
+		assert_true(frame_height == 64, "Player sprite frame height should be 64 (16px art ×4)")
+		assert_true(player_sprite.scale == Vector2(1, 1), "Player sprite scale should be 1x (sheet already 64px)")
 
 	player.free()
 	print("  Player visuals: All tests completed")

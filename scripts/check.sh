@@ -392,6 +392,28 @@ fi
 rm -f "$WALK_TEST_LOG"
 
 echo ""
+echo -e "${CYAN}========================================${NC}"
+echo -e "${CYAN}  Village night cycle test${NC}"
+echo -e "${CYAN}========================================${NC}"
+
+NIGHT_TEST_LOG="/tmp/godot_night_cycle_$$.log"
+run_godot "$NIGHT_TEST_LOG" --headless --path "$PROJECT_DIR" --script res://tests/integration/test_night_cycle.gd
+
+NIGHT_ERRORS=$(grep -cE "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call|^ERROR:|FATAL|failed to load|Failed to|handle_crash" "$NIGHT_TEST_LOG" 2>/dev/null || true)
+if [ "${NIGHT_ERRORS:-0}" -gt 0 ]; then
+    err "Night cycle test emitted ${NIGHT_ERRORS} script/runtime errors"
+    grep -E "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call|^ERROR:|FATAL|failed to load|Failed to|handle_crash" \
+        "$NIGHT_TEST_LOG" | sed 's/^/    /' | head -30
+elif grep -q "NIGHT CYCLE TESTS PASSED" "$NIGHT_TEST_LOG"; then
+    NIGHT_PASSED=$(sed -n 's/.*RESULTS: \([0-9][0-9]*\)\/.*/\1/p' "$NIGHT_TEST_LOG" | head -1)
+    ok "Village night cycle passed (${NIGHT_PASSED}/${NIGHT_PASSED})"
+else
+    err "Night cycle test failed"
+    grep -E "\[FAIL\]|NIGHT CYCLE TESTS FAILED" "$NIGHT_TEST_LOG" | sed 's/^/    /' | head -30
+fi
+rm -f "$NIGHT_TEST_LOG"
+
+echo ""
 echo -e "${BLUE}========================================${NC}"
 if [ "$FAIL" -eq 0 ]; then
     echo -e "${GREEN}  All checks passed (${PASS}/${PASS})${NC}"

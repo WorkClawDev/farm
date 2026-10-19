@@ -116,7 +116,10 @@ func _exercise_scene(scene_name: String, scene_path: String) -> void:
 
 	if scene_path == "res://src/world/maps/Village.tscn":
 		var sample_npc := instance.get_node_or_null("NPCs/MayorThomas")
-		_record("村民使用无毛边矢量角色", sample_npc != null and sample_npc.get_node_or_null("VillagerIllustration") != null)
+		var mayor_sprite := sample_npc.get_node_or_null("Sprite2D") as Sprite2D if sample_npc else null
+		_record("村民使用 Ninja 精灵表（无矢量插画）", sample_npc != null and sample_npc.get_node_or_null("VillagerIllustration") == null
+			and mayor_sprite != null and mayor_sprite.visible and mayor_sprite.hframes >= 8
+			and mayor_sprite.texture != null and mayor_sprite.texture.get_width() == 512)
 	elif scene_path == "res://src/world/maps/Forest.tscn":
 		var forage_points := instance.get_node_or_null("ForagePoints")
 		var sample_forage := (
@@ -1056,6 +1059,10 @@ func _exercise_npc_dialogue_reentrancy() -> void:
 		await get_tree().physics_frame
 	_record("结束对话的那次按键不会重新开始对话/打开商店", started[0] == 1 and not DialogueManager.is_in_dialogue() and not UIManager.is_screen_open("shop"))
 
+	# BUG-26 residual: one more press right after closing is still "closing", not "talk again".
+	await _press_action(&"interact")
+	_record("刚关闭对话马上再按 E 不会重新开始对话", started[0] == 1 and not DialogueManager.is_in_dialogue())
+	await _wait_retalk_cooldown()
 	await _press_action(&"interact")
 	_record("再次交互能开始新对话且有内容", DialogueManager.is_in_dialogue() and started[0] == 2 and box.visible and not box.dialogue_lines.is_empty())
 	DialogueManager.force_end_dialogue()
@@ -1120,6 +1127,7 @@ func _exercise_morning_npcs() -> void:
 		await get_tree().physics_frame
 	player.global_position = shop.global_position + Vector2(0, 36)
 	player.register_nearby_npc(shop)
+	await _wait_retalk_cooldown()
 	await _press_action(&"interact")
 	_record("6:30 按 E 商人打开商店", UIManager.is_screen_open("shop"))
 	UIManager.close_all()
@@ -1133,6 +1141,7 @@ func _exercise_morning_npcs() -> void:
 	mayor.schedule.update(23.0, TimeManager.current_day, TimeManager.current_season)
 	player.global_position = mayor.global_position + Vector2(0, 36)
 	player.register_nearby_npc(mayor)
+	await _wait_retalk_cooldown()
 	await _press_action(&"interact")
 	var rest_toast := false
 	if UIManager._toast_root:
@@ -1190,16 +1199,19 @@ func _exercise_npc_go_home() -> void:
 		walking_home = walking_home and npc.is_going_home and npc.visible and npc.is_walking
 	_record("20:00 汤姆、乔、玛丽开始走回家（仍可见）", walking_home)
 
+	# The walk home is a slow stroll (~15-30 s, round 8): run the clock 4x for it.
+	Engine.time_scale = 4.0
 	var frames := 0
-	while frames < 1500 and not npcs.values().all(func(n): return n.is_resting):
+	while frames < 1200 and not npcs.values().all(func(n): return n.is_resting):
 		frames += 1
 		await get_tree().physics_frame
 	await get_tree().physics_frame
+	Engine.time_scale = 1.0
 	for node_name in npcs:
 		var npc: NPC = npcs[node_name]
 		var door: Vector2 = npc._door_here()["position"]
 		var at_door := npc.global_position.distance_to(door) < 8.0
-		_record("%s 走到门口 %s 后休息：隐藏、无碰撞、不检测玩家（%.1f 秒）" % [npc.npc_name, door, frames / 60.0],
+		_record("%s 走到门口 %s 后休息：隐藏、无碰撞、不检测玩家（%.1f 秒）" % [npc.npc_name, door, frames * 4.0 / Engine.physics_ticks_per_second],
 			npc.is_resting and at_door and not npc.visible and npc.collision_shape.disabled and not npc.interaction_area.monitoring)
 
 	# E does nothing on a resting NPC (even if the player still had it registered)
@@ -1289,6 +1301,7 @@ func _exercise_dialogue_close_real_keys() -> void:
 			get_tree().paused = false
 			GameManager.current_state = GameManager.GameState.PLAYING
 			started[0] = 0
+			await _wait_retalk_cooldown()
 			await _tap_key(key, hold)
 			var opened := DialogueManager.is_in_dialogue()
 			var presses := 0
@@ -1623,6 +1636,11 @@ func _tap_key(keycode: Key, hold_frames: int) -> void:
 	Input.parse_input_event(up)
 	for i in 6:
 		await get_tree().physics_frame
+
+
+## A new talk right after a dialogue closed is ignored for a moment (Player.DIALOGUE_RETALK_COOLDOWN_MS).
+func _wait_retalk_cooldown() -> void:
+	await get_tree().create_timer(0.65).timeout
 
 
 func _hold_action(action: StringName, frames: int) -> void:

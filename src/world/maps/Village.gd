@@ -12,6 +12,7 @@ const HotkeyBarScene = preload("res://src/ui/hud/HotkeyBar.tscn")
 const ToolDisplayScene = preload("res://src/ui/hud/ToolDisplay.tscn")
 const QuestTrackerScene = preload("res://src/ui/hud/QuestTracker.tscn")
 const PauseMenuScene = preload("res://src/ui/menus/PauseMenu.tscn")
+const DayNightTint = preload("res://src/world/maps/DayNightTint.gd")
 var tile_map: TileMap = null # Legacy builder compatibility; no longer part of the runtime scene.
 @onready var map_root: EditableMap2D = $VillageMap
 @onready var player_spawn: MapMarker2D = map_root.get_marker(&"player_spawn")
@@ -46,6 +47,7 @@ func _ready() -> void:
 	print("[Village] Scene loaded")
 	_setup_map()
 	_setup_ui()
+	add_child(DayNightTint.new())  # night tint (round 7)
 	_connect_transition_areas()
 	# Also on GameManager.change_location (farm/house -> village), which does not go
 	# through SceneTransition: the scene's villagers get registered and placed by

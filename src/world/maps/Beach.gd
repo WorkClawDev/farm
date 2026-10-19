@@ -10,6 +10,7 @@ const HotkeyBarScene = preload("res://src/ui/hud/HotkeyBar.tscn")
 const ToolDisplayScene = preload("res://src/ui/hud/ToolDisplay.tscn")
 const QuestTrackerScene = preload("res://src/ui/hud/QuestTracker.tscn")
 const MapMenuInput = preload("res://src/world/maps/MapMenuInput.gd")
+const DayNightTint = preload("res://src/world/maps/DayNightTint.gd")
 
 # 场景配置
 @export var scene_name: String = "Beach"
@@ -33,6 +34,7 @@ const VILLAGE_SCENE = "res://src/world/maps/Village.tscn"
 func _ready() -> void:
 	_setup_map()
 	_setup_ui()
+	add_child(DayNightTint.new())  # outdoor night tint (round 8)
 	_setup_fishing_spots()
 	_setup_exits()
 	print("[Beach] Scene initialized")

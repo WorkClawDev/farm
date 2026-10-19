@@ -15,6 +15,7 @@ const HotkeyBarScene = preload("res://src/ui/hud/HotkeyBar.tscn")
 const PauseMenuScene = preload("res://src/ui/menus/PauseMenu.tscn")
 const QuestTrackerScene = preload("res://src/ui/hud/QuestTracker.tscn")
 const FarmPlotScript = preload("res://src/world/objects/FarmPlot.gd")
+const DayNightTint = preload("res://src/world/maps/DayNightTint.gd")
 const VILLAGE_SCENE := "res://src/world/maps/Village.tscn"
 
 @onready var map_root: EditableMap2D = $FarmMap
@@ -46,6 +47,7 @@ func _ready() -> void:
 	print("[Farm] Scene loaded")
 	_setup_map()
 	_setup_ui()
+	add_child(DayNightTint.new())  # outdoor night tint (round 8)
 	_setup_soil_plots()
 	_setup_house_entrance()
 	_setup_village_exit()

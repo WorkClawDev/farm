@@ -82,6 +82,7 @@ func _check_npc_points() -> void:
 					in_scene[n.npc_id] = n
 		var bad: Array[String] = []
 		var count := 0
+		var points := {}  # npc id -> schedule points on this map
 		for data in npcs:
 			var id: String = data.get("id", "")
 			var here: bool = in_scene.has(id) or root.get_node("NPCManager")._should_npc_be_in_scene(id, map[0])
@@ -92,6 +93,7 @@ func _check_npc_points() -> void:
 				count += 1
 				if not _npc_fits(space, p):
 					bad.append("%s %s@%s" % [id, entry.get("location_id", "?"), p])
+				points[id] = points.get(id, []) + [p]
 			var door: Dictionary = data.get("home_door", {}).get(map[0].to_lower(), {})
 			if not door.is_empty():
 				var route: Array[Vector2] = []
@@ -104,6 +106,17 @@ func _check_npc_points() -> void:
 						bad.append("%s door/via@%s" % [id, route[i]])
 					if i > 0 and not _npc_can_walk(space, route[i - 1], route[i]):
 						bad.append("%s door route %s->%s blocked" % [id, route[i - 1], route[i]])
+				# BUG-47: the walk home starts wherever the villager stands when its sleep entry begins.
+				var sched: Array = data.get("schedule", [])
+				for s in sched:
+					if int(s.get("activity", -1)) != 0:
+						continue
+					for e in sched:
+						if int(e.get("activity", -1)) != 0 and is_equal_approx(float(e.get("end_time", -1.0)), float(s.get("start_time", -2.0))):
+							count += 1
+							var start := _vec(e.get("location_position", {}))
+							if not _npc_can_walk(space, start, route[0]):
+								bad.append("%s go-home start %s->%s blocked" % [id, start, route[0]])
 		# Where the scene file itself places its villagers.
 		if map[0] == "Village":
 			var packed := (load(VILLAGE) as PackedScene).get_state()
@@ -118,6 +131,16 @@ func _check_npc_points() -> void:
 						if not _npc_fits(space, sp):
 							bad.append("%s scene spawn@%s" % [path, sp])
 		_record("%s：%d 个 NPC 日程点/门口/途经点/出生点都不在建筑或碰撞体里%s" % [map[0], count, "" if bad.is_empty() else "，问题：" + ", ".join(bad)], bad.is_empty())
+		# Two villagers must never be sent to the same spot (round 7: mayor/Lily, Joe/Tom stacked).
+		var stacked: Array[String] = []
+		var ids := points.keys()
+		for a in ids.size():
+			for b in range(a + 1, ids.size()):
+				for pa in points[ids[a]]:
+					for pb in points[ids[b]]:
+						if pa.distance_to(pb) < 28.0:
+							stacked.append("%s/%s@%s" % [ids[a], ids[b], pa])
+		_record("%s：不同 NPC 的日程点互不重叠（≥28px）%s" % [map[0], "" if stacked.is_empty() else "，重叠：" + ", ".join(stacked)], stacked.is_empty())
 	# Tom's door is near the mine exit band: standing at or just below it must not leave the village.
 	await _enter(VILLAGE, "")
 	var mine_area := current_scene.get_node("TransitionAreas/ToMineArea") as Area2D
@@ -272,10 +295,33 @@ func _check_mine_floors() -> void:
 		var flush_errors := _errors.messages.filter(func(m): return "flushing queries" in m)
 		_record("矿洞%s：第 %d 层，%d 块矿石，物理报错 %d 条%s" % [step[0], mine.current_floor, ores.size(), flush_errors.size(), "" if flush_errors.is_empty() else "：" + flush_errors[0]],
 			mine.current_floor == step[2] and ores.size() == 5 + step[2] * 2 and _errors.messages.is_empty())
+		# Round 7: the signs say where each ladder goes; only the exit says village.
+		var up_text := str(mine.get_node("Ladders/LadderUp/LadderSign").text)
+		var down_text := str(mine.get_node("Ladders/LadderDown/LadderSign").text)
+		var want_up := "↑ 第 %d 层" % (step[2] - 1) if step[2] > 1 else "↑"
+		var want_down := "↓ 第 %d 层" % (step[2] + 1)
+		var exit_text := str(mine.get_node("Ladders/ExitArea/ExitSign").text)
+		_record("矿洞第 %d 层梯子标签：上「%s」下「%s」出口「%s」" % [step[2], up_text, down_text, exit_text], up_text == want_up and down_text == want_down and exit_text == "← 村庄")
+		# Round 8: the up-ladder triggers on every floor, so it is visible on every floor too.
+		_record("矿洞第 %d 层上梯子可见（它总能踩）" % step[2], mine.get_node("Ladders/LadderUp").is_visible_in_tree())
 		# Step off the ladder before the next one (the other ladder is far away).
 		player.global_position = Vector2(400, 300)
 		await _physics(4)
 	OS.remove_logger(_errors)
+	# Back on floor 1 after coming up: the (visible) up-ladder leads to the village.
+	for body in mine.get_node("Ores").find_children("*", "CollisionObject2D", true, false):
+		body.collision_layer = 0  # this floor's new random ores
+	await _physics(2)
+	Input.action_press("move_left")
+	var left := 0
+	while current_scene == mine and left < 900:
+		await physics_frame
+		left += 1
+	_release_moves()
+	while root.get_node("SceneTransition").is_transitioning:
+		await process_frame
+	await _settle(4)
+	_record("从第 2 层回到第 1 层后，走上可见的上梯子回到村庄（%d 帧，%s）" % [left, current_scene.name if current_scene else "-"], current_scene != null and current_scene.name == "Village")
 
 
 # ---------------------------------------------------------------- exits

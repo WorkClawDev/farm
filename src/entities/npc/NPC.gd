@@ -38,7 +38,11 @@ var is_doing_idle_action: bool = false
 # door (npcs.json "home_door", per scene, optional "via" waypoints) and then rests:
 # hidden, no collision, no interaction. It reappears at the door when the next
 # non-sleep entry starts. No door here, or not there in time: fade out in place.
-const GO_HOME_TIMEOUT := 15.0
+## The evening walk home is a slow stroll so players see it happen: 15-30 real
+## seconds (= game minutes) on the village routes (round 8; at move_speed it was 6-11 s).
+const GO_HOME_SPEED := 30.0
+## Tom's route, the longest, takes ~30 s at GO_HOME_SPEED; keep a wide margin.
+const GO_HOME_TIMEOUT := 50.0
 const REST_FADE_SECONDS := 0.4
 var is_resting: bool = false
 var is_going_home: bool = false
@@ -69,35 +73,33 @@ const IDLE_FRAMES = {
 	Direction.LEFT: 2,
 	Direction.RIGHT: 4
 }
-const VillagerIllustrationScene = preload("res://src/entities/npc/VillagerIllustration.gd")
-const ILLUSTRATION_SCALE := 0.8
-const ILLUSTRATION_FEET_Y := 33.0  # bottom of the drawn shadow
+## Stage B: Ninja Adventure 64px sheets (16×4). Procedural VillagerIllustration retired.
+const SPRITE_BASE_SCALE := Vector2(1, 1)
+var _walk_anim_t: float = 0.0
 
 func _ready() -> void:
 	_setup_interaction_area()
 	_load_npc_data()
-	_setup_illustrated_character()
+	_setup_character_visual()
 	_setup_animation()
 	_connect_time_signals()
 	_connect_dialogue_signals()
 	_rest_if_asleep_on_enter()
 	print("[NPC] %s initialized" % npc_name)
 
-func _setup_illustrated_character() -> void:
-	if sprite:
-		sprite.visible = false
+func _setup_character_visual() -> void:
+	# Drop any leftover procedural drawing from earlier builds (Stage B).
 	var illustration = get_node_or_null("VillagerIllustration")
-	if illustration == null:
-		illustration = VillagerIllustrationScene.new()
-		add_child(illustration)
-	illustration.setup(npc_id, current_direction)
-	# The drawn villager is ~84 px tall and 56 px wide vs the 64x30 px player; scale
-	# it to player size, keeping its shadow bottom on the same spot. Visual only:
-	# collision, interaction area and y-sort origin are unchanged.
-	illustration.scale = Vector2.ONE * ILLUSTRATION_SCALE
-	illustration.position = Vector2(0.0, ILLUSTRATION_FEET_Y * (1.0 - ILLUSTRATION_SCALE))
-	# The old static "E" label is now an InteractPrompt (NPC.tscn): shown only while
-	# this is the NPC the player would talk to (Player.nearby_npcs, nearest wins).
+	if illustration:
+		illustration.queue_free()
+	if sprite:
+		sprite.visible = true
+		sprite.scale = SPRITE_BASE_SCALE
+		if sprite.texture and sprite.hframes < 2:
+			# Prefer npcs.json / scene override sheet (8 frames).
+			pass
+		sprite.frame = _get_sprite_frame(current_direction)
+	# InteractPrompt: shown only while this is the NPC the player would talk to.
 	var prompt = get_node_or_null("InteractPrompt")
 	if prompt:
 		prompt.priority = InteractPromptScript.PRIORITY_NPC
@@ -220,6 +222,8 @@ func _apply_sprite_data(data: Dictionary) -> void:
 	sprite.texture = texture
 	sprite.hframes = 8 if texture.get_width() >= texture.get_height() * 4 else 1
 	sprite.vframes = 1
+	sprite.scale = SPRITE_BASE_SCALE
+	sprite.visible = true
 	sprite.frame = _get_sprite_frame(current_direction)
 
 ## 连接日程信号
@@ -370,7 +374,7 @@ func _move_towards_target(_delta: float) -> void:
 
 	is_walking = true
 	direction_vector = direction_vector.normalized()
-	velocity = direction_vector * move_speed
+	velocity = direction_vector * (GO_HOME_SPEED if is_going_home else move_speed)
 
 	_update_direction_from_velocity(direction_vector)
 
@@ -416,6 +420,7 @@ func _reached_destination() -> void:
 	velocity = Vector2.ZERO
 	if is_going_home:
 		if _home_path.is_empty():
+			print("[NPC] %s reached the door at %s after %.1f s" % [npc_name, global_position.round(), _home_elapsed])
 			_fade_to_rest()
 		else:
 			target_position = _home_path.pop_front()
@@ -440,30 +445,21 @@ func _update_direction_from_velocity(dir: Vector2) -> void:
 
 	if new_direction != current_direction:
 		current_direction = new_direction
-		var illustration = get_node_or_null("VillagerIllustration")
-		if illustration:
-			illustration.set_facing(current_direction)
+		if sprite:
+			sprite.frame = _get_sprite_frame(current_direction)
 		direction_changed.emit(current_direction)
 
 ## 更新动画状态
 func _update_animation() -> void:
-	if not animation_player:
-		return
-
-	var anim_prefix := _get_animation_prefix()
-	var anim_name := anim_prefix + ("_walk" if is_walking else "_idle")
-
-	if animation_player.has_animation(anim_name):
-		if is_walking:
-			animation_player.play(anim_name)
-		else:
-			animation_player.stop()
-			if sprite:
-				sprite.frame = _get_sprite_frame(current_direction)
+	# Sheet-driven: idle frame per facing, or toggle walk frame while moving.
+	if is_walking:
+		_walk_anim_t += get_physics_process_delta_time()
 	else:
+		_walk_anim_t = 0.0
+	if sprite:
+		sprite.frame = _get_sprite_frame(current_direction)
+	if animation_player and animation_player.is_playing():
 		animation_player.stop()
-		if sprite:
-			sprite.frame = _get_sprite_frame(current_direction)
 
 ## 获取动画前缀
 func _get_animation_prefix() -> String:
@@ -484,21 +480,18 @@ func set_direction(direction: Direction) -> void:
 	current_direction = direction
 	if sprite:
 		sprite.frame = _get_sprite_frame(direction)
-	var illustration = get_node_or_null("VillagerIllustration")
-	if illustration:
-		illustration.set_facing(direction)
 
 func _get_sprite_frame(direction: Direction) -> int:
 	if sprite == null:
 		return 0
-
 	var total_frames: int = maxi(sprite.hframes * sprite.vframes, 1)
-	var frame: int = int(IDLE_FRAMES.get(direction, 0))
-
-	if frame >= total_frames:
+	var idle: int = int(IDLE_FRAMES.get(direction, 0))
+	if idle >= total_frames:
 		return 0
-
-	return frame
+	# 8-frame sheets: idle at even indices, walk step at idle+1 (same as player).
+	if is_walking and total_frames >= 8 and idle + 1 < total_frames:
+		return idle + 1 if int(_walk_anim_t * 5.0) % 2 == 0 else idle
+	return idle
 
 ## 面向玩家
 func face_position(target_pos: Vector2) -> void:

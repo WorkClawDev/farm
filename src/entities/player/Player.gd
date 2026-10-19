@@ -24,6 +24,10 @@ var building_in_range: Node = null
 
 # 对话/商店刚结束时，要先松开交互键才会再次交互（BUG-20）
 var _interact_needs_release := false
+## After a dialogue closes, a second E/Space within this window is taken as part of
+## closing it, not as "talk again" (BUG-26 residual: the line after the last one).
+const DIALOGUE_RETALK_COOLDOWN_MS := 600
+var _interact_blocked_until_msec := 0
 ## A direction key still held from walking into the previous map's exit would
 ## carry the player past the arrival spot (BUG-37); ignore it until released.
 var _move_needs_release := false
@@ -76,6 +80,8 @@ func _physics_process(_delta: float) -> void:
 		# when control comes back here; without this it re-talks to the NPC and the
 		# shop reopens (BUG-20). Wait until the key is released.
 		_interact_needs_release = true
+		if GameManager.current_state == GameManager.GameState.DIALOGUE:
+			_interact_blocked_until_msec = Time.get_ticks_msec() + DIALOGUE_RETALK_COOLDOWN_MS
 		velocity = Vector2.ZERO
 		# 对话/商店等非游戏状态下停在原地，不要原地踏步。
 		is_walking = false
@@ -177,6 +183,8 @@ func _handle_interaction() -> void:
 		if _interact_key_active():
 			return
 		_interact_needs_release = false
+	if Time.get_ticks_msec() < _interact_blocked_until_msec:
+		return
 	if Input.is_action_just_pressed("interact"):
 		_refresh_nearest_npc()
 		_refresh_nearest_animal()
@@ -304,7 +312,7 @@ func _play_use_feedback() -> void:
 		return
 	if _use_tween and _use_tween.is_valid():
 		_use_tween.kill()
-	var base_scale := Vector2(2, 2)
+	var base_scale := SPRITE_BASE_SCALE
 	sprite.position = Vector2.ZERO
 	sprite.scale = base_scale
 	var forward := _get_direction_vector()
@@ -332,8 +340,8 @@ func _play_use_feedback() -> void:
 ## shop, menus) and with reduce_motion.
 const BREATH_PERIOD := 2.2
 const BREATH_AMOUNT := 0.025
-const SPRITE_BASE_SCALE := Vector2(2, 2)
-const SPRITE_FEET_Y := 16.0  # frame bottom, in texture pixels below the sprite centre
+const SPRITE_BASE_SCALE := Vector2(1, 1)  # Villager3 sheet is already 64px (16×4)
+const SPRITE_FEET_Y := 32.0  # frame bottom, in texture pixels below the sprite centre
 var _breath_time := 0.0
 var _breathing := false
 

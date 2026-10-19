@@ -175,7 +175,8 @@ func _get_spawn_position(npc_id: String, npc_data: Dictionary) -> Vector2:
 	# 从日程中获取当前时间的位置
 	if TimeManager and npc_data.has("schedule"):
 		var schedule = npc_data["schedule"]
-		var current_time = get_node("/root/TimeManager").current_time
+		# Past midnight TimeManager runs on to 26.0; schedules are 0-24 (BUG-48).
+		var current_time = fposmod(get_node("/root/TimeManager").current_time, 24.0)
 		
 		for entry in schedule:
 			var start_time = entry.get("start_time", 0.0)

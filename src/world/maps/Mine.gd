@@ -93,7 +93,31 @@ func _setup_ladders() -> void:
 	if exit_area:
 		exit_area.body_entered.connect(_on_exit_area_entered)
 		ExitSign.attach(exit_area, "← 村庄", Vector2(0, -40))
+	# The ladders say where they lead, below them so they don't read as the
+	# village exit's sign next door (round 7: "← 村庄" sat over the up-ladder).
+	if ladder_up:
+		_attach_ladder_sign(ladder_up)
+	if ladder_down:
+		_attach_ladder_sign(ladder_down)
+	_update_ladder_signs()
 	print("[Mine] Ladders configured")
+
+
+func _attach_ladder_sign(ladder: Area2D) -> void:
+	var label := ExitSign.attach(ladder, " ", Vector2(0, 40))
+	if label:
+		label.name = "LadderSign"
+
+
+func _update_ladder_signs() -> void:
+	var up_sign := ladder_up.get_node_or_null("LadderSign") as Label if ladder_up else null
+	if up_sign:
+		# Floor 1 leads to the village too, but the left ExitArea already says 「← 村庄」.
+		# Keep this as a plain up marker so ladders never duplicate that label (Sand).
+		up_sign.text = "↑ 第 %d 层" % (current_floor - 1) if current_floor > 1 else "↑"
+	var down_sign := ladder_down.get_node_or_null("LadderSign") as Label if ladder_down else null
+	if down_sign:
+		down_sign.text = "↓ 第 %d 层" % (current_floor + 1) if current_floor < total_floors else ""
 
 
 func _on_exit_area_entered(body: Node2D) -> void:
@@ -237,9 +261,9 @@ func _go_to_floor(floor: int) -> void:
 	current_floor = floor
 	print("[Mine] Moving to floor ", floor)
 
-	# 更新梯子可见性
-	if ladder_up:
-		ladder_up.visible = current_floor > 1
+	# The up-ladder stays visible on every floor: on floor 1 it leads to the village
+	# ("↑ 村庄"); hiding it there left an invisible trigger (round 8).
+	_update_ladder_signs()
 
 	# 重新生成矿石
 	_setup_ores()

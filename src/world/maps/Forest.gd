@@ -14,6 +14,7 @@ const ForageItemScene = preload("res://src/entities/items/ForageItem.tscn")
 const PlayerScene = preload("res://src/entities/player/Player.tscn")
 const VILLAGE_SCENE := "res://src/world/maps/Village.tscn"
 const ExitSign = preload("res://src/world/maps/ExitSign.gd")
+const DayNightTint = preload("res://src/world/maps/DayNightTint.gd")
 const FROM_VILLAGE_SPAWN := Vector2(440, 790)
 const EXIT_SIGNS := {
 	"ToFarmArea": ["← 村庄", Vector2(40, -48)],
@@ -33,6 +34,7 @@ func _ready() -> void:
 	print("[Forest] Scene loaded")
 	_setup_map()
 	_setup_ui()
+	add_child(DayNightTint.new())  # outdoor night tint (round 8)
 	_setup_forage_points()
 	_connect_signals()
 	_generate_random_forage()
