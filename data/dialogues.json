@@ -2,7 +2,7 @@
   "npcs": {
     "mayor": {
       "id": "mayor",
-      "name": "镇长托马斯",
+      "name": "镇长·威廉",
       "description": "和蔼可亲的村庄领导者",
       "portrait": "res://assets/sprites/portraits/mayor.png",
       "default_location": "village_square",
@@ -19,7 +19,7 @@
     },
     "farmer": {
       "id": "farmer",
-      "name": "农场主约翰",
+      "name": "农夫·乔",
       "description": "经验丰富的老农，懂得种植的一切",
       "portrait": "res://assets/sprites/portraits/farmer_joe.png",
       "default_location": "farm_shop",
@@ -36,7 +36,7 @@
     },
     "merchant": {
       "id": "merchant",
-      "name": "商人艾米丽",
+      "name": "店主·莉莉",
       "description": "旅行商人，经营各种稀有物品",
       "portrait": "res://assets/sprites/portraits/shopkeeper_lily.png",
       "default_location": "general_store",
@@ -53,7 +53,7 @@
     },
     "blacksmith": {
       "id": "blacksmith",
-      "name": "铁匠布鲁斯",
+      "name": "铁匠·汤姆",
       "description": "强壮的铁匠，能打造各种工具",
       "portrait": "res://assets/sprites/portraits/blacksmith_tom.png",
       "default_location": "blacksmith_shop",
@@ -70,7 +70,7 @@
     },
     "doctor": {
       "id": "doctor",
-      "name": "医生玛丽",
+      "name": "医生·玛丽",
       "description": "善良的村医，照顾着大家的健康",
       "portrait": "res://assets/sprites/portraits/doctor_mary.png",
       "default_location": "clinic",
@@ -93,10 +93,10 @@
         "priority": 0,
         "conditions": [],
         "lines": [
-          {"speaker": "镇长托马斯", "text": "欢迎来到我们美丽的村庄！"},
-          {"speaker": "镇长托马斯", "text": "我是镇长托马斯，很高兴认识你。"},
-          {"speaker": "镇长托马斯", "text": "这个村庄虽然不大，但住着一群善良的人们。"},
-          {"speaker": "镇长托马斯", "text": "如果你需要帮助，随时可以找我。"}
+          {"speaker": "镇长·威廉", "text": "欢迎来到我们美丽的村庄！"},
+          {"speaker": "镇长·威廉", "text": "我是镇长·威廉，很高兴认识你。"},
+          {"speaker": "镇长·威廉", "text": "这个村庄虽然不大，但住着一群善良的人们。"},
+          {"speaker": "镇长·威廉", "text": "如果你需要帮助，随时可以找我。"}
         ]
       },
       "first_meeting": {
@@ -106,11 +106,11 @@
           {"type": "flag", "key": "met_mayor", "value": false}
         ],
         "lines": [
-          {"speaker": "镇长托马斯", "text": "哦！你一定是新来的农场主！"},
-          {"speaker": "镇长托马斯", "text": "我听说了你要接手那座旧农场的事。"},
-          {"speaker": "镇长托马斯", "text": "那是你祖父留下的宝贵财产，希望你能好好经营它。"},
+          {"speaker": "镇长·威廉", "text": "哦！你一定是新来的农场主！"},
+          {"speaker": "镇长·威廉", "text": "我听说了你要接手那座旧农场的事。"},
+          {"speaker": "镇长·威廉", "text": "那是你祖父留下的宝贵财产，希望你能好好经营它。"},
           {
-            "speaker": "镇长托马斯",
+            "speaker": "镇长·威廉",
             "text": "你以前有务农经验吗？",
             "choices": [
               {"text": "有的，我从小就帮忙干农活", "next": "experienced"},
@@ -121,8 +121,8 @@
         "branches": {
           "experienced": {
             "lines": [
-              {"speaker": "镇长托马斯", "text": "太好了！那我就放心了。"},
-              {"speaker": "镇长托马斯", "text": "相信你一定能让那座农场重现往日的辉煌！"}
+              {"speaker": "镇长·威廉", "text": "太好了！那我就放心了。"},
+              {"speaker": "镇长·威廉", "text": "相信你一定能让那座农场重现往日的辉煌！"}
             ],
             "effects": [
               {"type": "set_flag", "key": "met_mayor", "value": true},
@@ -131,9 +131,9 @@
           },
           "newcomer": {
             "lines": [
-              {"speaker": "镇长托马斯", "text": "别担心，万事开头难。"},
-              {"speaker": "镇长托马斯", "text": "我们村的约翰老兄是个种田的好手，你可以向他请教。"},
-              {"speaker": "镇长托马斯", "text": "只要肯努力，一定会有收获的！"}
+              {"speaker": "镇长·威廉", "text": "别担心，万事开头难。"},
+              {"speaker": "镇长·威廉", "text": "我们村的乔老兄是个种田的好手，你可以向他请教。"},
+              {"speaker": "镇长·威廉", "text": "只要肯努力，一定会有收获的！"}
             ],
             "effects": [
               {"type": "set_flag", "key": "met_mayor", "value": true},
@@ -150,8 +150,8 @@
           {"type": "flag", "key": "met_mayor", "value": true}
         ],
         "lines": [
-          {"speaker": "镇长托马斯", "text": "早上好啊！今天天气真不错。"},
-          {"speaker": "镇长托马斯", "text": "适合在田里干活的天气呢。"}
+          {"speaker": "镇长·威廉", "text": "早上好啊！今天天气真不错。"},
+          {"speaker": "镇长·威廉", "text": "适合在田里干活的天气呢。"}
         ]
       },
       "afternoon": {
@@ -162,8 +162,8 @@
           {"type": "flag", "key": "met_mayor", "value": true}
         ],
         "lines": [
-          {"speaker": "镇长托马斯", "text": "下午好！忙了一天了吗？"},
-          {"speaker": "镇长托马斯", "text": "记得要劳逸结合，不要太累着自己。"}
+          {"speaker": "镇长·威廉", "text": "下午好！忙了一天了吗？"},
+          {"speaker": "镇长·威廉", "text": "记得要劳逸结合，不要太累着自己。"}
         ]
       },
       "evening": {
@@ -174,8 +174,8 @@
           {"type": "flag", "key": "met_mayor", "value": true}
         ],
         "lines": [
-          {"speaker": "镇长托马斯", "text": "晚上好！这么晚还在外面忙？"},
-          {"speaker": "镇长托马斯", "text": "早点回去休息吧，明天还有很多事要做。"}
+          {"speaker": "镇长·威廉", "text": "晚上好！这么晚还在外面忙？"},
+          {"speaker": "镇长·威廉", "text": "早点回去休息吧，明天还有很多事要做。"}
         ]
       },
       "spring_festival": {
@@ -186,9 +186,9 @@
           {"type": "day", "value": 15}
         ],
         "lines": [
-          {"speaker": "镇长托马斯", "text": "欢迎参加春季花祭！"},
-          {"speaker": "镇长托马斯", "text": "这是我们村最重要的节日之一。"},
-          {"speaker": "镇长托马斯", "text": "希望大家都能玩得开心！"}
+          {"speaker": "镇长·威廉", "text": "欢迎参加春季花祭！"},
+          {"speaker": "镇长·威廉", "text": "这是我们村最重要的节日之一。"},
+          {"speaker": "镇长·威廉", "text": "希望大家都能玩得开心！"}
         ]
       }
     },
@@ -198,8 +198,8 @@
         "priority": 0,
         "conditions": [],
         "lines": [
-          {"speaker": "农场主约翰", "text": "你好，年轻人！"},
-          {"speaker": "农场主约翰", "text": "有什么农事方面的问题可以问我。"}
+          {"speaker": "农夫·乔", "text": "你好，年轻人！"},
+          {"speaker": "农夫·乔", "text": "有什么农事方面的问题可以问我。"}
         ]
       },
       "tutorial_watering": {
@@ -209,11 +209,11 @@
           {"type": "flag", "key": "need_watering_tutorial", "value": true}
         ],
         "lines": [
-          {"speaker": "农场主约翰", "text": "看来你需要学习如何浇水。"},
-          {"speaker": "农场主约翰", "text": "浇水是种植中最基本的工作之一。"},
-          {"speaker": "农场主约翰", "text": "每天早上都要给作物浇水，否则它们就无法生长。"},
-          {"speaker": "农场主约翰", "text": "使用水壶站在耕地旁边按住使用键就可以了。"},
-          {"speaker": "农场主约翰", "text": "记住，只有浇过水的土地才能让作物茁壮成长！"}
+          {"speaker": "农夫·乔", "text": "看来你需要学习如何浇水。"},
+          {"speaker": "农夫·乔", "text": "浇水是种植中最基本的工作之一。"},
+          {"speaker": "农夫·乔", "text": "每天早上都要给作物浇水，否则它们就无法生长。"},
+          {"speaker": "农夫·乔", "text": "使用水壶站在耕地旁边按住使用键就可以了。"},
+          {"speaker": "农夫·乔", "text": "记住，只有浇过水的土地才能让作物茁壮成长！"}
         ],
         "effects": [
           {"type": "set_flag", "key": "need_watering_tutorial", "value": false},
@@ -228,9 +228,9 @@
           {"type": "friendship", "npc": "farmer", "min": 1}
         ],
         "lines": [
-          {"speaker": "农场主约翰", "text": "想听点种田的小窍门吗？"},
+          {"speaker": "农夫·乔", "text": "想听点种田的小窍门吗？"},
           {
-            "speaker": "农场主约翰",
+            "speaker": "农夫·乔",
             "text": "什么方面的建议呢？",
             "choices": [
               {"text": "关于种子选择", "next": "seed_advice"},
@@ -242,23 +242,23 @@
         "branches": {
           "seed_advice": {
             "lines": [
-              {"speaker": "农场主约翰", "text": "选择种子要看季节和你的资金。"},
-              {"speaker": "农场主约翰", "text": "芜菁种子便宜，适合新手练手。"},
-              {"speaker": "农场主约翰", "text": "南瓜虽然贵，但利润也最高！"}
+              {"speaker": "农夫·乔", "text": "选择种子要看季节和你的资金。"},
+              {"speaker": "农夫·乔", "text": "芜菁种子便宜，适合新手练手。"},
+              {"speaker": "农夫·乔", "text": "南瓜虽然贵，但利润也最高！"}
             ]
           },
           "water_advice": {
             "lines": [
-              {"speaker": "农场主约翰", "text": "每天都要浇水，但下雨天例外。"},
-              {"speaker": "农场主约翰", "text": "如果忘记浇水，作物会停止生长一天。"},
-              {"speaker": "农场主约翰", "text": "建议早上第一件事就是浇水！"}
+              {"speaker": "农夫·乔", "text": "每天都要浇水，但下雨天例外。"},
+              {"speaker": "农夫·乔", "text": "如果忘记浇水，作物会停止生长一天。"},
+              {"speaker": "农夫·乔", "text": "建议早上第一件事就是浇水！"}
             ]
           },
           "harvest_advice": {
             "lines": [
-              {"speaker": "农场主约翰", "text": "作物成熟后要及时收获。"},
-              {"speaker": "农场主约翰", "text": "品质越高的作物卖价越好。"},
-              {"speaker": "农场主约翰", "text": "多浇几天水可能会提升品质哦！"}
+              {"speaker": "农夫·乔", "text": "作物成熟后要及时收获。"},
+              {"speaker": "农夫·乔", "text": "品质越高的作物卖价越好。"},
+              {"speaker": "农夫·乔", "text": "多浇几天水可能会提升品质哦！"}
             ]
           }
         }
@@ -270,8 +270,8 @@
         "priority": 0,
         "conditions": [],
         "lines": [
-          {"speaker": "商人艾米丽", "text": "欢迎光临！"},
-          {"speaker": "商人艾米丽", "text": "看看有什么喜欢的？"}
+          {"speaker": "店主·莉莉", "text": "欢迎光临！"},
+          {"speaker": "店主·莉莉", "text": "看看有什么喜欢的？"}
         ]
       },
       "buy_seeds": {
@@ -281,9 +281,9 @@
           {"type": "season", "value": "spring"}
         ],
         "lines": [
-          {"speaker": "商人艾米丽", "text": "春天到了！"},
-          {"speaker": "商人艾米丽", "text": "我们有新鲜的芜菁种子和土豆种子。"},
-          {"speaker": "商人艾米丽", "text": "芜菁生长快，土豆利润高，都很推荐哦！"}
+          {"speaker": "店主·莉莉", "text": "春天到了！"},
+          {"speaker": "店主·莉莉", "text": "我们有新鲜的芜菁种子和土豆种子。"},
+          {"speaker": "店主·莉莉", "text": "芜菁生长快，土豆利润高，都很推荐哦！"}
         ]
       },
       "rare_items": {
@@ -293,10 +293,10 @@
           {"type": "friendship", "npc": "merchant", "min": 3}
         ],
         "lines": [
-          {"speaker": "商人艾米丽", "text": "嘘...我有些特别的商品。"},
-          {"speaker": "商人艾米丽", "text": "这是只给老顾客看的好东西。"},
+          {"speaker": "店主·莉莉", "text": "嘘...我有些特别的商品。"},
+          {"speaker": "店主·莉莉", "text": "这是只给老顾客看的好东西。"},
           {
-            "speaker": "商人艾米丽",
+            "speaker": "店主·莉莉",
             "text": "你要看看吗？",
             "choices": [
               {"text": "当然！", "next": "show_items"},
@@ -307,8 +307,8 @@
         "branches": {
           "show_items": {
             "lines": [
-              {"speaker": "商人艾米丽", "text": "太好了！看这个..."},
-              {"speaker": "商人艾米丽", "text": "稀有种子！只能在这里买到。"}
+              {"speaker": "店主·莉莉", "text": "太好了！看这个..."},
+              {"speaker": "店主·莉莉", "text": "稀有种子！只能在这里买到。"}
             ],
             "effects": [
               {"type": "unlock_shop", "shop": "rare_seeds"}
@@ -316,7 +316,7 @@
           },
           "decline": {
             "lines": [
-              {"speaker": "商人艾米丽", "text": "好的，随时欢迎你回来。"}
+              {"speaker": "店主·莉莉", "text": "好的，随时欢迎你回来。"}
             ]
           }
         }
@@ -328,8 +328,8 @@
         "priority": 0,
         "conditions": [],
         "lines": [
-          {"speaker": "铁匠布鲁斯", "text": "有什么需要打造的吗？"},
-          {"speaker": "铁匠布鲁斯", "text": "好的工具是干活的基础。"}
+          {"speaker": "铁匠·汤姆", "text": "有什么需要打造的吗？"},
+          {"speaker": "铁匠·汤姆", "text": "好的工具是干活的基础。"}
         ]
       },
       "upgrade_tool": {
@@ -339,11 +339,11 @@
           {"type": "flag", "key": "can_upgrade_tools", "value": true}
         ],
         "lines": [
-          {"speaker": "铁匠布鲁斯", "text": "你的工具升级了吗？"},
-          {"speaker": "铁匠布鲁斯", "text": "升级后的工具效率更高，范围更大。"},
-          {"speaker": "铁匠布鲁斯", "text": "需要矿石和金钱来升级。"},
+          {"speaker": "铁匠·汤姆", "text": "你的工具升级了吗？"},
+          {"speaker": "铁匠·汤姆", "text": "升级后的工具效率更高，范围更大。"},
+          {"speaker": "铁匠·汤姆", "text": "需要矿石和金钱来升级。"},
           {
-            "speaker": "铁匠布鲁斯",
+            "speaker": "铁匠·汤姆",
             "text": "想要升级哪个工具？",
             "choices": [
               {"text": "锄头", "next": "upgrade_hoe"},
@@ -355,8 +355,8 @@
         "branches": {
           "upgrade_hoe": {
             "lines": [
-              {"speaker": "铁匠布鲁斯", "text": "铜锄头需要5个铜矿石和500金币。"},
-              {"speaker": "铁匠布鲁斯", "text": "升级后可以一次耕地三格。"}
+              {"speaker": "铁匠·汤姆", "text": "铜锄头需要5个铜矿石和500金币。"},
+              {"speaker": "铁匠·汤姆", "text": "升级后可以一次耕地三格。"}
             ],
             "effects": [
               {"type": "set_flag", "key": "upgrade_hoe_available", "value": true}
@@ -364,8 +364,8 @@
           },
           "upgrade_can": {
             "lines": [
-              {"speaker": "铁匠布鲁斯", "text": "铜水壶需要5个铜矿石和500金币。"},
-              {"speaker": "铁匠布鲁斯", "text": "升级后可以一次浇水三格。"}
+              {"speaker": "铁匠·汤姆", "text": "铜水壶需要5个铜矿石和500金币。"},
+              {"speaker": "铁匠·汤姆", "text": "升级后可以一次浇水三格。"}
             ],
             "effects": [
               {"type": "set_flag", "key": "upgrade_can_available", "value": true}
@@ -373,7 +373,7 @@
           },
           "decline": {
             "lines": [
-              {"speaker": "铁匠布鲁斯", "text": "好的，随时来找我。"}
+              {"speaker": "铁匠·汤姆", "text": "好的，随时来找我。"}
             ]
           }
         }
@@ -385,8 +385,8 @@
         "priority": 0,
         "conditions": [],
         "lines": [
-          {"speaker": "医生玛丽", "text": "你好！身体健康吗？"},
-          {"speaker": "医生玛丽", "text": "有任何不舒服都可以告诉我。"}
+          {"speaker": "医生·玛丽", "text": "你好！身体健康吗？"},
+          {"speaker": "医生·玛丽", "text": "有任何不舒服都可以告诉我。"}
         ]
       },
       "low_energy": {
@@ -396,11 +396,11 @@
           {"type": "player_energy", "max": 20}
         ],
         "lines": [
-          {"speaker": "医生玛丽", "text": "你看起来很疲惫！"},
-          {"speaker": "医生玛丽", "text": "过度劳累对身体不好。"},
-          {"speaker": "医生玛丽", "text": "要不要休息一下，或者吃点东西？"},
+          {"speaker": "医生·玛丽", "text": "你看起来很疲惫！"},
+          {"speaker": "医生·玛丽", "text": "过度劳累对身体不好。"},
+          {"speaker": "医生·玛丽", "text": "要不要休息一下，或者吃点东西？"},
           {
-            "speaker": "医生玛丽",
+            "speaker": "医生·玛丽",
             "text": "我可以给你一些恢复体力的建议。",
             "choices": [
               {"text": "好的，谢谢", "next": "give_advice"},
@@ -411,9 +411,9 @@
         "branches": {
           "give_advice": {
             "lines": [
-              {"speaker": "医生玛丽", "text": "食物可以恢复体力。"},
-              {"speaker": "医生玛丽", "text": "面包和奶酪都是不错的选择。"},
-              {"speaker": "医生玛丽", "text": "好好照顾自己！"}
+              {"speaker": "医生·玛丽", "text": "食物可以恢复体力。"},
+              {"speaker": "医生·玛丽", "text": "面包和奶酪都是不错的选择。"},
+              {"speaker": "医生·玛丽", "text": "好好照顾自己！"}
             ],
             "effects": [
               {"type": "add_friendship", "npc": "doctor", "amount": 20}
@@ -421,7 +421,7 @@
           },
           "decline_help": {
             "lines": [
-              {"speaker": "医生玛丽", "text": "好吧，但如果感觉不舒服要立刻休息。"}
+              {"speaker": "医生·玛丽", "text": "好吧，但如果感觉不舒服要立刻休息。"}
             ]
           }
         }
@@ -433,9 +433,45 @@
           {"type": "friendship", "npc": "doctor", "min": 2}
         ],
         "lines": [
-          {"speaker": "医生玛丽", "text": "要注意劳逸结合哦。"},
-          {"speaker": "医生玛丽", "text": "体力用完了就需要休息或吃东西。"},
-          {"speaker": "医生玛丽", "text": "如果体力耗尽继续工作，可能会晕倒！"}
+          {"speaker": "医生·玛丽", "text": "要注意劳逸结合哦。"},
+          {"speaker": "医生·玛丽", "text": "体力用完了就需要休息或吃东西。"},
+          {"speaker": "医生·玛丽", "text": "如果体力耗尽继续工作，可能会晕倒！"}
+        ]
+      }
+    },
+    "fisherman_old_jack": {
+      "greeting": {
+        "id": "fisherman_greeting",
+        "priority": 0,
+        "conditions": [],
+        "lines": [
+          {"speaker": "老渔夫·杰克", "text": "哟，年轻人。海风不错吧？"},
+          {"speaker": "老渔夫·杰克", "text": "钓鱼急不得，鱼咬钩之前，得先学会等。"},
+          {"speaker": "老渔夫·杰克", "text": "浮漂一沉，别慌，等它第二下再收线。"}
+        ]
+      },
+      "early_morning": {
+        "id": "fisherman_early_morning",
+        "priority": 30,
+        "conditions": [
+          {"type": "time", "min": 5.0, "max": 9.0}
+        ],
+        "lines": [
+          {"speaker": "老渔夫·杰克", "text": "起得真早！清晨的鱼最肯咬钩。"},
+          {"speaker": "老渔夫·杰克", "text": "我年轻时天不亮就出海，一网能装满半条船。"},
+          {"speaker": "老渔夫·杰克", "text": "现在老啦，在岸边钓几条，够晚饭就行。"}
+        ]
+      },
+      "old_stories": {
+        "id": "fisherman_old_stories",
+        "priority": 20,
+        "conditions": [
+          {"type": "friendship", "npc": "fisherman_old_jack", "min": 2}
+        ],
+        "lines": [
+          {"speaker": "老渔夫·杰克", "text": "跟你说个秘密：退潮的时候，礁石边上的鱼最多。"},
+          {"speaker": "老渔夫·杰克", "text": "下雨天别躲在屋里，雨天的鱼可比晴天活泼。"},
+          {"speaker": "老渔夫·杰克", "text": "要是钓到稀有的鱼，记得给我瞧瞧，哈哈！"}
         ]
       }
     }
@@ -484,10 +520,10 @@
       "trigger": "quest_start",
       "quest_id": "first_harvest",
       "lines": [
-        {"speaker": "农场主约翰", "text": "太好了，你已经收获了第一批作物！"},
-        {"speaker": "农场主约翰", "text": "收获的作物可以卖给商人换钱。"},
-        {"speaker": "农场主约翰", "text": "或者留着做料理自己吃。"},
-        {"speaker": "农场主约翰", "text": "你已经掌握了种植的基本技巧！"}
+        {"speaker": "农夫·乔", "text": "太好了，你已经收获了第一批作物！"},
+        {"speaker": "农夫·乔", "text": "收获的作物可以卖给商人换钱。"},
+        {"speaker": "农夫·乔", "text": "或者留着做料理自己吃。"},
+        {"speaker": "农夫·乔", "text": "你已经掌握了种植的基本技巧！"}
       ],
       "effects": [
         {"type": "complete_quest", "quest_id": "first_harvest"},
@@ -499,11 +535,11 @@
       "trigger": "quest_start",
       "quest_id": "expand_farm",
       "lines": [
-        {"speaker": "镇长托马斯", "text": "听说你想要扩建农场？"},
-        {"speaker": "镇长托马斯", "text": "这需要一定的资金和材料。"},
-        {"speaker": "镇长托马斯", "text": "等你准备好了来找我。"},
+        {"speaker": "镇长·威廉", "text": "听说你想要扩建农场？"},
+        {"speaker": "镇长·威廉", "text": "这需要一定的资金和材料。"},
+        {"speaker": "镇长·威廉", "text": "等你准备好了来找我。"},
         {
-          "speaker": "镇长托马斯",
+          "speaker": "镇长·威廉",
           "text": "扩建后你会有更多的土地可以耕种。",
           "choices": [
             {"text": "我想现在就扩建", "next": "expand_now", "conditions": [{"type": "money", "min": 1000}]},
@@ -514,8 +550,8 @@
       "branches": {
         "expand_now": {
           "lines": [
-            {"speaker": "镇长托马斯", "text": "太好了！明天就可以动工。"},
-            {"speaker": "镇长托马斯", "text": "你的农场会变得更大更漂亮！"}
+            {"speaker": "镇长·威廉", "text": "太好了！明天就可以动工。"},
+            {"speaker": "镇长·威廉", "text": "你的农场会变得更大更漂亮！"}
           ],
           "effects": [
             {"type": "remove_money", "amount": 1000},
@@ -525,8 +561,8 @@
         },
         "expand_later": {
           "lines": [
-            {"speaker": "镇长托马斯", "text": "好的，等你准备好了再来。"},
-            {"speaker": "镇长托马斯", "text": "扩建需要1000金币。"}
+            {"speaker": "镇长·威廉", "text": "好的，等你准备好了再来。"},
+            {"speaker": "镇长·威廉", "text": "扩建需要1000金币。"}
           ]
         }
       }
