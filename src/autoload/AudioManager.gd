@@ -30,6 +30,15 @@ const BGM_SCHEDULE := {
 	"village_night":  "res://assets/audio/bgm/village/village_night.ogg",
 	"forest_day":     "res://assets/audio/bgm/forest/forest_day.ogg",
 	"forest_night":   "res://assets/audio/bgm/forest/forest_night.ogg",
+	# Beach / mine / house reuse outdoor tracks (no dedicated stems yet) — BUG-52.
+	"beach_morning":  "res://assets/audio/bgm/farm/farm_morning.ogg",
+	"beach_day":      "res://assets/audio/bgm/farm/farm_day.ogg",
+	"beach_evening":  "res://assets/audio/bgm/farm/farm_evening.ogg",
+	"beach_night":    "res://assets/audio/bgm/farm/farm_night.ogg",
+	"mine_day":       "res://assets/audio/bgm/forest/forest_day.ogg",
+	"mine_night":     "res://assets/audio/bgm/forest/forest_night.ogg",
+	"house_day":      "res://assets/audio/bgm/farm/farm_day.ogg",
+	"house_night":    "res://assets/audio/bgm/farm/farm_night.ogg",
 	"festival_main":  "res://assets/audio/bgm/festival/festival_main.ogg",
 	"festival_harvest":"res://assets/audio/bgm/festival/festival_harvest.ogg",
 }
@@ -38,6 +47,8 @@ var current_ambient: String = ""
 func _ready() -> void:
 	print("[AudioManager] Initialized")
 	_setup_players()
+	# Drive BGM from in-game clock, not the host OS clock (BUG-52).
+	call_deferred("_connect_time_manager")
 
 ## Quitting while a track plays left its Ogg playback referenced in the audio
 ## server ("2 resources still in use at exit"). The server drops a stopped
@@ -111,11 +122,30 @@ func update_location_bgm(location: String) -> void:
 	_update_time_bgm()
 
 
+func _connect_time_manager() -> void:
+	var tm := get_node_or_null("/root/TimeManager")
+	if tm and not tm.time_changed.is_connected(_on_game_time_changed):
+		tm.time_changed.connect(_on_game_time_changed)
+
+
+func _on_game_time_changed(_new_time: float) -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	_update_time_bgm()
+
+
+func _game_hour() -> int:
+	var tm := get_node_or_null("/root/TimeManager")
+	if tm:
+		return int(fposmod(float(tm.current_time), 24.0))
+	return 12
+
+
 func _update_time_bgm() -> void:
-	"""根据时间更新 BGM."""
-	var hour: int = Time.get_time_dict_from_system().hour
+	"""Update BGM from in-game TimeManager hour (BUG-52)."""
+	var hour: int = _game_hour()
 	var track_key: String
-	
+
 	if hour >= 6 and hour < 9:
 		track_key = current_location + "_morning"
 	elif hour >= 9 and hour < 17:
@@ -124,12 +154,21 @@ func _update_time_bgm() -> void:
 		track_key = current_location + "_evening"
 	else:
 		track_key = current_location + "_night"
-	
-	var path: String = BGM_SCHEDULE.get(track_key, BGM_SCHEDULE.get(current_location + "_day", ""))
+
+	var path: String = BGM_SCHEDULE.get(track_key, "")
+	if path == "":
+		# Period missing for this map: fall back to day, then farm_day.
+		if BGM_SCHEDULE.has(current_location + "_day"):
+			track_key = current_location + "_day"
+			path = BGM_SCHEDULE[track_key]
+		else:
+			track_key = "farm_day"
+			path = BGM_SCHEDULE.get("farm_day", "")
 	if path != "" and ResourceLoader.exists(path):
 		_crossfade_to(path, track_key)
 	elif path == "":
 		print("[AudioManager] No BGM for time slot: ", track_key)
+
 
 
 func _crossfade_to(path: String, track_name: String) -> void:
