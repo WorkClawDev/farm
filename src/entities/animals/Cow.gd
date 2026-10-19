@@ -9,6 +9,14 @@ func _ready() -> void:
 	production_interval = 1  # 每天产奶
 	move_speed = 20.0
 	max_hunger = 150  # 牛需要更多食物
+	private_sheet_path = "animals/x4/cow_sheet_x4.png"
+	frame_px = 256
+	idle_frames = 4
+	walk_frames = 6
+	sprite_offset = Vector2(0, -36)
+	private_body_radius = 30.0
+	private_interaction_radius = 72.0
+	private_sprite_scale = 0.8
 	super._ready()
 
 ## 获取产品ID

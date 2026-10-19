@@ -8,6 +8,13 @@ func _ready() -> void:
 	animal_type = "chicken"
 	production_interval = 1  # 每天产蛋
 	move_speed = 25.0
+	private_sheet_path = "animals/x4/chicken_sheet_x4.png"
+	frame_px = 128
+	idle_frames = 6
+	walk_frames = 6
+	sprite_offset = Vector2(0, -34)
+	private_body_radius = 14.0
+	private_interaction_radius = 48.0
 	super._ready()
 
 ## 获取产品ID

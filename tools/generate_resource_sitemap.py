@@ -464,6 +464,13 @@ def _build_asset_inventory(project_root: Path, path_links: dict[str, list[dict[s
     for path in sorted(assets_root.rglob("*")):
         if not path.is_file():
             continue
+        # Optional private submodule (CraftPix); omit from public inventory.
+        try:
+            rel_to_assets = path.relative_to(assets_root)
+        except ValueError:
+            rel_to_assets = path
+        if rel_to_assets.parts and rel_to_assets.parts[0] == "private":
+            continue
         if path.suffix.lower() in SKIP_SUFFIXES:
             continue
         if path.name.startswith("."):

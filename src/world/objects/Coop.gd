@@ -3,8 +3,12 @@ class_name Coop
 const InteractPromptScript = preload("res://src/ui/components/InteractPrompt.gd")  # preload: works before the class cache knows the class_name
 
 const TextureLoader := preload("res://src/core/utils/RuntimeTextureLoader.gd")
+const PrivateBuildingArt := preload("res://src/world/objects/PrivateBuildingArt.gd")
 const DepthAnchor := preload("res://src/world/objects/WorldDepthAnchor.gd")
 const COLLISION_WIDTH_RATIO := 0.58
+## BUG-58: CraftPix art fills its region edge to edge (the SVG had padding),
+## so the footprint must be almost full width. B12 walls span atlas x 8..136 of 144 at the base.
+const PRIVATE_COLLISION_WIDTH_RATIO := 0.88
 const COLLISION_HEIGHT_RATIO := 0.34
 const COLLISION_Y_RATIO := 0.34
 
@@ -16,9 +20,12 @@ const COLLISION_Y_RATIO := 0.34
 
 const COOP_TEXTURE_PATH := "res://assets/ui/world/chicken_coop.svg"
 const COOP_DISPLAY_SIZE := Vector2(176, 136)
+# Small wooden shed region from CraftPix Houses atlas (coop stand-in).
+const PRIVATE_COOP_REGION := Rect2(916, 64, 144, 240)  # B12 elevated shed
 
 var animals: Array[Animal] = []
 var _depth_anchor_offset := 0.0
+var _collision_width_ratio := COLLISION_WIDTH_RATIO
 
 # 节点引用
 @onready var sprite: Sprite2D = $Sprite2D if has_node("Sprite2D") else null
@@ -38,7 +45,10 @@ func _setup_sprite() -> void:
 	if sprite == null:
 		return
 
-	var texture := TextureLoader.load_texture(COOP_TEXTURE_PATH)
+	var texture: Texture2D = _try_private_coop_texture()
+	var use_nearest := texture != null
+	if texture == null:
+		texture = TextureLoader.load_texture(COOP_TEXTURE_PATH)
 	if texture == null:
 		push_warning("[Coop] Could not load texture: " + COOP_TEXTURE_PATH)
 		return
@@ -46,13 +56,25 @@ func _setup_sprite() -> void:
 	var texture_size := Vector2(texture.get_size())
 	sprite.texture = texture
 	sprite.centered = true
-	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	var display_size: Vector2 = COOP_DISPLAY_SIZE
+	if use_nearest:
+		# CraftPix: uniform scale, never stretch width/height separately.
+		_collision_width_ratio = PRIVATE_COLLISION_WIDTH_RATIO
+		display_size = PrivateBuildingArt.display_size(PRIVATE_COOP_REGION)
+		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	else:
+		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	sprite.scale = Vector2(
-		COOP_DISPLAY_SIZE.x / texture_size.x,
-		COOP_DISPLAY_SIZE.y / texture_size.y
+		display_size.x / texture_size.x,
+		display_size.y / texture_size.y
 	)
 	sprite.z_index = 0
-	_update_collision_shape(COOP_DISPLAY_SIZE)
+	_update_collision_shape(display_size)
+
+
+func _try_private_coop_texture() -> Texture2D:
+	return PrivateBuildingArt.load_region(PRIVATE_COOP_REGION)
+
 
 func _update_collision_shape(display_size: Vector2) -> void:
 	if collision_shape == null:
@@ -64,7 +86,7 @@ func _update_collision_shape(display_size: Vector2) -> void:
 		collision_shape.shape = shape
 
 	shape.size = Vector2(
-		display_size.x * COLLISION_WIDTH_RATIO,
+		display_size.x * _collision_width_ratio,
 		display_size.y * COLLISION_HEIGHT_RATIO
 	)
 	collision_shape.position = Vector2(0, display_size.y * COLLISION_Y_RATIO)

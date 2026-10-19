@@ -1,0 +1,4 @@
+[submodule "assets/private/topdown_farm"]
+	path = assets/private/topdown_farm
+	url = /workspace/farm_private_assets/topdown_farm
+	ignore = untracked

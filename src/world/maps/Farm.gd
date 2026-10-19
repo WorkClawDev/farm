@@ -45,6 +45,10 @@ var pause_menu: PauseMenu
 var notification_label: Label
 var _house_entrance: Area2D
 var _village_exit: Area2D
+var _player_at_house_door: Player = null
+var _entering_house := false
+## BUG-59: steps only (door point is the bottom step; shape sits above it).
+const HOUSE_ENTRANCE_SIZE := Vector2(40, 24)
 
 # Draw order on the farm. Farm.tscn offsets the FarmMap instance by z -3, so its
 # profile layers (ground 0, terrain_overlay 1, decoration 2, objects 10) end up at:
@@ -304,15 +308,39 @@ func _setup_house_entrance() -> void:
 	_house_entrance.collision_mask = PHYSICS_LAYERS.PLAYER
 	var collision := CollisionShape2D.new()
 	var shape := RectangleShape2D.new()
-	shape.size = Vector2(64, 40)
+	# BUG-59: only the porch steps (door point = bottom step), not the road in
+	# front of the house. Walking past along the road must never enter.
+	shape.size = HOUSE_ENTRANCE_SIZE
 	collision.shape = shape
+	collision.name = "CollisionShape2D"
+	collision.position = Vector2(0, -HOUSE_ENTRANCE_SIZE.y * 0.5)
 	_house_entrance.add_child(collision)
 	_house_entrance.body_entered.connect(_on_house_entrance_entered)
+	_house_entrance.body_exited.connect(_on_house_entrance_exited)
 	add_child(_house_entrance)
 
 func _on_house_entrance_entered(body: Node2D) -> void:
 	if body is Player:
-		GameManager.change_location("res://src/world/maps/PlayerHouse.tscn", "house_entrance")
+		_player_at_house_door = body as Player
+		_try_enter_house()
+
+func _on_house_entrance_exited(body: Node2D) -> void:
+	if body == _player_at_house_door:
+		_player_at_house_door = null
+
+## Enter only while standing on the steps and walking north (into the door).
+func _try_enter_house() -> void:
+	var player := _player_at_house_door
+	if _entering_house or player == null or not is_instance_valid(player):
+		return
+	if not player.is_walking or player.current_direction != Player.Direction.UP:
+		return
+	_entering_house = true
+	GameManager.change_location("res://src/world/maps/PlayerHouse.tscn", "house_entrance")
+
+func _physics_process(_delta: float) -> void:
+	if _player_at_house_door != null:
+		_try_enter_house()
 
 func get_house_door_position() -> Vector2:
 	return _house_entrance.global_position if _house_entrance else Vector2(841, 286)

@@ -29,6 +29,9 @@
 - 瓦片集：使用 Godot 内置资源 + 自绘制像素风瓦片
 - 物品图标 / 作物精灵：AI 生成 (MiniMax)
 - 角色精灵：AI 生成 (MiniMax)，占位符使用色块
+- Farm, animals, buildings and interior art: Top-Down Farm with Animals Pixel Art Asset Pack by CraftPix.net (https://craftpix.net) — via private submodule `assets/private/topdown_farm`
+- Character / world tiles (existing): [Ninja Adventure Asset Pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack) by Pixel-Boy / AAA
+- Extra tiles / decor (existing): [Kenney](https://kenney.nl) CC0 asset packs
 
 ## 开发工具 Development Tools
 

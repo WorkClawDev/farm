@@ -376,6 +376,45 @@ func _exercise_collision(instance: Node, scene_path: String) -> void:
 				house_entrance.global_position.distance_to(house.get_door_global_position()) < 0.1
 					and house_entrance.global_position.x < house.global_position.x - 30.0
 			)
+			var entrance_cs := house_entrance.get_node("CollisionShape2D") as CollisionShape2D
+			var entrance_rect := Rect2(
+				entrance_cs.global_position - (entrance_cs.shape as RectangleShape2D).size * 0.5,
+				(entrance_cs.shape as RectangleShape2D).size
+			)
+			_record(
+				"BUG-59 farm house entrance only covers the porch steps",
+				entrance_rect.size.x <= 48.0 and entrance_rect.end.y <= house.get_door_global_position().y + 0.1
+			)
+			# BUG-59: standing on the steps while walking west must not enter the house.
+			player.global_position = house.get_door_global_position() + Vector2(0, -2)
+			player.current_direction = Player.Direction.LEFT
+			player.is_walking = true
+			await get_tree().physics_frame
+			await get_tree().physics_frame
+			_record(
+				"BUG-59 walking past the door along the road does not enter the house",
+				not bool(instance.get("_entering_house"))
+			)
+			player.is_walking = false
+			player.current_direction = Player.Direction.DOWN
+			player.global_position = house.get_door_global_position() + Vector2(0, 72)
+			await get_tree().physics_frame
+			if ResourceLoader.exists("res://assets/private/topdown_farm/buildings/x4/Houses_x4.png"):
+				for building_name in ["Coop", "Barn"]:
+					var building := instance.find_child(building_name, true, false) as Node2D
+					var building_shape := (
+						building.get_node("CollisionShape2D").shape as RectangleShape2D
+						if building else null
+					)
+					var building_sprite := building.get_node("Sprite2D") as Sprite2D if building else null
+					var drawn_width := (
+						building_sprite.texture.get_size().x * building_sprite.scale.x
+						if building_sprite and building_sprite.texture else 0.0
+					)
+					_record(
+						"BUG-58 %s footprint spans the CraftPix walls" % building_name,
+						building_shape != null and building_shape.size.x >= drawn_width * 0.85
+					)
 			house_entrance.set_deferred("monitoring", false)
 			await get_tree().physics_frame
 			var house_center := house.get_visual_center_global_position()
@@ -464,6 +503,40 @@ func _exercise_collision(instance: Node, scene_path: String) -> void:
 			)
 
 
+
+func _assert_animal_private_art(animal: Animal, animal_label: String) -> void:
+	var sheet_animals := ["Chicken", "Pig", "Cow"]
+	var sprite := animal.get_node_or_null("Sprite2D") as Sprite2D
+	var has_private := ResourceLoader.exists("res://assets/private/topdown_farm/animals/x4/chicken_sheet_x4.png")
+	if animal_label in sheet_animals:
+		if has_private:
+			_record("%s anim_sprite present with private art" % animal_label, animal.anim_sprite != null)
+			if animal.anim_sprite != null:
+				var frames: SpriteFrames = animal.anim_sprite.sprite_frames
+				_record("%s has 8 directional animations" % animal_label, frames != null and frames.get_animation_names().size() >= 8)
+				if frames != null and frames.has_animation("idle_down"):
+					_record("%s idle speed is 10 FPS" % animal_label, is_equal_approx(frames.get_animation_speed("idle_down"), 10.0))
+					var expect_idle := 6 if animal_label == "Chicken" else 4
+					_record("%s idle_down frame count" % animal_label, frames.get_frame_count("idle_down") == expect_idle)
+				_record("%s Sprite2D hidden when animated" % animal_label, sprite != null and sprite.visible == false)
+				var expect_scale := 0.8 if animal_label in ["Pig", "Cow"] else 1.0
+				_record(
+					"%s private sprite scale is %.1f" % [animal_label, expect_scale],
+					animal.anim_sprite.scale.is_equal_approx(Vector2.ONE * expect_scale)
+				)
+		else:
+			_record("%s anim_sprite null without private art" % animal_label, animal.anim_sprite == null)
+			_record("%s Sprite2D visible without private art" % animal_label, sprite != null and sprite.visible == true)
+			if sprite and sprite.texture:
+				_record(
+					"%s fallback texture is public sprites" % animal_label,
+					str(sprite.texture.resource_path).begins_with("res://assets/sprites/animals/")
+				)
+	else:
+		_record("%s leaves anim_sprite unset" % animal_label, animal.anim_sprite == null)
+		_record("%s Sprite2D remains visible" % animal_label, sprite != null and sprite.visible == true)
+
+
 func _exercise_actor_collisions() -> void:
 	print("------------------------------------------------------------")
 	print("Actor collision matrix: player <-> animals / enemies")
@@ -503,6 +576,8 @@ func _exercise_actor_collisions() -> void:
 		player.global_position = Vector2(100, 0)
 		player.velocity = Vector2.ZERO
 		await get_tree().physics_frame
+
+		_assert_animal_private_art(animal, animal_label)
 
 		var body_shape := animal.get_node("CollisionShape2D").shape as CircleShape2D
 		var interaction_shape := (
