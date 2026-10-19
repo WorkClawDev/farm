@@ -24,6 +24,10 @@ const TEX_HOUSE_STONE := preload("res://assets/tiles/kenney/decor/house_stone_19
 const TEX_HOUSE_TAN := preload("res://assets/tiles/kenney/decor/house_tan_192.png")
 const TEX_HOUSE_RED := preload("res://assets/tiles/kenney/decor/house_red_192.png")
 const TEX_FLOWER := preload("res://assets/tiles/kenney/decor/flower_64.png")
+const TEX_SAND := preload("res://assets/tiles/kenney/decor/sand_64.png")
+const TEX_SAND2 := preload("res://assets/tiles/kenney/decor/sand2_64.png")
+const TEX_WATER := preload("res://assets/tiles/kenney/decor/water_64.png")
+const TEX_WATER2 := preload("res://assets/tiles/kenney/decor/water2_64.png")
 
 
 func _ready() -> void:
@@ -96,20 +100,21 @@ func _draw_village() -> void:
 	_path_h(256.0, -320.0, 1200.0)
 	_path_h(512.0, 64.0, 1024.0)
 	_path_v(384.0, -256.0, 960.0)
-	# Plaza
+	# Plaza (centered on well at ~420,320)
 	for dy in range(-1, 2):
 		for dx in range(-1, 2):
-			_stamp(TEX_STONE, Vector2(384 + dx * CELL, 256 + dy * CELL), Vector2(CELL, CELL))
-	_stamp(TEX_WELL, Vector2(384, 256), Vector2(CELL, CELL))
+			_stamp(TEX_STONE, Vector2(388 + dx * CELL, 288 + dy * CELL), Vector2(CELL, CELL))
+	# Center matches authored VillageWell global (420, 320).
+	_stamp(TEX_WELL, Vector2(388, 288), Vector2(CELL, CELL))
 	# Houses
 	_stamp(TEX_HOUSE_STONE, Vector2(32, -32), Vector2(192, 192))
 	_stamp(TEX_HOUSE_TAN, Vector2(520, -48), Vector2(192, 192))
 	_stamp(TEX_HOUSE_RED, Vector2(760, 360), Vector2(192, 192))
 	_stamp(TEX_HOUSE_STONE, Vector2(16, 600), Vector2(192, 192))
-	# Fences near plaza
-	for i in range(6):
-		_stamp(TEX_FENCE_H, Vector2(256 + i * CELL, 192), Vector2(CELL, CELL))
-		_stamp(TEX_FENCE_H, Vector2(256 + i * CELL, 384), Vector2(CELL, CELL))
+	# Short fence accents beside houses (not wrapping the well like benches).
+	for i in range(3):
+		_stamp(TEX_FENCE_H, Vector2(96 + i * CELL, 160), Vector2(CELL, CELL))
+		_stamp(TEX_FENCE_H, Vector2(700 + i * CELL, 160), Vector2(CELL, CELL))
 	# Trees around the edge
 	for pos in [
 		Vector2(-48, 0), Vector2(-32, 220), Vector2(-40, 500), Vector2(-48, 780),
@@ -117,7 +122,7 @@ func _draw_village() -> void:
 		Vector2(160, -96), Vector2(880, -80), Vector2(400, 820), Vector2(740, 820)
 	]:
 		_stamp(TEX_TREE, pos)
-	for pos in [Vector2(320, 200), Vector2(480, 200), Vector2(320, 400), Vector2(480, 400)]:
+	for pos in [Vector2(320, 200), Vector2(480, 200), Vector2(240, 560), Vector2(560, 560)]:
 		_stamp(TEX_FLOWER, pos, Vector2(CELL, CELL))
 
 
@@ -138,15 +143,20 @@ func _draw_forest() -> void:
 
 
 func _draw_beach() -> void:
-	# Sand-like dirt + grass strip inland; water band at the bottom using stone/dirt contrast.
-	_fill_tiles(TEX_DIRT, OUTER_RECT, TEX_STONE)
-	_fill_tiles(TEX_GRASS, Rect2(-1400, -900, 4200, 1100), TEX_GRASS2)
-	_path_v(0.0, -200.0, 200.0)  # path from village
+	# Keep ocean collision (top ~155) but paint shore/water so the beach reads as sand+sea (BUG-51).
+	const SHORE_Y := 80.0
+	_fill_tiles(TEX_WATER, OUTER_RECT, TEX_WATER2)
+	# Sand belt from inland down to the waterline (covers the playable shore).
+	_fill_tiles(TEX_SAND, Rect2(-1400, -400, 4200, SHORE_Y + 400), TEX_SAND2)
+	# Grass only farther inland (north), not the whole map.
+	_fill_tiles(TEX_GRASS, Rect2(-1400, -900, 4200, 500), TEX_GRASS2)
+	_path_v(0.0, -200.0, SHORE_Y + 20.0)
 	for x in range(-200, 900, 96):
-		_stamp(TEX_BUSH, Vector2(x, 40), Vector2(CELL, CELL))
-	# Shore markers
-	for x in range(-100, 1000, 128):
-		_stamp(TEX_STONE, Vector2(x, 520), Vector2(CELL, CELL))
+		_stamp(TEX_BUSH, Vector2(x, -80), Vector2(CELL, CELL))
+	for x in range(-200, 1100, 64):
+		_stamp(TEX_SAND2, Vector2(x, SHORE_Y - 64.0), Vector2(CELL, CELL))
+		_stamp(TEX_STONE, Vector2(x, SHORE_Y - 32.0), Vector2(CELL, CELL))
+		_stamp(TEX_WATER2, Vector2(x, SHORE_Y), Vector2(CELL, CELL))
 
 
 func _draw_mine_fallback() -> void:
