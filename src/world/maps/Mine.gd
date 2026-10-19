@@ -9,6 +9,8 @@ const HUDScene = preload("res://src/ui/hud/HUD.tscn")
 const HotkeyBarScene = preload("res://src/ui/hud/HotkeyBar.tscn")
 const ToolDisplayScene = preload("res://src/ui/hud/ToolDisplay.tscn")
 const QuestTrackerScene = preload("res://src/ui/hud/QuestTracker.tscn")
+const MapMenuInput = preload("res://src/world/maps/MapMenuInput.gd")
+const ExitSign = preload("res://src/world/maps/ExitSign.gd")
 const PickaxeScene = preload("res://src/entities/tools/Pickaxe.tscn")
 const OreScene = preload("res://src/world/objects/Ore.tscn")
 
@@ -70,6 +72,7 @@ func _setup_ui() -> void:
 	var quest_tracker := QuestTrackerScene.instantiate()
 	quest_tracker.position = Vector2(16, 70)
 	hud.add_child(quest_tracker)
+	hud.add_child(MapMenuInput.new())  # Esc / J, same as Village
 	print("[Mine] Unified HUD added")
 
 
@@ -84,7 +87,18 @@ func _setup_ladders() -> void:
 		ladder_down.body_entered.connect(_on_ladder_down_entered)
 	if ladder_up:
 		ladder_up.body_entered.connect(_on_ladder_up_entered)
+	# The exit next to the up-ladder was never connected, and all three areas
+	# watched the world layer instead of the player (BUG-36).
+	var exit_area := get_node_or_null("Ladders/ExitArea") as Area2D
+	if exit_area:
+		exit_area.body_entered.connect(_on_exit_area_entered)
+		ExitSign.attach(exit_area, "← 村庄", Vector2(0, -40))
 	print("[Mine] Ladders configured")
+
+
+func _on_exit_area_entered(body: Node2D) -> void:
+	if body is Player:
+		_exit_mine()
 
 
 func _setup_ores() -> void:
@@ -187,18 +201,36 @@ func _connect_signals() -> void:
 		get_node("/root/EventBus").player.player_interacted.connect(_on_player_interacted)
 
 
+# body_entered runs while physics queries are flushed; adding/removing the ore
+# bodies there fails ("Can't change this state while flushing queries", BUG-45),
+# so the floor change runs deferred, once per ladder touch.
+var _floor_change_pending := false
+
+
 func _on_ladder_down_entered(body: Node2D) -> void:
 	if body is Player and current_floor < total_floors:
-		_go_to_floor(current_floor + 1)
+		_request_floor(current_floor + 1)
 
 
 func _on_ladder_up_entered(body: Node2D) -> void:
 	if body is Player:
 		if current_floor > 1:
-			_go_to_floor(current_floor - 1)
+			_request_floor(current_floor - 1)
 		else:
 			# 返回地面（农场或村庄）
 			_exit_mine()
+
+
+func _request_floor(floor: int) -> void:
+	if _floor_change_pending:
+		return
+	_floor_change_pending = true
+	_apply_requested_floor.call_deferred(floor)
+
+
+func _apply_requested_floor(floor: int) -> void:
+	_floor_change_pending = false
+	_go_to_floor(floor)
 
 
 func _go_to_floor(floor: int) -> void:

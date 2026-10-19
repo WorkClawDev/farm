@@ -10,6 +10,7 @@ const HUDScene = preload("res://src/ui/hud/HUD.tscn")
 const HotkeyBarScene = preload("res://src/ui/hud/HotkeyBar.tscn")
 const ToolDisplayScene = preload("res://src/ui/hud/ToolDisplay.tscn")
 const QuestTrackerScene = preload("res://src/ui/hud/QuestTracker.tscn")
+const MapMenuInput = preload("res://src/world/maps/MapMenuInput.gd")
 const IllustratedMapBackdropScene = preload("res://src/world/maps/IllustratedMapBackdrop.gd")
 const WorldCollisionLayoutScene = preload("res://src/world/maps/WorldCollisionLayout.gd")
 
@@ -25,6 +26,8 @@ var time_display: Control
 var ui_canvas: CanvasLayer
 var house_data: Dictionary = {}
 
+var _exit_to_village := false
+
 func _ready() -> void:
 	print("[PlayerHouse] Scene loaded")
 	_setup_map()
@@ -33,6 +36,8 @@ func _ready() -> void:
 	_connect_signals()
 	_apply_house_upgrades()
 	_setup_furniture()
+	# Leave by the door you came in through (BUG-40): the village door or the farm.
+	_exit_to_village = GameManager.current_spawn_point == "village_house_entrance"
 	var player := get_tree().get_first_node_in_group("player") as Node2D
 	if player:
 		player.global_position = player_spawn.global_position
@@ -102,6 +107,7 @@ func _setup_ui() -> void:
 	var quest_tracker := QuestTrackerScene.instantiate()
 	quest_tracker.position = Vector2(16, 70)
 	hud.add_child(quest_tracker)
+	hud.add_child(MapMenuInput.new())  # Esc / J, same as Village
 	print("[PlayerHouse] Unified HUD added")
 
 func _setup_house_data() -> void:
@@ -135,8 +141,12 @@ func _connect_signals() -> void:
 
 func _on_exit_area_entered(body: Node2D) -> void:
 	if body is Player:
-		GameManager.change_location("res://src/world/maps/Farm.tscn", "house_exit")
-		print("[PlayerHouse] Player exiting to farm")
+		if _exit_to_village:
+			GameManager.change_location("res://src/world/maps/Village.tscn", "from_house")
+			print("[PlayerHouse] Player exiting to village")
+		else:
+			GameManager.change_location("res://src/world/maps/Farm.tscn", "house_exit")
+			print("[PlayerHouse] Player exiting to farm")
 
 func _on_bed_zone_entered(body: Node2D) -> void:
 	if body is Player:
@@ -227,7 +237,7 @@ func get_furniture_container() -> Node2D:
 	return furniture_container
 
 func _on_spawn_point_changed(spawn_point: String) -> void:
-	if spawn_point == "house_entrance":
+	if spawn_point in ["house_entrance", "village_house_entrance"]:
 		# 玩家从农场进入房屋
 		if player_spawn:
 			var player = get_tree().current_scene.find_child("Player", true, false)

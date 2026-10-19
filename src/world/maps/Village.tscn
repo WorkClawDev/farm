@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3 uid="uid://village_map_001"]
+[gd_scene load_steps=15 format=3 uid="uid://village_map_001"]
 
 [ext_resource type="Script" path="res://src/world/maps/Village.gd" id="1_village"]
 [ext_resource type="PackedScene" uid="uid://npc_base_001" path="res://src/entities/npc/NPC.tscn" id="2_npc"]
@@ -16,7 +16,17 @@
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_tofarm"]
 size = Vector2(40, 60)
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_toforest"]
+size = Vector2(120, 60)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_tobeach"]
+size = Vector2(60, 200)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_tomine"]
+size = Vector2(200, 56)
+
 [node name="Village" type="Node2D"]
+y_sort_enabled = true
 script = ExtResource("1_village")
 
 [node name="VillageMap" parent="." instance=ExtResource("10_map")]
@@ -43,32 +53,34 @@ collision_mask = 2
 shape = SubResource("RectangleShape2D_tofarm")
 
 [node name="ToBeachArea" type="Area2D" parent="TransitionAreas"]
-position = Vector2(1100, 700)
+position = Vector2(1190, 690)
 collision_layer = 0
 collision_mask = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="TransitionAreas/ToBeachArea"]
-shape = SubResource("RectangleShape2D_tofarm")
+shape = SubResource("RectangleShape2D_tobeach")
 
 [node name="ToForestArea" type="Area2D" parent="TransitionAreas"]
-position = Vector2(640, 60)
+position = Vector2(410, -90)
 collision_layer = 0
 collision_mask = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="TransitionAreas/ToForestArea"]
-shape = SubResource("RectangleShape2D_tofarm")
+shape = SubResource("RectangleShape2D_toforest")
 
 [node name="ToMineArea" type="Area2D" parent="TransitionAreas"]
-position = Vector2(180, 820)
+position = Vector2(180, 940)
 collision_layer = 0
 collision_mask = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="TransitionAreas/ToMineArea"]
-shape = SubResource("RectangleShape2D_tofarm")
+shape = SubResource("RectangleShape2D_tomine")
 
 [node name="NPCs" type="Node2D" parent="."]
+y_sort_enabled = true
 
 [node name="MayorThomas" parent="NPCs" instance=ExtResource("2_npc")]
+z_index = 0
 npc_id = "mayor"
 npc_name = "镇长·威廉"
 position = Vector2(400, 200)
@@ -77,6 +89,7 @@ Sprite2D/hframes = 8
 Sprite2D/vframes = 1
 
 [node name="Maria" parent="NPCs" instance=ExtResource("2_npc")]
+z_index = 0
 npc_id = "shopkeeper_lily"
 script = ExtResource("9_shop_script")
 shop_type = 0
@@ -87,6 +100,7 @@ Sprite2D/hframes = 8
 Sprite2D/vframes = 1
 
 [node name="John" parent="NPCs" instance=ExtResource("2_npc")]
+z_index = 0
 npc_id = "farmer_joe"
 npc_name = "农夫·乔"
 position = Vector2(200, 350)
@@ -95,6 +109,7 @@ Sprite2D/hframes = 8
 Sprite2D/vframes = 1
 
 [node name="Iron" parent="NPCs" instance=ExtResource("2_npc")]
+z_index = 0
 npc_id = "blacksmith_tom"
 npc_name = "铁匠·汤姆"
 position = Vector2(700, 400)
@@ -103,6 +118,7 @@ Sprite2D/hframes = 8
 Sprite2D/vframes = 1
 
 [node name="Lily" parent="NPCs" instance=ExtResource("2_npc")]
+z_index = 0
 npc_id = "doctor_mary"
 npc_name = "医生·玛丽"
 position = Vector2(500, 150)

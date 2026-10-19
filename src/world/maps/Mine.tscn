@@ -1,8 +1,7 @@
-[gd_scene load_steps=8 format=3 uid="uid://mine_scene_001"]
+[gd_scene load_steps=7 format=3 uid="uid://mine_scene_001"]
 
 [ext_resource type="Script" path="res://src/world/maps/Mine.gd" id="1_mine"]
 [ext_resource type="PackedScene" uid="uid://dp5y8hqm2x8nr" path="res://src/entities/player/Player.tscn" id="2_player"]
-[ext_resource type="Script" path="res://src/world/transitions/SceneTransition.gd" id="3_transition"]
 [ext_resource type="PackedScene" path="res://src/entities/tools/Pickaxe.tscn" id="4_pickaxe"]
 [ext_resource type="PackedScene" path="res://src/world/objects/Ore.tscn" id="5_ore"]
 [ext_resource type="PackedScene" path="res://src/world/maps/content/MineMap.tscn" id="6_map"]
@@ -27,8 +26,8 @@ position = Vector2(400, 300)
 
 [node name="LadderUp" type="Area2D" parent="Ladders"]
 position = Vector2(100, 300)
-collision_layer = 2
-collision_mask = 1
+collision_layer = 0
+collision_mask = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ladders/LadderUp"]
 shape = SubResource("RectangleShape2D_ladder")
@@ -39,8 +38,8 @@ scale = Vector2(1, 2)
 
 [node name="LadderDown" type="Area2D" parent="Ladders"]
 position = Vector2(700, 300)
-collision_layer = 2
-collision_mask = 1
+collision_layer = 0
+collision_mask = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ladders/LadderDown"]
 shape = SubResource("RectangleShape2D_ladder")
@@ -51,16 +50,13 @@ scale = Vector2(1, 2)
 
 [node name="ExitArea" type="Area2D" parent="Ladders"]
 position = Vector2(50, 300)
-collision_layer = 2
-collision_mask = 1
+collision_layer = 0
+collision_mask = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Ladders/ExitArea"]
 shape = SubResource("RectangleShape2D_exit")
 
 [node name="Ores" type="Node2D" parent="."]
-
-[node name="SceneTransition" type="CanvasLayer" parent="."]
-script = ExtResource("3_transition")
 
 [node name="Walls" type="Node2D" parent="."]
 
