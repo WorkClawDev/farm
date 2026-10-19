@@ -48,6 +48,7 @@ func _ready() -> void:
 	await _test_save_summaries()
 	await _test_dialogue_long_text()
 	await _test_toast_eviction_timers()
+	await _test_pause_submenu_esc()
 	print("============================================================")
 	print("RESULTS: %d/%d passed" % [_passed, _passed + _failed])
 	if _failed == 0:
@@ -247,6 +248,61 @@ func _test_toast_eviction_timers() -> void:
 	await get_tree().create_timer(UIManager.TOAST_DURATION + 0.6, true, false, true).timeout
 	await get_tree().process_frame
 	_record("被挤掉的 Toast 计时器到点后全部消失", UIManager.get_visible_toast_count() == 0)
+
+
+func _press_esc() -> void:
+	# Real key events through the viewport (Esc maps to both "pause" and "ui_cancel").
+	for pressed in [true, false]:
+		var ev := InputEventKey.new()
+		ev.keycode = KEY_ESCAPE
+		ev.physical_keycode = KEY_ESCAPE
+		ev.pressed = pressed
+		get_viewport().push_input(ev)
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+
+func _test_pause_submenu_esc() -> void:
+	# BUG-18: a sub-screen opened from the pause menu owns Esc; the pause menu
+	# (a scene node, so it sees _unhandled_input before the UIManager autoload)
+	# must not close/unpause underneath it.
+	var old_active := GameManager.is_game_active
+	var old_state := GameManager.current_state
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	var layer := CanvasLayer.new()
+	layer.layer = 20
+	add_child(layer)
+	var pm := (load("res://src/ui/menus/PauseMenu.tscn") as PackedScene).instantiate() as PauseMenu
+	pm.visible = false
+	layer.add_child(pm)
+	pm.resume_requested.connect(func():
+		pm.visible = false
+		GameManager.resume_game())
+	await get_tree().process_frame
+	GameManager.pause_game()
+	pm.visible = true
+	await get_tree().process_frame
+	for sub in [["save_load", pm._open_save], ["settings", pm._open_settings]]:
+		var sid: String = sub[0]
+		(sub[1] as Callable).call()
+		for i in 3:
+			await get_tree().process_frame
+		_record("暂停菜单打开子界面 %s" % sid, UIManager.is_screen_open(sid))
+		await _press_esc()
+		_record("子界面 %s 按 Esc 只关子界面" % sid, not UIManager.is_screen_open(sid))
+		_record("子界面 %s 关后暂停菜单仍在且保持暂停" % sid, pm.visible and get_tree().paused and GameManager.is_paused())
+	pm._confirm_quit()
+	await get_tree().process_frame
+	await _press_esc()
+	_record("确认框按 Esc 取消且暂停菜单仍在", not UIManager.has_open_modal() and pm.visible and get_tree().paused)
+	await _press_esc()
+	_record("再按 Esc 关闭暂停菜单并恢复", not pm.visible and not get_tree().paused)
+	UIManager.close_all()
+	layer.queue_free()
+	await get_tree().process_frame
+	GameManager.is_game_active = old_active
+	GameManager.current_state = old_state
 
 
 func _record(label: String, passed: bool) -> void:

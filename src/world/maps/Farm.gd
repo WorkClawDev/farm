@@ -336,6 +336,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		UIManager.open_screen("journal", context)
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("pause"):
+		# Esc belongs to the topmost UIManager screen/confirmation when one is open.
+		if UIManager.has_open_modal():
+			return
 		if GameManager.is_paused():
 			_close_pause_menu()
 		else:

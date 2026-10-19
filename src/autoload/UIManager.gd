@@ -219,6 +219,7 @@ func show_confirmation(config: Dictionary) -> Control:
 	shade.theme = UIStyles.active_theme()
 	_screen_root.add_child(shade)
 	_confirmation = shade
+	shade.set_meta("confirm_config", config)
 
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -253,12 +254,33 @@ func show_confirmation(config: Dictionary) -> Control:
 	return shade
 
 
+## True while a UIManager screen (save/load, settings, journal...) or a
+## confirmation dialog is on top. Scene-level Esc handlers (Farm, PauseMenu)
+## must yield to it: they run before this autoload in _unhandled_input order,
+## so without this check they would swallow the Esc meant for the sub-screen.
+func has_open_modal() -> bool:
+	if is_instance_valid(_confirmation):
+		return true
+	for entry in _stack:
+		if is_instance_valid(entry.get("node")):
+			return true
+	return false
+
+
 func is_screen_open(screen_id: String) -> bool:
 	return not _find_entry(screen_id).is_empty()
 
 
 func get_screen(screen_id: String) -> Control:
 	return _find_entry(screen_id).get("node") as Control
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	# Esc on a confirmation dialog means "cancel" (screens handle their own Esc).
+	if is_instance_valid(_confirmation) and (event.is_action_pressed("ui_cancel") or event.is_action_pressed("pause")):
+		get_viewport().set_input_as_handled()
+		var config: Dictionary = _confirmation.get_meta("confirm_config", {})
+		_on_confirmation_result(false, config)
 
 
 func _build_overlay() -> void:

@@ -109,6 +109,10 @@ func _on_visibility_changed() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# A sub-screen opened from here (save/load, settings) or a confirmation is
+	# on top: let its own handler take the Esc instead of closing the pause menu.
+	if UIManager.has_open_modal():
+		return
 	if visible and (event.is_action_pressed("pause") or event.is_action_pressed("ui_cancel")):
 		resume_requested.emit()
 		get_viewport().set_input_as_handled()
