@@ -119,7 +119,7 @@ func _draw_village() -> void:
 	for pos in [
 		Vector2(-48, 0), Vector2(-32, 220), Vector2(-40, 500), Vector2(-48, 780),
 		Vector2(1080, 20), Vector2(1100, 240), Vector2(1090, 500), Vector2(1110, 780),
-		Vector2(160, -96), Vector2(880, -80), Vector2(400, 820), Vector2(740, 820)
+		Vector2(160, -96), Vector2(880, -80), Vector2(608, 640), Vector2(740, 820)
 	]:
 		_stamp(TEX_TREE, pos)
 	for pos in [Vector2(320, 200), Vector2(480, 200), Vector2(240, 560), Vector2(560, 560)]:

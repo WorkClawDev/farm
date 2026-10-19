@@ -65,9 +65,9 @@ func _ready() -> void:
 				player.global_position = Vector2(1110, 690)
 			"from_forest":
 				player.global_position = Vector2(410, -20)
-			# Above the mine exit band and clear of the blue-roof house door (Tom).
+			# East of SW building + Tree10 corridor (BUG-53); still above ToMineArea.
 			"from_mine":
-				player.global_position = Vector2(240, 880)
+				player.global_position = Vector2(520, 880)
 			# The house door on the lower road (BUG-40).
 			"from_house":
 				player.global_position = Vector2(470, 575)

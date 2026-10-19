@@ -125,7 +125,7 @@ size = Vector2(250, 175)
 size = Vector2(275, 175)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_6mev6"]
-radius = 36.0
+radius = 28.0
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_5teai"]
 size = Vector2(40, 90)
@@ -351,7 +351,7 @@ preset = SubResource("Resource_c8hvq")
 shape = SubResource("RectangleShape2D_okx0c")
 
 [node name="VillageTree08" type="StaticBody2D" parent="Collision" unique_id=1664814846]
-position = Vector2(300, 55)
+position = Vector2(312, 86)
 collision_mask = 0
 script = ExtResource("11_24qou")
 preset = SubResource("Resource_c8hvq")
@@ -369,7 +369,7 @@ preset = SubResource("Resource_c8hvq")
 shape = SubResource("RectangleShape2D_u5vsf")
 
 [node name="VillageTree10" type="StaticBody2D" parent="Collision" unique_id=1709719423]
-position = Vector2(540, 985)
+position = Vector2(760, 822)
 collision_mask = 0
 script = ExtResource("11_24qou")
 preset = SubResource("Resource_c8hvq")
