@@ -38,7 +38,7 @@ func _build_village() -> void:
 	_add_rect("BuildingNorthEast", Rect2(520, 5, 270, 185))
 	_add_rect("BuildingSouthEast", Rect2(760, 405, 250, 175))
 	_add_rect("BuildingSouthWest", Rect2(35, 640, 275, 175))
-	_add_circle("VillageWell", Vector2(420, 320), 48.0)
+	_add_circle("VillageWell", Vector2(420, 320), 36.0)
 
 	var tree_positions := [
 		Vector2(-40, 40), Vector2(-30, 245), Vector2(-20, 520), Vector2(-40, 800),

@@ -258,7 +258,15 @@ func update_npc_positions() -> void:
 		
 		if npc_data.has("schedule"):
 			var new_pos = _get_spawn_position(npc_id, npc_data)
-			if npc.global_position.distance_to(new_pos) > 10.0:
+			var dist: float = npc.global_position.distance_to(new_pos)
+			if dist > 200.0:
+				# Far schedule jump (e.g. lunch plaza): snap so they do not stack while walking.
+				npc.global_position = new_pos
+				if npc.has_method("clear_move_target"):
+					npc.clear_move_target()
+				elif "has_target" in npc:
+					npc.has_target = false
+			elif dist > 10.0:
 				npc.move_to(new_pos)
 
 ## 保存所有NPC状态
