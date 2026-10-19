@@ -292,6 +292,25 @@ func _test_pause_submenu_esc() -> void:
 		await _press_esc()
 		_record("子界面 %s 按 Esc 只关子界面" % sid, not UIManager.is_screen_open(sid))
 		_record("子界面 %s 关后暂停菜单仍在且保持暂停" % sid, pm.visible and get_tree().paused and GameManager.is_paused())
+	# BUG-19: Esc on a confirm opened from a sub-screen closes only the confirm.
+	var sub_confirms := [
+		["save_load", "覆盖存档", pm._open_save, func(scr): scr._confirm_overwrite(2, false)],
+		["save_load", "删除存档", pm._open_save, func(scr): scr._on_delete_pressed(2)],
+		["settings", "恢复默认", pm._open_settings, func(scr): scr._confirm_reset()],
+	]
+	for sc in sub_confirms:
+		var sid2: String = sc[0]
+		var what: String = sc[1]
+		(sc[2] as Callable).call()
+		for i in 3:
+			await get_tree().process_frame
+		(sc[3] as Callable).call(UIManager.get_screen(sid2))
+		await get_tree().process_frame
+		_record("%s确认框已弹出" % what, UIManager.has_open_confirmation() and UIManager.is_screen_open(sid2))
+		await _press_esc()
+		_record("%s确认框按 Esc 只关确认框，%s 仍开且暂停" % [what, sid2], not UIManager.has_open_confirmation() and UIManager.is_screen_open(sid2) and get_tree().paused)
+		await _press_esc()
+		_record("%s后再按 Esc 关 %s，暂停菜单仍在且暂停" % [what, sid2], not UIManager.is_screen_open(sid2) and pm.visible and get_tree().paused and GameManager.is_paused())
 	pm._confirm_quit()
 	await get_tree().process_frame
 	await _press_esc()

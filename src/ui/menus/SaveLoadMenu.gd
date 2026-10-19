@@ -287,6 +287,8 @@ func _delete_save(slot: int) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if UIManager.has_open_confirmation():
+		return  # Esc belongs to the confirm dialog on top (UIManager cancels it).
 	if event.is_action_pressed("ui_cancel") or event.is_action_pressed("pause"):
 		close()
 		get_viewport().set_input_as_handled()

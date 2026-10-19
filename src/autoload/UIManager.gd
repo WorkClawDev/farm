@@ -267,6 +267,14 @@ func has_open_modal() -> bool:
 	return false
 
 
+## True while a confirmation dialog is open. It is the topmost layer, so screens
+## (save/load, settings) must leave Esc to it: being children of the overlay they
+## see _unhandled_input before this autoload and would otherwise close themselves
+## underneath the dialog (BUG-19).
+func has_open_confirmation() -> bool:
+	return is_instance_valid(_confirmation)
+
+
 func is_screen_open(screen_id: String) -> bool:
 	return not _find_entry(screen_id).is_empty()
 
