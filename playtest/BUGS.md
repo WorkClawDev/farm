@@ -442,3 +442,37 @@
 ### 备注
 - 第 1 层梯子上“← 村庄”和“↑ 村庄”同时存在，建议整理一下文案。
 - 夜晚小屋和矿洞内部亮度还没测，下一轮可以补。
+
+## 2026-10-19 美术验收（HEAD Stage A–D，槽 3，1280×720）
+日志：`playtest/run_art_accept.log`；截图：`screenshots/art_accept_*`（约 83 张）。读档农场 3（save_2）。无时约到第 1 年春季第 5 天中午，金币 500。无 SCRIPT ERROR / signal 11 / 崩溃。
+
+### 清单结果
+1. **玩家（Villager3 绿袍）：通过。** 黑发褐肤绿袍，四向走路/待机正常；锄头、水壶手持可见且能锄地浇水（「土地已翻好」「浇水完成」）。截图：art_accept_player_walk_*.png、art_accept_player_tool_*.png、art_accept_hoe_action.png、art_accept_water_action.png
+2. **村民：部分通过。** 精灵与角色对应，能对话，E 气泡正常。谈过汤姆、玛丽、杰克；莉莉商店能开。**失败：站位**——镇长卡进水井里（下半身被井挡住）；广场/午餐时段多人重叠。Day4/Day5 多次复现。截图：art_accept_plaza_npcs.png、art_accept_talk_*.png
+3. **地块：部分通过。** 农场/村庄/森林是 Kenney 像素风（草地、土路、树、篱、井、拼装房）。**海滩失败观感**：能进，但几乎看不见沙和海，像草地。小屋内部空米色房、矿洞偏旧图——按清单只记录不算失败。截图：art_accept_farm/village/forest/beach/house_interior/mine.png
+4. **道具图标：通过。** 热键栏/背包/商店是统一像素图标族（番茄等替代图标按已知不算新 bug）。截图：art_accept_hotbar.png、art_accept_inventory.png、art_accept_shop.png
+5. **已知未换：已确认。** 本存档田间几乎没作物；谷仓外观仍是旧插画风；对话无肖像（只有名字+正文）。不算回归失败。截图：art_accept_crops.png、art_accept_farm_buildings.png、art_accept_portrait.png
+6. **顺手回归：通过。** Esc/J 正常；对话 Space 结束不立刻重开；村庄↔农场、小屋、矿洞、海滩、森林出口都能走。
+
+### 新问题
+- **BUG-49（中）NPC 站位：镇长卡进水井 + 广场重叠。** 步骤：白天进村看水井/广场。预期：站在路上/门口不穿模。实际：镇长下半身埋进井；多人叠在一起。截图：art_accept_plaza_npcs.png
+- **BUG-50（低）手持锄头/水壶精灵过大，挡住大半身。** 截图：art_accept_player_tool_hoe.png、art_accept_player_tool_can.png
+- **BUG-51（中）海滩地图几乎无沙无海，像草地。** 截图：art_accept_beach.png
+- **BUG-52（低）BGM 时段错配。** 日志：白天海滩报 `No BGM for time slot: beach_night`；中午森林切到 forest_night。
+
+### 备注
+- 退出时有 ObjectDB leak 警告（非崩溃）。
+- 浇水有 toast，泥块仍偏深褐，未见明显蓝色湿润层（未单独开 bug）。
+
+## 2026-10-19 复测 BUG-49～52（工作区未提交，槽 3，1280×720）
+日志：`playtest/run_art_retest.log`；截图：`screenshots/art_retest_*`。读档农场 3。无 SCRIPT ERROR / signal 11。日志中 **0** 条 `No BGM for time slot`。
+
+- **BUG-49：通过。** 白天多次进村（至少 4 次）。水井始终空着，镇长不在井里；村民分开站，不叠成一团。中午广场坐标分散。截图：art_retest_plaza_noon.png、art_retest_plaza.png、art_retest_well.png
+- **BUG-50：通过。** 锄头/水壶手持明显缩小，贴在身侧/头旁，不再挡住大半身（对比 art_accept_player_tool_*）。截图：art_retest_hoe.png、art_retest_can.png
+- **BUG-51：通过（沙+海可见）。** 海滩有棕沙、内陆草、底部蓝水带，不再是一片草。备注：岸边南走时精灵会浅浅叠进绘制水面（碰撞约 y=155、岸线约 y=80），未掉出地图。截图：art_retest_beach.png、art_retest_beach_morning.png、art_retest_beach_shore.png、art_retest_beach_hud.png
+- **BUG-52：主缺陷通过。** 白天无 `beach_night` 错配；夜晚海滩才切 `beach_night`；换日时海滩切 `beach_morning`。村庄白天 `village_day`、夜晚 `village_night`。矿洞/小屋未单独切 location BGM（仍播上一场景日曲，可接受）。农场/森林本轮因卡住未进。
+
+### 新问题（非本轮必过项）
+- **BUG-53（低）矿洞回村出生点卡建筑。** `from_mine` 出生点 (240,880) 落在南侧建筑碰撞盒内，进村后几乎只能先往南回矿洞再往东绕出。
+- **BUG-54（低）北广场卡住。** Day6 约 9:13～10:58 在北井/↑森林/←农场路牌附近 WASD 无位移。
+- 海滩岸线浅穿模：见 BUG-51 备注，暂不单开高优先级。
