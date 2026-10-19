@@ -31,3 +31,6 @@ dist/
 # Runtime artifacts
 logs/
 __pycache__/
+
+# Playtest screenshots (BUGS.md stays tracked)
+playtest/screenshots/
