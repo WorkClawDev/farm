@@ -177,3 +177,253 @@
 - 删除确认框通过：按一次 Esc 只关掉确认框，槽 3 还在；再按一次 Esc 回到暂停菜单（bug19_08 至 bug19_10）。
 - 设置里“恢复默认”的确认框通过：按一次 Esc 只关掉确认框，设置值不变（100/80/100）；再按一次 Esc 回到暂停菜单（bug19_13 至 bug19_16）。
 - BUG-18 回归通过：在读取、保存、设置界面按 Esc，都只关掉当前界面；在“返回主菜单”和“退出游戏”的确认框上按 Esc 会取消；游戏中按一次 Esc 就能打开或关闭暂停菜单（bug19_11、bug19_12、bug19_17 至 bug19_22）。
+
+## 2026-10-19 复测人物打磨第 1 轮（工作区改动未提交：Player.gd、Player.tscn、ToolManager.gd、角色精灵图）
+日志：`playtest/run_polish_r1.log`。只用了存档槽 3，没花钱。截图在 `playtest/screenshots/polish_r1_test_*`，共 194 张。
+- 工具位置和朝向：通过。锄头画在手边，会跟着朝向翻转；朝上时画在身后。地图左上角不再出现工具（polish_r1_test_face_sheet.png）。备注：锄头目前是橙色的“Γ”形占位图，水壶是一团蓝色，不是正式的精灵图。
+- 锄地和浇水动作：通过。四个方向都有抬手、挥下、收回的动作，锄地和浇水的结果都正常（polish_r1_test_hoe_left_sheet.png、polish_r1_test_can_left_after.png）。
+- 走路：通过。上下走两条腿轮流迈步，左右走没有滑步（polish_r1_test_walk_down_zoomsheet.png、polish_r1_test_walk_right_sheet.png）。
+- 白色毛边：通过。草地上和土路上都没有白边，只有头发和左臂边缘有几个灰色的抗锯齿像素（polish_r1_test_edge_grass_zoom8.png）。
+- 对话和商店里站立不动：通过。对话时按住 D 或 W，连拍 6 帧都一样，没有原地踏步（polish_r1_test_dialog_npc_holdD_zs.png）。开商店时角色被面板挡住了，只能确认位置没动。
+
+### BUG-20 和喷泉旁的 NPC 对话会无限递归，之后 Esc 和 J 都失灵【高】
+- 步骤：进村，走到喷泉旁的 NPC 身边，按 E 或 Space 对话。
+- 日志：
+  - DialogueManager.start_dialogue（第 119、136、143 行）和 _on_event_dialogue_started / _on_event_dialogue_ended（第 459、461 行）互相调用，报了 16 次以上 Stack overflow。
+  - 之后 DialogueBox.gd 第 136 行报 `Nonexistent 'float' constructor`，第 109、199 行也有报错。
+  - 最后引擎报了约 1000 次 Stack underflow。
+- 实际：
+  - 对话翻页时出现空白页，最后一句结束后又重新打开了商店（polish_r1_test_dialog_closed.png）。
+  - 之后 Esc 打不开暂停菜单，J 也打不开手册，只能点窗口的 X 关游戏（polish_r1_test_pause3.png）。
+- 期望：对话正常结束，没有报错，暂停菜单能正常打开。
+- 备注：这两个对话脚本不在本轮改动的文件里，看起来是原来就有的问题，跟人物打磨没有关系。
+
+### BUG-21 角色在喷泉旁被 NPC 围住，动不了【中】
+- 步骤：进村，走到喷泉附近，等 NPC 走过来。
+- 实际：NPC 把角色挤在中间，按 WASD 好几秒都没反应，角色还被画在 NPC 下面（polish_r1_test_postshop_holdD_zoomsheet.png、polish_r1_test_nav9.png）。
+- 期望：NPC 不该把角色堵住，也不该盖住角色。
+
+### 待确认
+- 锄地朝向：朝下、左、右、上各锄一次，只出了 3 格耕地，朝右那次好像和朝下锄到了同一格。可能是因为角色正好站在两格的交界处，需要再测一次。
+
+## 2026-10-19 复测 UI 第 2 轮（工作区改动未提交：GameTheme.tres、UIThemeBridge.gd、背包、HUD）
+日志：`playtest/run_polish_r2.log`，没有 SCRIPT ERROR。只用了存档槽 3，save_0 和 save_1 没有变化。这次没和 NPC 对话，也没买东西；高对比模式测完已经关掉（ui_settings.json 里 high_contrast 为 false）。截图在 `playtest/screenshots/polish_r2_test_*`。
+- HUD：通过。各面板互不重叠，金钱是金色，字号一致（polish_r2_test_03_hud_stamina.png、polish_r2_test_03_crop_money.png）。
+  - 体力条只在体力低于 78% 时才出现，每次变化后显示约 2.6 秒。
+  - 提示“…（按数字键选种子播种）”里的“种)”会单独换到下一行，和已知的“品。”是同一个问题。
+- 背包：通过，有两处小问题。图标居中，左上角有快捷键号，右下角有 ×N；悬停是绿框，选中是橙框；选中的页签能看出来（polish_r2_test_06_crop_slots_zoom_v2.png）。
+  - 小问题：“×15”压到了种子图标的底部。
+  - 小问题：同样是空格子，悬停提示有时显示“空”，有时显示“[3] 空”。
+- 暂停菜单、存档界面、设置：大部分不通过。
+  - 通过的部分：暂停菜单的按钮有悬停和按下的样式，“保存”按钮不再是绿色，存档卡的标题大小正常（polish_r2_test_10_pause_hover_save.png、polish_r2_test_11_pause_pressed_settings.png）。
+  - 商店：没测。商店只能通过和 NPC 对话打开，而对话会触发 BUG-20。
+
+### BUG-22 还有很多按钮是绿色【中】
+- 存档界面的“保存到这里”全是绿色。
+- 制作页签里每个配方都是绿色，“可制作 0”的配方也是，看起来像能做（polish_r2_test_08_craft_tab_hover.png）。
+- 设置里的“应用”是绿色，鼠标悬停时变化很小。
+
+### BUG-23 选中的配方和设置分类没有选中样式【低】
+- 选中的配方，以及当前所在的设置分类（声音、辅助功能），只有鼠标悬停时才看得出来，移开就没了（polish_r2_test_08、polish_r2_test_14_settings_hover.png）。
+
+### BUG-24 音量滑条的颜色让人看不懂【低】
+- 音乐音量在 80% 时，右边没填满的部分是深色；而 100% 的滑条看起来是灰色（polish_r2_test_14_crop_sliders.png）。
+
+### BUG-25 高对比模式下有多处显示问题【高】
+- 获得焦点的按钮看不清文字：打开设置 → 辅助功能 → 打开高对比模式 → 按 Esc 回到暂停菜单，获得焦点的“设置”按钮是黑底深色字，看不清。存档界面、手册、设置里的 × 关闭按钮也一样（polish_r2_test_19_crop_focus_text_invisible.png）。
+- HUD：
+  - 日期和金钱面板超出了窗口右边，时间显示成“10:01 AI”，“500 金”也被截掉（polish_r2_test_22_crop_hc_date_clipped.png）。
+  - 体力面板盖住了提示面板，提示面板还超出了底边，被物品栏压住（polish_r2_test_22_hc_hud.png）。
+  - 只有日期、体力、提示这三个面板换了主题，任务面板、物品栏和工具面板还是普通主题。
+- 背包：悬停和选中都是一样的纯黄色，分不出来；图标很小，还偏到了左上（polish_r2_test_23_crop_hc_slots.png）。
+- 设置：
+  - 鼠标悬停在已勾选的“高对比模式”这一行时，底色和边框都消失了（polish_r2_test_16_hc_settings.png）。
+  - 打开高对比模式会马上保存，不用点“应用”；关掉时却要点“应用”才会保存，两边不一致。
+- 其他：
+  - “删除”和“退出游戏”按钮没有了红色的危险提示。
+  - 存档卡上“第1年·春季第1天”这一行的字比上下几行小。
+
+### 待确认
+- 关掉手册后马上按 Esc，有时没反应，要按第二次才能打开暂停菜单。
+
+## 2026-10-19 复测第 3 轮（工作区未提交改动，槽 3）
+日志：playtest/run_r3.log；截图前缀：screenshots/r3_test_*
+日志统计：Stack overflow 0 次，Stack underflow 0 次，SCRIPT ERROR 0 次。
+
+- **BUG-20 对话递归：部分通过。** 不再栈溢出。镇长、铁匠、农场主用 E 和 Space 各聊过多次，没有空白页，商店不会自己打开，聊完 Esc 和 J 都是按一次就生效。截图：r3_test_dlg_ejcheck_all.png
+- **商店 UI：正常。** 商人直接打开种子商店（没有招呼对话，可能就是这么设计的）。购买和出售两个页签、悬停高亮都正常，Esc 或 × 可以关闭。截图：r3_test_shop_buy_hover.png、r3_test_shop_sell_tab.png
+- **BUG-21 被 NPC 围住：通过。** 往上顶商人约 0.6 秒挤过去，往右顶两个村民最多约 2.5 秒挤过去。前后遮挡按上下位置正确。截图：r3_test_squeezeUp_montage.png、r3_test_squeeze_montage.png、r3_test_draworder_above_zoom.png、r3_test_draworder_below_zoom.png
+- **锄地四个方向：通过。** 在格子中心锄出 4 个相邻格，靠近格子右边缘也是 4 个相邻格，贴着右侧围栏只出 3 格（往外那一下出了田地，属正常）。截图：r3_test_hoe_setA.png、r3_test_hoe_setB.png、r3_test_hoe_setC.png
+- **挥工具时锁定移动：通过。** 挥动的约 0.26 秒内原地不动，挥完不用再按，按住的方向会直接接着走。截图：r3_test_swing2_zoom.png，逐帧 r3_test_swing2_00..41.png
+
+### BUG-26（新，中）结束对话的那次按键会重新开始对话
+- 步骤：在村子里面朝 NPC，按 E 或 Space，之后大约每秒按一次。
+- 预期：第 1 句，第 2 句，然后关闭。
+- 实际：第 1 句、第 2 句反复循环 2 到 7 遍才关闭（约翰 14 页，铁匠 8 页，镇长 8 页）。E 和 Space 都会出现，不是每次都有。日志里每循环一次都有新的 `[Player] Interacting with …` 和 `Started dialogue`，这一轮共 48 次。看起来是关闭对话的那次按键又被 Player 当成了一次交互。
+- 截图：r3_test_dlg_E_trace.png、r3_test_dlg_space_trace.png、r3_test_dlg_npcD_E1_montage.png
+
+### BUG-27（新，低）日志里的 NPC 名字和对话框不一致
+- 日志写的是 镇长·威廉、农夫·乔、铁匠·汤姆、店主·莉莉，对话框显示的是 镇长托马斯、农场主约翰、铁匠布鲁斯。
+
+### 备注（UI 风格，不算 bug）
+- 对话框里的正文是浅色字配米色底，很难看清。截图：r3_test_dlg_E_trace.png
+
+## 2026-10-19 复测第 4 轮（工作区未提交，槽 3）+ Sand 加测
+日志：playtest/run_r4.log；截图：screenshots/r4_test_*（66 张）。Started dialogue 39 次，对应开始的 39 次对话；Stack overflow 0 次。
+
+- **BUG-26：通过。** 和铁匠·汤姆、农夫·乔、医生·玛丽、镇长·威廉对话，E 和 Space 快按、慢按各 2 次以上，都不再从第一句重开，每次只有 1 条 Started dialogue。截图：r4_test_dlg_mayor_line1.png
+- **BUG-27：通过。** 对话框和日志里的名字一致，正文是深色字，看得清。截图：r4_test_dlg_blacksmith1.png、r4_test_dlg_farmer1.png、r4_test_dlg_doctor1.png
+- **BUG-22~25：基本通过，只有“完成”一项失败（见 BUG-28）。** 存档卡和配方行是普通样式；可制作 0 的配方变灰；选中项是金色；滑条清楚；删除、退出、恢复默认是红色；设置即改即存。高对比下焦点是青色外框，HUD 跟随主题且不越界不重叠，背包悬停和选中能分清，图标居中。高对比下没法判断“可制作 0 变灰”，因为所有配方都是 0、没有对照。高对比已关闭。截图：r4_test_normal_crafting.png、r4_test_hc_focus.png、r4_test_hc_hud.png、r4_test_hc_inv_selected_hover.png、r4_test_hc_off_settings.png
+- **小问题：通过。** ×N 不压图标；格子提示格式统一（“芜菁种子 × 15”，空格子显示“空”）；文字没有单字折行；关手册后按一次 Esc 就开暂停，5/5。截图：r4_test_normal_inv_hover_tooltip.png、r4_test_esc_after_handbook_1..5.png
+- **各场景 Esc/J：部分通过。** 玩家小屋里 Esc 和 J 都是按一次就生效。截图：r4_test_house_esc_first_press.png、r4_test_house_j_first_press.png。Forest、Beach、Mine 没测到，因为找不到入口（见 BUG-32）。
+- **存档卡时间：通过。** 显示 2026-10-19 12:20，与当时的 `date`（12:20:51 HKT）一致。截图：r4_test_slot3_card_time.png
+- **待机呼吸：大部分通过。** 站着不动时有呼吸；开暂停菜单或手册时不动；开“减少动态效果”后不播放，关掉后恢复。走路、挥工具和对话时有没有停，没能单独确认。截图：r4_test_breath_idle_*、r4_test_breath_pause_*、r4_test_breath_reduced_motion_*
+- **NPC 0.8 倍：通过。** 比例协调，脚踩在影子上；相邻格能对话，隔 2 到 3 格按 E 没反应；头上没有残留的 E 标签。截图：r4_test_far_from_npcs_E_no_talk.png
+
+### BUG-28（低）设置里的“完成”按钮不是绿色
+- 步骤：Esc → 设置。预期“完成”是绿色主按钮，实际和普通按钮一样是米色。普通主题和高对比都这样。截图：r4_test_normal_settings.png、r4_test_hc_settings_a11y.png
+
+### BUG-29（高）进入玩家小屋时 Kitchen.gd 解析错误
+- run_r4.log 第 746、750 行：`Identifier "InteractPrompt" not declared`（res://src/world/objects/Kitchen.gd:18）；第 754 行：`Failed to load script Kitchen.gd`。可能是 UI 正在改到一半。
+
+### BUG-30（高）往返村庄时崩溃（signal 11）
+- 步骤：农场 → 村庄 → 农场 → 村庄，第二次刚到村庄时崩溃。日志第 268 行：`Program crashed with signal 11`，崩在 `NPCManager._despawn_all_npcs`（对已经释放的 NPC 调用 queue_free）。只出现了一次。
+
+### BUG-31（中）早上 6:00 到 7:15 左右 NPC 不能对话
+- 这段时间所有 NPC 都站在喷泉旁（日程上应该在家）。按 E 时日志有 Interacting，但不弹对话，商人也不开商店。
+
+### BUG-32（中）村庄找不到去 Forest、Beach、Mine 的出口
+- 沿北、东边缘和右下角走都没有触发。Village.tscn 里 Forest 出口在 (640,60)，落在东北建筑的碰撞框内（x 520–790，y 5–190），可能走不到。Mine 出口 (180,820) 在西南角建筑旁，没走到。待确认。
+
+### BUG-33（低）可以走到西北房子屋顶的下沿上
+
+### BUG-34（低）对话提示写成“Space 继续 · Space 显示全文”，同一个键写了两遍
+
+### 备注
+- 中午 NPC 聚在喷泉旁时还是可能把人短暂围住（BUG-21 的残留，低）。
+- 第一次启动时，存档卡时间比第二次早约 8 小时（槽 1：03:16 对 11:16），之后都正确。可能和时区修复前后有关，先观察。
+
+## 2026-10-19 复测第 5 轮（工作区未提交，槽 3）
+日志：playtest/run_r5.log（Scene loaded 20 次；没有 SCRIPT ERROR、signal 11、InteractPrompt 报错）。截图：screenshots/r5_test_*（91 张）
+
+- **BUG-29 厨房：通过。** 进小屋后站在灶台正下方按 E，打开了烹饪界面，日志没有 Kitchen 报错。截图：r5_test_kitchen_e.png
+- **BUG-30 来回切换：通过。** 农场和村庄来回 6 趟，其中 2 趟穿插了小屋，另外还去了森林和海滩，都没有崩溃。
+- **BUG-31 早上和村民对话：通过。** 6:20 左右找商人莉莉，提示“暂未营业”并写出营业时间 8:00-20:00；铁匠能正常对话。截图：r5_test_npc_talk.png、r5_test_npc2_talk.png
+- **BUG-32 出口：失败。**
+  - 海滩：通过。进得去，回来落在“海滩 →”路牌旁，在海滩里 Esc 和 J 都是按一次就生效。截图：r5_test_beach_esc.png、r5_test_beach_j.png、r5_test_beach_back.png
+  - 森林：进得去，Esc 和 J 按一次就生效，但出不来（见 BUG-35）。
+  - 矿洞：去不了（见 BUG-36）。
+  - 农场：从村庄回农场时落在“前往村庄”出口旁，正常；从农场去村庄时的落点不对（见 BUG-37）。
+- **BUG-28：通过**，“完成”是绿色。**BUG-33：通过**，走不到西北房子的屋顶上（截图：r5_test_nw_roof2.png）。**BUG-34：通过**，打字时提示“Space 显示全文”，打完后提示“Space 继续”（截图：r5_test_dialogue_hint.png）。
+- **交互气泡：**
+  - 通过：NPC、出货箱、工作台、厨房、牛棚、鸡舍。截图：r5_test_npc_near.png、r5_test_bin_near.png、r5_test_workbench_near2.png、r5_test_kitchen_near3.png、r5_test_barn_bubble.png、r5_test_coop_near.png
+  - 失败：钓鱼点、可采集物（见 BUG-38、BUG-39）。
+  - 另外：厨房气泡只在灶台正下方出现；鸡舍的气泡被任务面板挡住一部分。
+- **呼吸动作：通过。** 走路、挥工具和对话时都停止。
+
+### BUG-35（高）森林出不去，只能读档
+- 步骤：从村庄沿中路往上进入森林，然后试着从下边、上边、左边和东边的路出去。
+- 预期：有一个能走到的出口回村庄。实际：哪个方向都不触发切换，只能回主菜单重新读槽 3。
+- 截图：r5_test_forest_exit2.png、r5_test_forest_exit3.png、r5_test_forest_exit4.png、r5_test_forest_east.png、r5_test_forest_bottom.png
+
+### BUG-36（中）走不到矿洞出口
+- 步骤：从下方道路沿蓝顶房子右侧往下走，再沿最下沿从左走到右，经过“↓ 矿洞”路牌。
+- 实际：镜头停在最下沿，没有切换场景。代码里出口在 (180,900)，看起来在能走、能看见的范围之外。所以矿洞里的 Esc 和 J 没测到。
+- 截图：r5_test_mine_route3.png 到 r5_test_mine_route6.png
+
+### BUG-37（低）从农场进村庄的落点不对
+- 预期落在“← 农场”路牌旁（from_farm 设为 (150,300)），实际落在喷泉广场，往东偏了约 270。截图：r5_test_v_arrive3.png
+
+### BUG-38（中）钓鱼点不显示 E 气泡
+- 日志有“[FishingSpot] Player at fishing spot”，但画面上没有气泡。截图：r5_test_fish_near3.png、r5_test_fish_near4.png
+
+### BUG-39（中）森林里的可采集物不能互动
+- 站在蘑菇或浆果丛上没有气泡，按 E 没反应，日志也没有任何记录。截图：r5_test_forage_near.png、r5_test_forage_e2.png、r5_test_forage_berry2.png
+
+### BUG-40（低）从村庄进小屋，出来后总是回到农场
+
+### BUG-41（中）厨房食谱窗口排版错乱
+- 标题栏过高，× 按钮被拉得很长，面板底部超出窗口。可能跟正在改的 UI 有关。截图：r5_test_kitchen_open.png
+
+### BUG-42（低）森林里树的碰撞不一致，有些树可以直接穿过去
+
+### 待确认：BUG-26 可能部分复发
+- 在最后一句按 Space 结束对话，会马上又开始同一段对话（Space 也是交互键）。BUG-26 那一轮说的就是这个问题，需要单独再测。
+
+### 备注
+- 海滩里“→ 村庄”路牌的箭头指向右边，但实际回村庄要往上走。
+
+## 2026-10-19 复测第 6 轮（工作区未提交，槽 3）
+日志：playtest/run_r6.log（没有 SCRIPT ERROR、signal 11 和 Stack overflow）。截图：screenshots/r6_test_*（43 张）。这一轮游戏非常卡，输入和画面落后 5~15 秒，每一步都对照日志确认过。
+
+- **BUG-35 森林出口：通过。** 西出口和南出口都回到村庄中路顶端（“↑ 森林”路牌下面）。截图：r6_test_forest_south_exit_village.png
+- **BUG-42 树碰撞：通过。** 试了 5 棵树，都穿不过去。
+- **BUG-39 采集：通过。** 蘑菇和浆果都有 E 气泡，按 E 能采到（快捷栏显示浆果 ×2、蘑菇 ×2）。重新进森林后采集物会刷新。
+- **BUG-36 矿洞：通过。**
+  - 从村庄往南走到底就进入矿洞。截图：r6_test_mine_entered.png
+  - 矿洞里 Esc 和 J 都是按一次就生效。截图：r6_test_mine_esc.png、r6_test_mine_j_handbook.png
+  - 梯子能下到第 2 层，再上回第 1 层。截图：r6_test_mine_floor2.png
+  - 从西出口回到村庄“↓ 矿洞”路牌旁。截图：r6_test_mine_exit_village.png
+  - 站在 Tom 家门口不会误进矿洞。截图：r6_test_tom_door_no_mine_0840.png
+- **BUG-41 厨房：通过。**
+  - 食谱窗口排版正常。截图：r6_test_kitchen_window.png
+  - 站在灶台左、右、下方都有气泡（r6_test_kitchen_bubble_left/right/below.png）。气泡触发范围偏大，站在灶台左上方斜一格也会出现。
+- **BUG-38 钓鱼点：部分通过。** 拿着水壶时显示“装水”；拿其他工具时显示“钓鱼”这一项没测到。
+- **BUG-37：通过。** 从农场进村庄落在“← 农场”路牌旁。
+- **BUG-40：通过。** 从村庄进小屋，出来回到村庄“⌂ 小屋”旁。截图：r6_test_house_exit_village_npcs_0626.png
+- **海滩路牌：通过。** 显示“↑ 村庄”。截图：r6_test_beach_sign.png
+- **鸡舍气泡：失败（BUG-43）。**
+- **NPC 作息：部分。**
+  - 20:00~21:00 回家淡出没看到，21:19 到村庄时已经全部在休息。
+  - 早上 6:26 村民都已经在路上，6:00 在门口出现没看到。
+  - 白天看到 NPC 站在房顶上、两个 NPC 重叠（BUG-44）。
+- **BUG-26 再确认：通过（测了 4 个 NPC）。** 在最后一句只轻按一次 Space，都没有重开，日志里 Started dialogue 正好 4 条，对上 4 次对话。商人直接开商店，渔夫没有对话（BUG-46），所以没凑齐第 5 个 NPC。
+
+### BUG-43（低）鸡舍的 E 气泡位置不对
+- 在鸡舍旁按 E 能进（日志：[Coop] 按 E 键进入鸡舍），但鸡舍上方没有气泡，气泡出现在池塘那边。
+
+### BUG-44（中）每次进村庄 NPC 都生成两份
+- 日志里每次进村庄，同一个 NPC 都会初始化两次。例如铁匠·汤姆在第 303 和 318 行、第 392 和 407 行都各初始化了一次，医生·玛丽也一样。看起来场景里放了一份，NPCManager 又生成了一份。
+- 表现：两个紫衣 NPC 叠在喷泉上方；8:40 和 9:27 有个橙衣 NPC 站在东北红顶房子的屋顶上。截图：r6_test_village_npcs_0927.png、r6_test_tom_door_no_mine_0840.png
+- 还有个 NPC 站在“← 农场”路牌附近，被任务面板挡住一部分。
+
+### BUG-45（中）矿洞换层时出现物理报错
+- 用梯子换层时出现 64 条 `Can't change this state while flushing queries`。调用链：`_on_ladder_down_entered`（Mine.gd:206）→ `_generate_floor_ores`（Mine.gd:129）。矿石应该延后（deferred）生成，不要在 area_entered 回调里直接生成。
+
+### BUG-46（低）海滩的老渔夫·杰克不能对话
+- 有 E 气泡，但按 E 没反应。日志第 1068 行：`No dialogue data for NPC: fisherman_old_jack`。截图：r6_test_beach_fisherman_no_dialogue.png
+
+### 备注
+- 测试代理最后跑了一次只读的 `git status --short`，没有改动任何东西。
+
+## 2026-10-19 复测第 7 轮（工作区未提交，槽 3，窗口 1280×720）
+日志：playtest/run_r7.log；截图：screenshots/r7_test_*（36 张）。没有崩溃，flushing queries 0 条，Stack overflow 0 条。
+输入延迟：按 J 开手册 0.08~0.11 秒，Esc 关闭 0.05~0.07 秒，开始走路 0.09~0.28 秒，整体比第 6 轮好很多。
+
+- **BUG-44 NPC 重复生成：通过。** 从农场、小屋、森林、矿洞、海滩进村庄共 5 次，每次 5 个村民各初始化一次，广场上每人只出现一次，没有人在屋顶上或房子里。截图：r7_test_1_entry1_from_farm.png ~ r7_test_1_entry5_from_beach_plaza.png
+  - 小问题：镇长和莉莉的出生点都是 (500,400)，乔和汤姆都是 (600,350)，有时会叠在一起。
+- **BUG-45 矿洞换层：通过。** 碰梯子 4 次，每次只换一层（1→2→3→4→3），flushing queries 0 条。截图：r7_test_2_mine_f2.png、r7_test_2_mine_f3.png
+  - 不一致：左边梯子标着“← 村庄”，走进去是上一层，但在第 3 层站在上面按 E 会直接回村庄。
+- **BUG-43 鸡舍气泡：通过。** 气泡贴在鸡舍下方。截图：r7_test_3_coop_bubble.png
+- **BUG-46 老渔夫·杰克：通过。** 能对话。截图：r7_test_3_fisherman_dialogue.png
+  - 在最后一句按 Space 结束后，对话立刻又开了一次；重开的那次按 Space 没反应，只有 Enter 能关。日志里还写着杰克“arrived at tavern”，但他人在海滩。
+- **厨房气泡范围：通过。** 灶台左、右、下方有气泡，左上斜一格没有。截图：r7_test_3_kitchen_left.png、r7_test_3_kitchen_right.png、r7_test_3_kitchen_below2.png、r7_test_3_kitchen_diag_ul.png
+- **钓鱼点文字：通过。** 拿锄头或斧头显示“钓鱼”，拿水壶显示“装水”。截图：r7_test_4a_hoe_fish.png、r7_test_4a_can_water.png
+- **晚上回家：失败（BUG-47）。**
+- **早上出门：没看到。** 02:00 自动跳到第二天 06:00，人还在村庄；但 06:27 才第一次看清，那时 5 个村民已经在广场和水井附近，没看到“在门口出现”那一刻。截图：r7_test_4c_night_9.png、r7_test_4c_night_10.png
+
+### BUG-47（中）晚上村民不走回家门，直接消失
+- 步骤：19:50 站在村庄广场，每 15 分钟截一张图。
+- 预期：20:00/21:00 村民走到自家门口后淡出。
+- 实际：乔、汤姆、玛丽在 20:00~20:15 之间直接消失；镇长和莉莉在水井旁叠着站到 20:59，21:14 前消失。始终没看到有人走路回家。日志里“is going home”后面马上就是“is resting”（第 787~792 行），像是直接删掉了。
+- 截图：r7_test_4b_eve_1950.png、r7_test_4b_eve_1.png ~ r7_test_4b_eve_6.png
+
+### BUG-48（中）NPCSchedule.gd:168 访问空对象
+- 留在村庄过夜，所有村民进入 resting 之后、02:00 换日之前，报了两次 `Invalid access to property or key 'activity' on a base object of type 'Nil'`（日志第 797、804 行）。调用链：NPCSchedule.update ← NPC._on_time_changed:579 ← TimeManager。
+
+### BUG-26 残留（低）：Space 结束对话后又被当成交互
+- 在老渔夫·杰克的最后一句按 Space，对话会立刻重开一次。
+
+### 备注
+- 村庄半夜也是全亮的，没有夜晚色调。
+- 测试工具注意：按键要按住约 120 毫秒、两次按键间隔约 0.4 秒，太短的点按有时会被吞掉。
