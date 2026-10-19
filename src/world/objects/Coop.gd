@@ -1,5 +1,6 @@
 extends StaticBody2D
 class_name Coop
+const InteractPromptScript = preload("res://src/ui/components/InteractPrompt.gd")  # preload: works before the class cache knows the class_name
 
 const TextureLoader := preload("res://src/core/utils/RuntimeTextureLoader.gd")
 const DepthAnchor := preload("res://src/world/objects/WorldDepthAnchor.gd")
@@ -30,6 +31,7 @@ func _ready() -> void:
 	if interaction_area:
 		interaction_area.body_entered.connect(_on_body_entered)
 		interaction_area.body_exited.connect(_on_body_exited)
+	InteractPromptScript.attach(self, "收集", InteractPromptScript.sprite_top(self), _is_prompt_available, InteractPromptScript.PRIORITY_BUILDING)
 	print("[Coop] Chicken coop initialized")
 
 func _setup_sprite() -> void:
@@ -75,6 +77,11 @@ func _update_collision_shape(display_size: Vector2) -> void:
 
 func get_depth_anchor_offset() -> float:
 	return _depth_anchor_offset
+
+## Player.building_in_range is what E acts on (after NPCs).
+func _is_prompt_available() -> bool:
+	var player := get_tree().get_first_node_in_group("player")
+	return player != null and "building_in_range" in player and player.building_in_range == self
 
 func _on_body_entered(body: Node2D) -> void:
 	if body is Player:

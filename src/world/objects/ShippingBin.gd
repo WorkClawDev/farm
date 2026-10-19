@@ -1,5 +1,6 @@
 extends Area2D
 class_name ShippingBin
+const InteractPromptScript = preload("res://src/ui/components/InteractPrompt.gd")  # preload: works before the class cache knows the class_name
 
 const PHYSICS_LAYERS = preload("res://src/core/constants/PhysicsLayers.gd")
 
@@ -35,6 +36,7 @@ func _ready() -> void:
 	_apply_depth_anchor()
 	_setup_interaction()
 	_connect_signals()
+	InteractPromptScript.attach(self, "出货", InteractPromptScript.sprite_top(self), func(): return _player_in_range and is_interactable)
 	print("[ShippingBin] Initialized at position: ", global_position)
 
 
@@ -145,10 +147,10 @@ func _on_body_exited(body: Node2D) -> void:
 		print("[ShippingBin] Player left interaction range")
 
 
+## The shared InteractPrompt bubble replaced this label; keep it hidden.
 func _show_prompt() -> void:
 	if prompt_label:
-		prompt_label.text = interaction_prompt
-		prompt_label.visible = true
+		prompt_label.visible = false
 
 
 func _hide_prompt() -> void:

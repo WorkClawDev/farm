@@ -1,5 +1,6 @@
 extends Area2D
 class_name ForageItem
+const InteractPromptScript = preload("res://src/ui/components/InteractPrompt.gd")  # preload: works before the class cache knows the class_name
 
 ## ForageItem - 可采集物品场景节点
 ## 放置在场景中，玩家交互后可采集
@@ -86,6 +87,8 @@ func _setup_interaction() -> void:
 		add_child(interact_label)
 
 	interact_label.text = "[E] 采集"
+	# Shown through the shared InteractPrompt bubble instead of this label.
+	InteractPromptScript.attach(self, "采集", InteractPromptScript.sprite_top(self), func(): return _player_in_range and not is_collected)
 
 
 func _process(_delta: float) -> void:
@@ -97,8 +100,8 @@ func _process(_delta: float) -> void:
 func _on_body_entered(body: Node2D) -> void:
 	if body is Player:
 		_player_in_range = true
-		if not is_collected and interact_label:
-			interact_label.visible = true
+		if interact_label:
+			interact_label.visible = false  # InteractPrompt shows the prompt
 
 
 func _on_body_exited(body: Node2D) -> void:
