@@ -30,6 +30,24 @@ const TOAST_DURATION := 3.0
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_overlay()
+	get_tree().root.window_input.connect(_on_root_window_input)
+
+
+## Godot's GUI treats Esc as "hide the tooltip" and marks the event handled while a
+## tooltip popup exists, so with the mouse resting on a slot the first Esc only hid the
+## tooltip and the journal/pause menu needed a second press. Free the tooltip before
+## the GUI sees the key (freeing clears the viewport's tooltip pointer) so one Esc does both.
+func _on_root_window_input(event: InputEvent) -> void:
+	if not (event is InputEventKey and event.pressed and not event.echo):
+		return
+	if not (event.is_action("ui_cancel") or event.is_action("pause")):
+		return
+	var hovered := get_viewport().gui_get_hovered_control()
+	if hovered == null:
+		return
+	for child in hovered.get_children(true):
+		if child is Popup:
+			child.free()
 
 
 func open_screen(screen_id: String, context := {}) -> Control:
@@ -129,7 +147,7 @@ func show_toast(message_key: String, args := {}, variant := "info") -> void:
 			child.set_meta("toast_count", count)
 			var existing_label := child.get_meta("toast_label") as Label
 			if is_instance_valid(existing_label):
-				existing_label.text = "%s ×%d" % [text, count]
+				existing_label.text = UIFactory.no_orphan("%s ×%d" % [text, count])
 			child.modulate.a = 1.0
 			_schedule_toast_dismiss(child)
 			return
@@ -160,9 +178,10 @@ func show_toast(message_key: String, args := {}, variant := "info") -> void:
 	row.add_child(marker)
 	var label := Label.new()
 	label.theme_type_variation = &"HUDText"
-	label.text = text
+	label.text = UIFactory.no_orphan(text)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.custom_minimum_size.x = 260
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL  # use the whole toast width before wrapping
 	row.add_child(label)
 	panel.set_meta("toast_text", text)
 	panel.set_meta("toast_variant", variant)
@@ -313,6 +332,7 @@ func _build_overlay() -> void:
 	_toast_root.offset_bottom = 400
 	_toast_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_toast_root.add_theme_constant_override("separation", 10)
+	UIStyles.follow_theme(_toast_root)
 	_overlay_layer.add_child(_toast_root)
 
 

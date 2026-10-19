@@ -87,9 +87,9 @@ func _build_ui() -> void:
 	var safe := MarginContainer.new()
 	safe.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	safe.add_theme_constant_override("margin_left", 48)
-	safe.add_theme_constant_override("margin_top", 38)
+	safe.add_theme_constant_override("margin_top", 24)
 	safe.add_theme_constant_override("margin_right", 48)
-	safe.add_theme_constant_override("margin_bottom", 38)
+	safe.add_theme_constant_override("margin_bottom", 24)
 	add_child(safe)
 	var center := CenterContainer.new()
 	safe.add_child(center)
@@ -106,6 +106,9 @@ func _build_ui() -> void:
 	header.add_child(title)
 	var stamina := UIFactory.subtitle("烹饪会消耗少量体力")
 	stamina.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	# A wrapping label in an HBox gets ~0 width and wraps one character per line,
+	# which made the header (and the × button) hundreds of pixels tall (BUG-41).
+	stamina.autowrap_mode = TextServer.AUTOWRAP_OFF
 	header.add_child(stamina)
 	var close_button := UIFactory.button("×", &"", Vector2(48, 44))
 	close_button.tooltip_text = "关闭"
@@ -150,7 +153,7 @@ func _build_ui() -> void:
 	content.add_theme_constant_override("separation", 11)
 	details.add_child(content)
 	_result_icon = TextureRect.new()
-	_result_icon.custom_minimum_size = Vector2(132, 132)
+	_result_icon.custom_minimum_size = Vector2(96, 96)  # fits a 1280x720 window (BUG-41)
 	_result_icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	_result_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	content.add_child(_result_icon)

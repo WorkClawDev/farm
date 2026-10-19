@@ -43,7 +43,7 @@ func _build_ui() -> void:
 	offset_right = -20
 	offset_bottom = -18
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	theme = UIStyles.active_theme()
+	UIStyles.follow_theme(self)
 
 	var panel := UIFactory.hud_panel()
 	panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -56,14 +56,9 @@ func _build_ui() -> void:
 	panel.add_child(content)
 
 	_icon_card = PanelContainer.new()
+	_icon_card.theme_type_variation = &"HUDIconCard"
 	_icon_card.custom_minimum_size = Vector2(54, 54)
 	_icon_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var card_style := StyleBoxFlat.new()
-	card_style.bg_color = Color(0.97, 0.91, 0.73, 0.96)
-	card_style.border_color = UIStyles.COLOR_GOLD
-	card_style.set_border_width_all(2)
-	card_style.set_corner_radius_all(10)
-	_icon_card.add_theme_stylebox_override("panel", card_style)
 	content.add_child(_icon_card)
 
 	tool_icon = TextureRect.new()
@@ -81,14 +76,12 @@ func _build_ui() -> void:
 	content.add_child(labels)
 
 	tool_name_label = Label.new()
-	tool_name_label.theme_type_variation = &"HUDText"
-	tool_name_label.add_theme_font_size_override("font_size", 18)
+	tool_name_label.theme_type_variation = &"HUDTitle"
 	labels.add_child(tool_name_label)
 
 	_hint_label = Label.new()
-	_hint_label.theme_type_variation = &"HUDText"
-	_hint_label.add_theme_font_size_override("font_size", 13)
-	_hint_label.modulate.a = 0.82
+	_hint_label.theme_type_variation = &"HUDSmall"
+	_hint_label.modulate.a = 0.88
 	_hint_label.text = "Q / R  切换工具"
 	labels.add_child(_hint_label)
 

@@ -63,7 +63,11 @@ func open(shop_id: String) -> void:
 	_update_balance()
 	if not shop_system.open_shop(shop_id):
 		_shop_name.text = "暂未营业"
-		_status.text = "商店现在没有营业，请在营业时间再来。"
+		var shop_data = shop_system.get_shop(shop_id)
+		if shop_data:
+			_status.text = "%s的营业时间是 %d:00–%d:00，现在还没开门。" % [shop_data.shop_name, shop_data.opening_hour, shop_data.closing_hour]
+		else:
+			_status.text = "商店现在没有营业，请在营业时间再来。"
 		_status.modulate = UIStyles.COLOR_DANGER
 		_clear_selection()
 		await get_tree().process_frame

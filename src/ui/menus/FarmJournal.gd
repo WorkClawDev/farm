@@ -137,6 +137,8 @@ func _build_ui() -> void:
 	layout.add_child(tabs)
 	for index in range(TABS.size()):
 		var tab := UIFactory.button(UIStyles.tr_key(TABS[index][1], TABS[index][2]), &"TabButton", Vector2(106, 44))
+		# toggle_mode so button_pressed sticks and the active tab draws its "pressed" (selected) style.
+		tab.toggle_mode = true
 		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tab.pressed.connect(_select_tab.bind(index))
 		tabs.add_child(tab)
@@ -167,7 +169,7 @@ func _select_tab(index: int) -> void:
 
 func _update_tab_state() -> void:
 	for index in range(_tab_buttons.size()):
-		_tab_buttons[index].button_pressed = index == _active_tab
+		_tab_buttons[index].set_pressed_no_signal(index == _active_tab)
 
 
 func _refresh_page() -> void:
@@ -229,24 +231,57 @@ func _build_inventory_page() -> Control:
 
 
 func _create_inventory_slot(index: int) -> Button:
-	var slot := UIFactory.button("", &"", Vector2(72, 72))
+	# Same look as the HUD hotbar (SlotButton etc. in GameTheme.tres): big centred
+	# icon, quantity in the bottom-right corner, hotbar key in the top-left, and the
+	# picked-up slot uses the theme's pressed/selected style instead of a gold tint.
+	var slot := UIFactory.button("", &"SlotButton", Vector2(72, 72))
 	slot.name = "Slot_%d" % index
 	slot.focus_mode = Control.FOCUS_ALL
+	slot.toggle_mode = true
+	slot.set_pressed_no_signal(index == _selected_slot)
 	var data = Inventory.get_slot(index)
 	if data and not data.is_empty():
-		slot.icon = ItemDatabase.load_icon_texture(data.item_id)
-		slot.expand_icon = true
-		slot.text = str(data.quantity) if data.quantity > 1 else ""
-		slot.tooltip_text = "%s × %d" % [Inventory.get_item_name(data.item_id), data.quantity]
+		# Icon as a child rect (like the HUD hotbar) so it leaves the bottom strip free
+		# for "×15" instead of filling the whole slot under it.
+		var icon := TextureRect.new()
+		icon.name = "Icon"
+		icon.texture = ItemDatabase.load_icon_texture(data.item_id)
+		icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		icon.offset_left = 12
+		icon.offset_top = 6
+		icon.offset_right = -12
+		icon.offset_bottom = -21
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		slot.add_child(icon)
+		slot.tooltip_text = UIFactory.slot_tooltip(Inventory.get_item_name(data.item_id), data.quantity)
+		if data.quantity > 1:
+			slot.add_child(_slot_corner_label("Quantity", "×%d" % data.quantity, &"SlotQuantityLabel", HORIZONTAL_ALIGNMENT_RIGHT, VERTICAL_ALIGNMENT_BOTTOM))
 	else:
-		slot.text = "·"
-		slot.modulate.a = 0.72
+		slot.tooltip_text = UIFactory.slot_tooltip("", 0)
 	if index < Inventory.HOTBAR_SIZE:
-		slot.tooltip_text = "[%d] %s" % [index + 1, slot.tooltip_text]
-	if index == _selected_slot:
-		slot.modulate = Color("#F2C14E")
+		var key := _slot_corner_label("Key", str(index + 1), &"SlotKeyLabel", HORIZONTAL_ALIGNMENT_LEFT, VERTICAL_ALIGNMENT_TOP)
+		key.modulate.a = 0.72
+		slot.add_child(key)
 	slot.pressed.connect(_on_inventory_slot_pressed.bind(index))
 	return slot
+
+
+func _slot_corner_label(label_name: String, text: String, variation: StringName, h: HorizontalAlignment, v: VerticalAlignment) -> Label:
+	var label := Label.new()
+	label.name = label_name
+	label.text = text
+	label.theme_type_variation = variation
+	label.horizontal_alignment = h
+	label.vertical_alignment = v
+	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	label.offset_left = 5
+	label.offset_top = 1
+	label.offset_right = -5
+	label.offset_bottom = 0
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return label
 
 
 func _populate_item_detail(container: VBoxContainer, index: int) -> void:
@@ -430,10 +465,18 @@ func _build_crafting_page() -> Control:
 		}.get(_workbench_type, _workbench_type))
 		list.add_child(UIFactory.title(station_name))
 		list.add_child(UIFactory.subtitle("仅显示可在这里制作的配方"))
+	if _selected_recipe.is_empty() and not recipes.is_empty():
+		_selected_recipe = recipes[0].id
 	for recipe in recipes:
 		var craftable := CraftingSystem.get_craftable_count(recipe.id)
-		var button := UIFactory.button("%s\n可制作 %d" % [recipe.name, craftable], &"", Vector2(390, 58))
+		# BUG-22/23: list rows, not green action buttons (UIThemeBridge used to turn every
+		# "可制作" row into a PrimaryButton). Selected row = pressed style; 0 craftable = muted.
+		var variation := &"ListItemButton" if craftable > 0 else &"ListItemButtonMuted"
+		var button := UIFactory.button("%s\n可制作 %d" % [recipe.name, craftable], variation, Vector2(390, 58))
+		button.name = "Recipe_%s" % recipe.id
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.toggle_mode = true
+		button.set_pressed_no_signal(recipe.id == _selected_recipe)
 		button.pressed.connect(_select_recipe.bind(recipe.id))
 		list.add_child(button)
 	var detail := UIFactory.paper_panel()
@@ -442,8 +485,6 @@ func _build_crafting_page() -> Control:
 	var content := VBoxContainer.new()
 	content.add_theme_constant_override("separation", 12)
 	detail.add_child(content)
-	if _selected_recipe.is_empty() and not recipes.is_empty():
-		_selected_recipe = recipes[0].id
 	var selected = CraftingSystem.get_recipe(_selected_recipe)
 	if selected:
 		content.add_child(UIFactory.title(selected.name))

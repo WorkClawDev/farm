@@ -17,6 +17,7 @@ var _active_tab := 0
 var _status: Label
 var _waiting_action: StringName = &""
 var _binding_buttons: Dictionary = {}
+var _save_queued := false
 
 
 func _ready() -> void:
@@ -25,6 +26,9 @@ func _ready() -> void:
 	refresh_theme()
 	_build_ui()
 	_show_tab(0)
+	# BUG-25: every option already applies live; now every change is also saved at once
+	# (high contrast used to look saved while other changes waited for "应用").
+	UserSettings.settings_changed.connect(_on_setting_changed)
 	await get_tree().process_frame
 	if not _tab_buttons.is_empty():
 		_tab_buttons[0].grab_focus()
@@ -40,6 +44,18 @@ func refresh_theme() -> void:
 
 func open() -> void:
 	show()
+
+
+func _on_setting_changed(_section: String, _key: String, _value: Variant) -> void:
+	if _save_queued:
+		return
+	_save_queued = true
+	_flush_save.call_deferred()
+
+
+func _flush_save() -> void:
+	_save_queued = false
+	UserSettings.save()
 
 
 func close() -> void:
@@ -91,6 +107,8 @@ func _build_ui() -> void:
 	body.add_child(tabs)
 	for index in range(TAB_IDS.size()):
 		var tab := UIFactory.button(UIStyles.tr_key(TAB_KEYS[index], TAB_IDS[index]), &"TabButton", Vector2(0, 50))
+		# toggle_mode so the current category keeps the TabButton "pressed" (selected) style (BUG-23).
+		tab.toggle_mode = true
 		tab.pressed.connect(_show_tab.bind(index))
 		tabs.add_child(tab)
 		_tab_buttons.append(tab)
@@ -117,7 +135,9 @@ func _build_ui() -> void:
 	var reset := UIFactory.button(UIStyles.tr_key("ui.common.reset", "恢复默认"), &"DangerButton", Vector2(150, 46))
 	reset.pressed.connect(_confirm_reset)
 	footer.add_child(reset)
-	var done := UIFactory.button(UIStyles.tr_key("ui.common.apply", "应用"), &"PrimaryButton", Vector2(150, 46))
+	# Changes are applied and saved immediately, so "完成" (not "应用") just closes
+	# the screen; it is still the screen's main action, so it is the green one (BUG-28).
+	var done := UIFactory.button(UIStyles.tr_key("ui.common.done", "完成"), &"PrimaryButton", Vector2(150, 46))
 	done.pressed.connect(_save_and_close)
 	footer.add_child(done)
 
@@ -270,7 +290,7 @@ func _show_tab(index: int) -> void:
 	_active_tab = wrapi(index, 0, _pages.size())
 	for page_index in range(_pages.size()):
 		_pages[page_index].visible = page_index == _active_tab
-		_tab_buttons[page_index].button_pressed = page_index == _active_tab
+		_tab_buttons[page_index].set_pressed_no_signal(page_index == _active_tab)
 
 
 func _begin_remap(action: StringName) -> void:

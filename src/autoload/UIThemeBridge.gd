@@ -103,10 +103,18 @@ func _style_button(button: Button) -> void:
 	for color_name in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_disabled_color"]:
 		button.remove_theme_color_override(color_name)
 	button.remove_theme_font_size_override("font_size")
+	# Only guess a variation for plain buttons. An explicit one (TabButton,
+	# SlotButton, PrimaryButton...) was chosen on purpose: the “制作” journal tab
+	# must stay a tab, not turn into a green PrimaryButton.
+	if not button.theme_type_variation.is_empty():
+		return
 	var semantic := (button.name + " " + button.text).to_lower()
 	if _contains_any(semantic, ["delete", "remove", "quit", "danger", "删除", "退出"]):
 		button.theme_type_variation = &"DangerButton"
-	elif _contains_any(semantic, ["confirm", "buy", "save", "upgrade", "cook", "craft", "购买", "保存", "升级", "制作", "烹饪", "确认"]):
+	elif _contains_any(semantic, ["confirm", "buy", "upgrade", "cook", "购买", "升级", "烹饪", "确认"]):
+		# "save"/"craft" (保存/制作) are no longer guessed: they matched card buttons and
+		# recipe rows ("可制作 0") and painted whole lists green (BUG-22). Screens that
+		# have one main save/craft action mark it PrimaryButton explicitly.
 		button.theme_type_variation = &"PrimaryButton"
 
 
@@ -121,6 +129,8 @@ func _style_plain_panel(panel: Panel) -> void:
 
 
 func _style_label(label: Label) -> void:
+	if not label.theme_type_variation.is_empty():
+		return  # e.g. save-card "Heading" uses CardTitleLabel on purpose.
 	var semantic := label.name.to_lower()
 	if _contains_any(semantic, ["title", "heading", "shopname", "itemname"]):
 		label.theme_type_variation = &"TitleLabel"
@@ -163,3 +173,6 @@ func _on_setting_changed(section: String, key: String, _value: Variant) -> void:
 		for root in get_tree().get_nodes_in_group("themed_ui_root"):
 			if root is Node:
 				style_scene(root)
+		for follower in get_tree().get_nodes_in_group("theme_followers"):
+			if follower is Control:
+				(follower as Control).theme = UIStyles.active_theme()

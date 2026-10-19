@@ -50,6 +50,9 @@ func _build_ui() -> void:
 
 func _add_button(parent: VBoxContainer, key: String, fallback: String, variation: StringName, callback: Callable) -> Button:
 	var button := UIFactory.button(UIStyles.tr_key(key, fallback), variation, Vector2(0, 48))
+	# Keep the variation chosen here. Without this UIThemeBridge sees "保存" in the
+	# text and turns it into a second green PrimaryButton next to "继续".
+	button.set_meta("preserve_theme_overrides", true)
 	button.pressed.connect(callback)
 	parent.add_child(button)
 	return button
