@@ -31,7 +31,7 @@ func _ready() -> void:
 	if interaction_area:
 		interaction_area.body_entered.connect(_on_body_entered)
 		interaction_area.body_exited.connect(_on_body_exited)
-	InteractPromptScript.attach(self, "收集", InteractPromptScript.sprite_top(self), _is_prompt_available, InteractPromptScript.PRIORITY_BUILDING)
+	InteractPromptScript.attach(self, "收集/喂养", InteractPromptScript.sprite_top(self), _is_prompt_available, InteractPromptScript.PRIORITY_BUILDING)
 	print("[Barn] Barn initialized")
 
 func _setup_sprite() -> void:
@@ -86,7 +86,7 @@ func _is_prompt_available() -> bool:
 func _on_body_entered(body: Node2D) -> void:
 	if body is Player:
 		body.building_in_range = self
-		print("[Barn] 按 E 键进入牛棚")
+		print("[Barn] 按 E 键：收集产品 / 喂养 / 查看牛棚（牛棚暂无室内）")
 
 func _on_body_exited(body: Node2D) -> void:
 	if body is Player and body.building_in_range == self:

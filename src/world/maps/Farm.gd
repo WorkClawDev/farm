@@ -17,6 +17,18 @@ const QuestTrackerScene = preload("res://src/ui/hud/QuestTracker.tscn")
 const FarmPlotScript = preload("res://src/world/objects/FarmPlot.gd")
 const DayNightTint = preload("res://src/world/maps/DayNightTint.gd")
 const VILLAGE_SCENE := "res://src/world/maps/Village.tscn"
+## BUG-55 debug: F9 spawns one of each farm animal (debug builds only).
+const DEBUG_SPAWN_ANIMALS_KEY := KEY_F9
+const DEBUG_ANIMAL_SCENES := [
+	"res://src/entities/animals/Chicken.tscn",
+	"res://src/entities/animals/Pig.tscn",
+	"res://src/entities/animals/Cow.tscn",
+	"res://src/entities/animals/Sheep.tscn",
+	"res://src/entities/animals/Horse.tscn",
+]
+## Open grass between the pond, the fenced field and the barn.
+const DEBUG_ANIMAL_AREA_CENTER := Vector2(640, 500)
+const DEBUG_ANIMAL_CLEARANCE := 40.0
 
 @onready var map_root: EditableMap2D = $FarmMap
 @onready var tile_map: MapTileLayer = map_root.get_layer(&"ground") as MapTileLayer
@@ -344,6 +356,16 @@ func _refresh_all_plots() -> void:
 		plot.refresh()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if (
+		OS.is_debug_build()
+		and event is InputEventKey
+		and event.pressed
+		and not event.echo
+		and (event as InputEventKey).keycode == DEBUG_SPAWN_ANIMALS_KEY
+	):
+		debug_spawn_animals()
+		get_viewport().set_input_as_handled()
+		return
 	if (event.is_action_pressed("inventory") or event.is_action_pressed("journal")) and not GameManager.is_paused():
 		var context := {}
 		if event.is_action_pressed("inventory"):
@@ -384,3 +406,59 @@ func get_plantable_soils() -> Array[Soil]:
 		if soil.can_plant():
 			result.append(soil)
 	return result
+
+
+## BUG-55: debug-only animal spawner (no save data or shop sells animals yet).
+## Returns the spawned animals so tests can inspect them.
+func debug_spawn_animals() -> Array[Animal]:
+	var spawned: Array[Animal] = []
+	if not OS.is_debug_build() or layout_root == null:
+		return spawned
+	var taken: Array[Vector2] = []
+	for existing in get_tree().get_nodes_in_group("debug_spawned_animal"):
+		if existing is Node2D:
+			taken.append((existing as Node2D).global_position)
+	for scene_path in DEBUG_ANIMAL_SCENES:
+		var packed := load(scene_path) as PackedScene
+		var animal := packed.instantiate() as Animal if packed else null
+		if animal == null:
+			continue
+		var spot := _find_debug_animal_spot(taken)
+		if spot == Vector2.INF:
+			animal.free()
+			continue
+		taken.append(spot)
+		animal.add_to_group("debug_spawned_animal")
+		layout_root.add_child(animal)
+		animal.set_home_position(spot)
+		animal.go_outside()
+		spawned.append(animal)
+	print("[Farm] DEBUG F9 spawned %d animals" % spawned.size())
+	_show_notification("调试：生成了 %d 只动物" % spawned.size())
+	return spawned
+
+
+func _find_debug_animal_spot(taken: Array[Vector2]) -> Vector2:
+	var space := get_world_2d().direct_space_state
+	var probe := CircleShape2D.new()
+	probe.radius = DEBUG_ANIMAL_CLEARANCE
+	var query := PhysicsShapeQueryParameters2D.new()
+	query.shape = probe
+	query.collision_mask = PHYSICS_LAYERS.WORLD | PHYSICS_LAYERS.PLAYER | PHYSICS_LAYERS.NPC
+	query.collide_with_areas = false
+	for ring in range(0, 6):
+		var count := maxi(1, ring * 8)
+		for i in range(count):
+			var angle := TAU * float(i) / float(count)
+			var spot := DEBUG_ANIMAL_AREA_CENTER + Vector2(cos(angle), sin(angle)) * ring * 72.0
+			var clear := true
+			for other in taken:
+				if other.distance_to(spot) < DEBUG_ANIMAL_CLEARANCE * 2.0:
+					clear = false
+					break
+			if not clear:
+				continue
+			query.transform = Transform2D(0.0, spot)
+			if space.intersect_shape(query, 1).is_empty():
+				return spot
+	return Vector2.INF

@@ -408,6 +408,28 @@ func _exercise_collision(instance: Node, scene_path: String) -> void:
 			"Farm pond remains fishable from the shoreline",
 			pond_fishing_spot != null and bool(pond_fishing_spot.get("is_player_in_range"))
 		)
+		# BUG-55: debug F9 spawner puts one of each animal on free farm ground.
+		player.global_position = Vector2(300, 140)
+		await get_tree().physics_frame
+		var debug_animals: Array = instance.call("debug_spawn_animals")
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+		_record("Debug F9 spawns chicken/pig/cow/sheep/horse on the farm", debug_animals.size() == 5)
+		var debug_clear := not debug_animals.is_empty()
+		var debug_types: Array[String] = []
+		for debug_animal in debug_animals:
+			debug_types.append(str(debug_animal.animal_type))
+			if debug_animal.test_move(debug_animal.global_transform, Vector2.ZERO):
+				debug_clear = false
+		_record("Debug-spawned animals are not stuck in collision", debug_clear)
+		_record(
+			"Debug spawner covers every animal type",
+			debug_types.has("chicken") and debug_types.has("pig") and debug_types.has("cow")
+				and debug_types.has("sheep") and debug_types.has("horse")
+		)
+		for debug_animal in debug_animals:
+			debug_animal.queue_free()
+		await get_tree().physics_frame
 	elif scene_path == "res://src/world/maps/PlayerHouse.tscn":
 		var kitchen := instance.get_node_or_null("InteractionZones/Kitchen")
 		if kitchen:
