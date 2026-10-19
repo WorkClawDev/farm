@@ -98,6 +98,8 @@ func _test_modal_pause_and_focus() -> void:
 	_record("UIManager 可打开主模态", screen != null and UIManager.is_screen_open("settings"))
 	_record("主模态打开后游戏暂停", GameManager.current_state == GameManager.GameState.PAUSED and get_tree().paused)
 	_record("设置页存在可达焦点", get_viewport().gui_get_focus_owner() != null)
+	var done_buttons := screen.find_children("*", "Button", true, false).filter(func(b): return b.text == "完成")
+	_record("设置页“完成”是绿色主按钮（BUG-28）", done_buttons.size() == 1 and done_buttons[0].theme_type_variation == &"PrimaryButton")
 	UIManager.close_top_screen()
 	await get_tree().process_frame
 	_record("最后模态关闭后恢复游戏", GameManager.current_state == GameManager.GameState.PLAYING and not get_tree().paused)
@@ -223,6 +225,14 @@ func _test_save_summaries() -> void:
 	_record("存档摘要保持三个槽位", summaries.size() == SaveManager.MAX_SAVE_SLOTS)
 	var latest := SaveManager.get_latest_save_info()
 	_record("最近存档查询安全", latest is Dictionary)
+	# saved_at is UTC unix time; the card shows local time (03:52 UTC = 11:52 in UTC+8).
+	_record("存档时间按 UTC+8 显示为本地时间", UIStyles.format_timestamp(1792381920, 480) == "2026-10-19  11:52")
+	_record("存档时间按 UTC 显示不变", UIStyles.format_timestamp(1792381920, 0) == "2026-10-19  03:52")
+	_record("存档时间跨日换算正确（UTC-5）", UIStyles.format_timestamp(1792381920, -300) == "2026-10-18  22:52")
+	var now_local := Time.get_datetime_dict_from_system()
+	var now_text := UIStyles.format_timestamp(int(Time.get_unix_time_from_system()))
+	print("[UI] save time now=%s system_local=%02d:%02d tz=%s" % [now_text, int(now_local.hour), int(now_local.minute), Time.get_time_zone_from_system()])
+	_record("存档时间用系统时区（与本机时钟一致）", now_text.ends_with("%02d:%02d" % [int(now_local.hour), int(now_local.minute)]) or now_text.ends_with("%02d:%02d" % [int(now_local.hour), (int(now_local.minute) + 1) % 60]))
 
 
 func _test_dialogue_long_text() -> void:
@@ -232,7 +242,11 @@ func _test_dialogue_long_text() -> void:
 	await get_tree().process_frame
 	var long_text := "这是一段用于验证未来本地化扩展的长文本。".repeat(16)
 	dialogue.show_dialogue("测试角色", [long_text])
+	var key := InputManager.get_action_prompt(&"interact")
+	var typing_hint := dialogue.continue_indicator.text
+	_record("打字中只提示一次“%s 显示全文”（BUG-34）" % key, dialogue.is_typing and dialogue.continue_indicator.visible and typing_hint == "%s 显示全文" % key)
 	dialogue._finish_typewriter()
+	_record("显示完后只提示“%s 继续”（BUG-34）" % key, dialogue.continue_indicator.visible and dialogue.continue_indicator.text == "%s 继续" % key)
 	_record("长对话可完整显示", dialogue.text_label.text.length() == long_text.length())
 	dialogue.queue_free()
 	await get_tree().process_frame

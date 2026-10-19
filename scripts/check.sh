@@ -202,6 +202,30 @@ fi
 
 echo ""
 
+echo -e "${CYAN}========================================${NC}"
+echo -e "${CYAN}  Source load check (every src/ .gd/.tscn)${NC}"
+echo -e "${CYAN}========================================${NC}"
+
+LOAD_ALL_LOG="/tmp/godot_load_all_$$.log"
+run_godot "$LOAD_ALL_LOG" --headless --path "$PROJECT_DIR" --script res://tools/check_load_all.gd
+
+# Leak reports printed at engine exit are not load failures.
+LOAD_ALL_ERRORS=$(grep -E "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call|^ERROR:|FATAL|failed to load|Failed to|\[LOAD FAIL\]" "$LOAD_ALL_LOG" 2>/dev/null \
+    | grep -cvE "resources still in use at exit|RID allocations of type" || true)
+if [ "${LOAD_ALL_ERRORS:-0}" -gt 0 ]; then
+    err "Source load check emitted ${LOAD_ALL_ERRORS} errors"
+    grep -E "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call|^ERROR:|FATAL|failed to load|Failed to|\[LOAD FAIL\]" "$LOAD_ALL_LOG" \
+        | grep -vE "resources still in use at exit|RID allocations of type" | sed 's/^/    /' | head -30
+elif grep -q "LOAD CHECK PASSED" "$LOAD_ALL_LOG"; then
+    ok "Source load check ($(sed -n 's/^LOAD CHECK: \([0-9]*\) scripts, \([0-9]*\) scenes.*/\1 scripts, \2 scenes/p' "$LOAD_ALL_LOG"))"
+else
+    err "Source load check did not finish"
+    tail -20 "$LOAD_ALL_LOG" | sed 's/^/    /'
+fi
+rm -f "$LOAD_ALL_LOG"
+
+echo ""
+
 RUN_LOG="/tmp/godot_check_$$.log"
 run_godot "$RUN_LOG" --no-window --headless --quit --path "$PROJECT_DIR"
 
@@ -322,6 +346,50 @@ else
     err "UI system integration test failed"
     grep -E "\[FAIL\]|UI TESTS FAILED" "$UI_TEST_LOG" | sed 's/^/    /' | head -30
 fi
+
+echo ""
+echo -e "${CYAN}========================================${NC}"
+echo -e "${CYAN}  Scene switch cycle test${NC}"
+echo -e "${CYAN}========================================${NC}"
+
+CYCLE_TEST_LOG="/tmp/godot_cycles_$$.log"
+run_godot "$CYCLE_TEST_LOG" --headless --path "$PROJECT_DIR" --script res://tests/integration/test_scene_cycles.gd
+
+CYCLE_ERRORS=$(grep -cE "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call|^ERROR:|FATAL|failed to load|Failed to|handle_crash" "$CYCLE_TEST_LOG" 2>/dev/null || true)
+if [ "${CYCLE_ERRORS:-0}" -gt 0 ]; then
+    err "Scene switch cycles emitted ${CYCLE_ERRORS} script/runtime errors"
+    grep -E "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call|^ERROR:|FATAL|failed to load|Failed to|handle_crash" \
+        "$CYCLE_TEST_LOG" | sed 's/^/    /' | head -30
+elif grep -q "SCENE CYCLE TESTS PASSED" "$CYCLE_TEST_LOG"; then
+    CYCLE_PASSED=$(sed -n 's/.*RESULTS: \([0-9][0-9]*\)\/.*/\1/p' "$CYCLE_TEST_LOG" | head -1)
+    ok "Scene switch cycles passed (${CYCLE_PASSED}/${CYCLE_PASSED})"
+else
+    err "Scene switch cycle test failed"
+    grep -E "\[FAIL\]|SCENE CYCLE TESTS FAILED" "$CYCLE_TEST_LOG" | sed 's/^/    /' | head -30
+fi
+rm -f "$CYCLE_TEST_LOG"
+
+echo ""
+echo -e "${CYAN}========================================${NC}"
+echo -e "${CYAN}  Map points + exit walk test${NC}"
+echo -e "${CYAN}========================================${NC}"
+
+WALK_TEST_LOG="/tmp/godot_map_walk_$$.log"
+run_godot "$WALK_TEST_LOG" --headless --path "$PROJECT_DIR" --script res://tests/integration/test_map_walk.gd
+
+WALK_ERRORS=$(grep -cE "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call|^ERROR:|FATAL|failed to load|Failed to|handle_crash" "$WALK_TEST_LOG" 2>/dev/null || true)
+if [ "${WALK_ERRORS:-0}" -gt 0 ]; then
+    err "Map walk test emitted ${WALK_ERRORS} script/runtime errors"
+    grep -E "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call|^ERROR:|FATAL|failed to load|Failed to|handle_crash" \
+        "$WALK_TEST_LOG" | sed 's/^/    /' | head -30
+elif grep -q "MAP WALK TESTS PASSED" "$WALK_TEST_LOG"; then
+    WALK_PASSED=$(sed -n 's/.*RESULTS: \([0-9][0-9]*\)\/.*/\1/p' "$WALK_TEST_LOG" | head -1)
+    ok "Map points + exits passed (${WALK_PASSED}/${WALK_PASSED})"
+else
+    err "Map walk test failed"
+    grep -E "\[FAIL\]|MAP WALK TESTS FAILED" "$WALK_TEST_LOG" | sed 's/^/    /' | head -30
+fi
+rm -f "$WALK_TEST_LOG"
 
 echo ""
 echo -e "${BLUE}========================================${NC}"

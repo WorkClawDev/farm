@@ -39,6 +39,25 @@ func _ready() -> void:
 	print("[AudioManager] Initialized")
 	_setup_players()
 
+## Quitting while a track plays left its Ogg playback referenced in the audio
+## server ("2 resources still in use at exit"). The server drops a stopped
+## playback on its next mix, so stop early (quit_game waits a few frames).
+func release_streams() -> void:
+	if _music_tween and _music_tween.is_valid():
+		_music_tween.kill()
+	_music_tween = null
+	for player in [music_player, ambient_player]:
+		if is_instance_valid(player):
+			player.stop()
+			player.stream = null
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST:
+		release_streams()
+
+func _exit_tree() -> void:
+	release_streams()
+
 func _setup_players() -> void:
 	# 设置音乐播放器
 	music_player.bus = "Music"

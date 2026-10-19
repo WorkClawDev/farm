@@ -58,6 +58,15 @@ func _ready() -> void:
 	await _exercise_tool_vs_hotbar_dispatch()
 	await _exercise_tool_selection_across_scenes()
 	await _exercise_json_save_compatibility()
+	await _exercise_npc_dialogue_reentrancy()
+	await _exercise_morning_npcs()
+	await _exercise_npc_go_home()
+	await _exercise_dialogue_close_real_keys()
+	await _exercise_map_menu_keys()
+	await _exercise_idle_breathing()
+	await _exercise_interact_prompt()
+	await _exercise_hoe_facing_and_swing_lock()
+	await _exercise_npc_crowd_squeeze()
 	_finish()
 
 
@@ -968,6 +977,818 @@ func _is_valid_json(path: String) -> bool:
 		return false
 	var json := JSON.new()
 	return json.parse(file.get_as_text()) == OK
+
+
+func _press_action(action: StringName, frames := 3) -> void:
+	var down := InputEventAction.new()
+	down.action = action
+	down.pressed = true
+	Input.parse_input_event(down)
+	for i in frames:
+		await get_tree().physics_frame
+	var up := InputEventAction.new()
+	up.action = action
+	up.pressed = false
+	Input.parse_input_event(up)
+	for i in 2:
+		await get_tree().physics_frame
+
+
+## BUG-20: talking to the mayor recursed start_dialogue <-> EventBus.dialogue_started
+## until the stack overflowed (the dialogue box cleared the NPC's shared line array).
+func _exercise_npc_dialogue_reentrancy() -> void:
+	print("------------------------------------------------------------")
+	print("BUG-20 村长对话不递归、能正常结束、结束后不重开、Esc/J 可用")
+	DialogueManager.reset()
+	TimeManager.reset()
+	TimeManager.current_time = 10.0
+	var started := [0]
+	var bus_started := [0]
+	var on_started := func(_id: String): started[0] += 1
+	var on_bus := func(_id: String): bus_started[0] += 1
+	DialogueManager.dialogue_started.connect(on_started)
+	EventBus.social.dialogue_started.connect(on_bus)
+
+	# Direct guard checks: an empty dialogue is refused, an echo while talking is ignored.
+	DialogueManager._dialogue_data["bug20_empty"] = {"only": {"id": "bug20_empty", "priority": 0, "conditions": [], "lines": []}}
+	_record("空对话不会开始（不递归）", DialogueManager.start_dialogue("bug20_empty") == false and not DialogueManager.is_in_dialogue() and started[0] == 0)
+	DialogueManager._dialogue_data.erase("bug20_empty")
+
+	var village := (load("res://src/world/maps/Village.tscn") as PackedScene).instantiate()
+	add_child(village)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	var player := village.find_child("Player", true, false) as Player
+	var mayor := village.get_node_or_null("NPCs/MayorThomas") as NPC
+	var box: DialogueBox = DialogueManager._dialogue_box
+	_record("对话用例有玩家、村长和对话框", player != null and mayor != null and box != null)
+	if player == null or mayor == null or box == null:
+		village.queue_free()
+		return
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	if mayor.schedule:
+		mayor.schedule.update(10.0, TimeManager.current_day, TimeManager.current_season)
+	var mayor_lines: Array = DialogueManager._dialogue_data["mayor"]["first_meeting"]["lines"]
+	var line_count := mayor_lines.size()
+	player.global_position = mayor.global_position + Vector2(0, 36)
+	player.register_nearby_npc(mayor)
+
+	await _press_action(&"interact")
+	_record("按交互键开始村长对话一次", DialogueManager.is_in_dialogue() and started[0] == 1 and bus_started[0] <= 2)
+	EventBus.social.dialogue_started.emit(mayor.npc_id)
+	_record("对话中重复的开始事件被忽略", started[0] == 1 and DialogueManager.is_in_dialogue())
+
+	var blank_pages := 0
+	var steps := 0
+	while box.visible and steps < 30:
+		steps += 1
+		box._finish_typewriter()
+		if box.text_label.text.strip_edges().is_empty():
+			blank_pages += 1
+		await _press_action(&"interact")
+	_record("村长对话能正常结束", not box.visible and not DialogueManager.is_in_dialogue() and steps < 30)
+	_record("对话里没有空白页", blank_pages == 0)
+	_record("对话数据没有被清空", mayor_lines.size() == line_count and line_count > 0)
+	_record("选项分支生效（已认识村长）", bool(DialogueManager._player_flags.get("met_mayor", false)))
+	_record("对话结束后恢复玩家控制", GameManager.current_state == GameManager.GameState.PLAYING)
+	for i in 4:
+		await get_tree().physics_frame
+	_record("结束对话的那次按键不会重新开始对话/打开商店", started[0] == 1 and not DialogueManager.is_in_dialogue() and not UIManager.is_screen_open("shop"))
+
+	await _press_action(&"interact")
+	_record("再次交互能开始新对话且有内容", DialogueManager.is_in_dialogue() and started[0] == 2 and box.visible and not box.dialogue_lines.is_empty())
+	DialogueManager.force_end_dialogue()
+	await get_tree().physics_frame
+
+	await _press_action(&"pause")
+	var village_pause := village.get("pause_menu") as Control
+	_record("对话后 Esc 能打开暂停菜单", GameManager.is_paused() and village_pause != null and village_pause.visible)
+	await _press_action(&"pause")
+	_record("再按 Esc 关闭暂停菜单", not GameManager.is_paused() and not get_tree().paused)
+	await _press_action(&"journal")
+	_record("对话后 J 能打开手册", UIManager.is_screen_open("journal"))
+	UIManager.close_all()
+	await get_tree().process_frame
+
+	DialogueManager.dialogue_started.disconnect(on_started)
+	EventBus.social.dialogue_started.disconnect(on_bus)
+	player.unregister_nearby_npc(mayor)
+	village.queue_free()
+	await get_tree().process_frame
+	DialogueManager.reset()
+	GameManager.is_game_active = false
+
+
+## BUG-31: from the 6:00 day start until ~9:00 the schedules said "sleep" while the NPCs
+## stand in the village, so E did nothing (no dialogue, no shop).
+func _exercise_morning_npcs() -> void:
+	print("------------------------------------------------------------")
+	print("BUG-31 早上 6:00-9:00 NPC 可以对话、商人可以开店；夜里按 E 有提示")
+	DialogueManager.reset()
+	TimeManager.reset()
+	var village := (load("res://src/world/maps/Village.tscn") as PackedScene).instantiate()
+	add_child(village)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	var player := village.find_child("Player", true, false) as Player
+	var npcs: Array = village.get_node("NPCs").get_children().filter(func(n): return n is NPC)
+	for hour in [6.0, 6.5, 7.25, 8.5]:
+		var blocked: Array[String] = []
+		for npc in npcs:
+			if npc.schedule:
+				npc.schedule.update(hour, TimeManager.current_day, TimeManager.current_season)
+			if not npc.can_interact():
+				blocked.append(npc.npc_name)
+		_record("%.2f 点村里 %d 个 NPC 都能交互%s" % [hour, npcs.size(), "" if blocked.is_empty() else "（不能：%s）" % ", ".join(blocked)], blocked.is_empty() and npcs.size() >= 5)
+
+	TimeManager.current_time = 6.5
+	var mayor := village.get_node("NPCs/MayorThomas") as NPC
+	var shop := village.get_node("NPCs/Maria") as NPC
+	var started := [0]
+	var on_started := func(_id: String): started[0] += 1
+	DialogueManager.dialogue_started.connect(on_started)
+	player.global_position = mayor.global_position + Vector2(0, 36)
+	player.register_nearby_npc(mayor)
+	await _press_action(&"interact")
+	_record("6:30 按 E 和村长对话", DialogueManager.is_in_dialogue() and started[0] == 1)
+	DialogueManager.force_end_dialogue()
+	player.unregister_nearby_npc(mayor)
+	for i in 4:
+		await get_tree().physics_frame
+	player.global_position = shop.global_position + Vector2(0, 36)
+	player.register_nearby_npc(shop)
+	await _press_action(&"interact")
+	_record("6:30 按 E 商人打开商店", UIManager.is_screen_open("shop"))
+	UIManager.close_all()
+	shop.end_interaction()
+	player.unregister_nearby_npc(shop)
+	for i in 4:
+		await get_tree().physics_frame
+
+	# Night: still asleep by schedule, but E now explains instead of doing nothing.
+	TimeManager.current_time = 23.0
+	mayor.schedule.update(23.0, TimeManager.current_day, TimeManager.current_season)
+	player.global_position = mayor.global_position + Vector2(0, 36)
+	player.register_nearby_npc(mayor)
+	await _press_action(&"interact")
+	var rest_toast := false
+	if UIManager._toast_root:
+		for toast in UIManager._toast_root.get_children():
+			rest_toast = rest_toast or str(toast.get_meta("toast_text", "")).contains("正在休息")
+	_record("23:00 村长在休息：按 E 不开对话但有提示", not DialogueManager.is_in_dialogue() and started[0] == 1 and rest_toast)
+	player.unregister_nearby_npc(mayor)
+	DialogueManager.dialogue_started.disconnect(on_started)
+	village.queue_free()
+	await get_tree().process_frame
+	DialogueManager.reset()
+	TimeManager.reset()
+	GameManager.is_game_active = false
+
+
+## Evening sleep: walk to the own door, then rest hidden (no collision / interaction /
+## prompt); entering during sleep time spawns them hidden; at wake-up they reappear at the door.
+func _exercise_npc_go_home() -> void:
+	print("------------------------------------------------------------")
+	print("NPC 晚上回家：走到自家门口后隐藏，进村时已在睡觉则直接隐藏，起床在门口出现")
+	DialogueManager.reset()
+	TimeManager.reset()
+	TimeManager.current_time = 19.9
+	var village := (load("res://src/world/maps/Village.tscn") as PackedScene).instantiate()
+	add_child(village)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	var player := village.find_child("Player", true, false) as Player
+	player.global_position = Vector2(1100, 800)  # out of the way
+	var walkers := {
+		"Iron": Vector2(600, 350),   # blacksmith_tom, tavern until 20:00
+		"John": Vector2(600, 350),   # farmer_joe, tavern until 20:00
+		"Lily": Vector2(180, 520),   # doctor_mary, west side until 20:00
+	}
+	var npcs := {}
+	for node_name in walkers:
+		var npc := village.get_node("NPCs/%s" % node_name) as NPC
+		npc.global_position = walkers[node_name]
+		npcs[node_name] = npc
+	await get_tree().physics_frame
+	_record("19:54 三人都在村里、可见、未休息", npcs.values().all(func(n): return n.visible and not n.is_resting and not n.is_going_home))
+
+	TimeManager.current_time = 20.0
+	var start_distance := {}
+	for node_name in npcs:
+		var door: Dictionary = npcs[node_name]._door_here()
+		start_distance[node_name] = npcs[node_name].global_position.distance_to(door["position"])
+	for i in 30:
+		await get_tree().physics_frame
+	var walking_home := true
+	for node_name in npcs:
+		var npc: NPC = npcs[node_name]
+		walking_home = walking_home and npc.is_going_home and npc.visible and npc.is_walking
+	_record("20:00 汤姆、乔、玛丽开始走回家（仍可见）", walking_home)
+
+	var frames := 0
+	while frames < 1500 and not npcs.values().all(func(n): return n.is_resting):
+		frames += 1
+		await get_tree().physics_frame
+	await get_tree().physics_frame
+	for node_name in npcs:
+		var npc: NPC = npcs[node_name]
+		var door: Vector2 = npc._door_here()["position"]
+		var at_door := npc.global_position.distance_to(door) < 8.0
+		_record("%s 走到门口 %s 后休息：隐藏、无碰撞、不检测玩家（%.1f 秒）" % [npc.npc_name, door, frames / 60.0],
+			npc.is_resting and at_door and not npc.visible and npc.collision_shape.disabled and not npc.interaction_area.monitoring)
+
+	# E does nothing on a resting NPC (even if the player still had it registered)
+	var tom: NPC = npcs["Iron"]
+	var started := [0]
+	var on_started := func(_id: String): started[0] += 1
+	DialogueManager.dialogue_started.connect(on_started)
+	player.global_position = tom.global_position + Vector2(40, 0)  # beside the door (below it is the mine exit)
+	player.register_nearby_npc(tom)
+	await _press_action(&"interact")
+	var toast := false
+	if UIManager._toast_root:
+		for t in UIManager._toast_root.get_children():
+			toast = toast or str(t.get_meta("toast_text", "")).contains(tom.npc_name)
+	var prompt = tom.get_node("InteractPrompt")
+	_record("休息中的 NPC：按 E 没反应（无对话、无提示），气泡不显示", started[0] == 0 and not DialogueManager.is_in_dialogue() and not toast and InteractPrompt.current() != prompt and not prompt.is_visible_in_tree())
+	player.unregister_nearby_npc(tom)
+	DialogueManager.dialogue_started.disconnect(on_started)
+
+	# Wake up at 6:00 next morning: back at the door, solid and talkable again.
+	player.global_position = Vector2(1100, 800)
+	TimeManager.current_time = 6.0
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var woke := true
+	for node_name in npcs:
+		var npc: NPC = npcs[node_name]
+		var door: Vector2 = npc._door_here()["position"]
+		woke = woke and not npc.is_resting and npc.visible and npc.global_position.distance_to(door) < 6.0 and not npc.collision_shape.disabled and npc.interaction_area.monitoring and npc.can_interact()
+	_record("6:00 起床：在自家门口重新出现，可碰撞、可交互", woke)
+	village.queue_free()
+	await get_tree().process_frame
+
+	# Entering the village while everyone is asleep: hidden from the first frame.
+	TimeManager.current_time = 23.0
+	var night := (load("res://src/world/maps/Village.tscn") as PackedScene).instantiate()
+	add_child(night)
+	await get_tree().process_frame
+	var all_npcs: Array = night.get_node("NPCs").get_children().filter(func(n): return n is NPC)
+	var hidden := all_npcs.filter(func(n): return n.is_resting and not n.visible)
+	var at_doors := all_npcs.filter(func(n): return n._door_here().is_empty() or n.global_position.distance_to(n._door_here()["position"]) < 1.0)
+	_record("23:00 进村：%d/%d 个 NPC 直接在家休息（隐藏，位置在门口）" % [hidden.size(), all_npcs.size()], all_npcs.size() >= 5 and hidden.size() == all_npcs.size() and at_doors.size() == all_npcs.size())
+	night.queue_free()
+	await get_tree().process_frame
+	TimeManager.reset()
+	GameManager.is_game_active = false
+
+
+## BUG-26: the real E/Space key press that closes a dialogue restarted it. xdotool-style
+## taps deliver press and release in the same frame, so "wait until released" never saw
+## the key held and the player still got is_action_just_pressed. Drive real key events.
+func _exercise_dialogue_close_real_keys() -> void:
+	print("------------------------------------------------------------")
+	print("BUG-26 真实按键（E / Space，按下松开同帧/隔帧/长按）结束对话不会重新开始对话")
+	DialogueManager.reset()
+	TimeManager.reset()
+	TimeManager.current_time = 10.0
+	var village := (load("res://src/world/maps/Village.tscn") as PackedScene).instantiate()
+	add_child(village)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	var player := village.find_child("Player", true, false) as Player
+	var mayor := village.get_node_or_null("NPCs/MayorThomas") as NPC
+	var box: DialogueBox = DialogueManager._dialogue_box
+	_record("真实按键用例有玩家、村长和对话框", player != null and mayor != null and box != null)
+	if player == null or mayor == null or box == null:
+		village.queue_free()
+		return
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	if mayor.schedule:
+		mayor.schedule.update(10.0, TimeManager.current_day, TimeManager.current_season)
+	# Only the mayor takes part: park the other villagers (the shopkeeper wandering by
+	# would otherwise open the shop and pause the game).
+	for npc in village.get_node("NPCs").get_children():
+		if npc != mayor and npc is Node2D:
+			npc.process_mode = Node.PROCESS_MODE_DISABLED
+			(npc as Node2D).global_position += Vector2(4000, 4000)
+	var started := [0]
+	var on_started := func(_id: String): started[0] += 1
+	DialogueManager.dialogue_started.connect(on_started)
+	for key in [KEY_E, KEY_SPACE]:
+		for hold in [0, 1, 6]:  # 0 = press and release in the same frame
+			player.global_position = mayor.global_position + Vector2(0, 36)
+			player.register_nearby_npc(mayor)
+			UIManager.close_all()
+			get_tree().paused = false
+			GameManager.current_state = GameManager.GameState.PLAYING
+			started[0] = 0
+			await _tap_key(key, hold)
+			var opened := DialogueManager.is_in_dialogue()
+			var presses := 0
+			while (box.visible or DialogueManager.is_in_dialogue()) and presses < 40:
+				presses += 1
+				box._finish_typewriter()
+				await get_tree().process_frame
+				await _tap_key(key, hold)
+			for i in 8:
+				await get_tree().physics_frame
+			var label := "%s 按住 %d 帧" % [OS.get_keycode_string(key), hold]
+			_record("%s：对话开始且关闭一次，只开始 1 次（实际 %d 次）" % [label, started[0]],
+				opened and started[0] == 1 and not DialogueManager.is_in_dialogue() and not box.visible
+				and GameManager.current_state == GameManager.GameState.PLAYING)
+			DialogueManager.force_end_dialogue()
+			await get_tree().physics_frame
+	DialogueManager.dialogue_started.disconnect(on_started)
+	# BUG-27: the dialogue box speaker must match the NPC's own name (data/npcs.json).
+	var mismatched: Array[String] = []
+	for npc in village.get_node("NPCs").get_children():
+		if npc is NPC:
+			var dialogue_id: String = DialogueManager.DIALOGUE_ID_ALIASES.get(npc.npc_id, npc.npc_id)
+			if DialogueManager._npc_data.has(dialogue_id) and DialogueManager._get_npc_name(dialogue_id) != npc.npc_name:
+				mismatched.append("%s≠%s" % [npc.npc_name, DialogueManager._get_npc_name(dialogue_id)])
+	_record("对话框里的 NPC 名字和 NPC 本身一致 %s" % [mismatched], mismatched.is_empty())
+	player.unregister_nearby_npc(mayor)
+	village.queue_free()
+	await get_tree().process_frame
+	DialogueManager.reset()
+	GameManager.is_game_active = false
+
+
+## Esc / J did nothing outside Farm and Village (tester round 3 follow-up).
+func _exercise_map_menu_keys() -> void:
+	print("------------------------------------------------------------")
+	print("森林/海滩/矿洞/玩家房屋：Esc 打开/关闭暂停菜单，J 打开手册")
+	for path in ["res://src/world/maps/Forest.tscn", "res://src/world/maps/Beach.tscn", "res://src/world/maps/Mine.tscn", "res://src/world/maps/PlayerHouse.tscn"]:
+		var map := (load(path) as PackedScene).instantiate()
+		add_child(map)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		GameManager.is_game_active = true
+		GameManager.current_state = GameManager.GameState.PLAYING
+		get_tree().paused = false
+		var label: String = (path as String).get_file().get_basename()
+		var handler := map.find_child("MapMenuInput", true, false)
+		var menu: Control = handler.get("pause_menu") if handler else null
+		await _press_action(&"pause")
+		_record("%s：Esc 打开暂停菜单" % label, GameManager.is_paused() and menu != null and menu.visible)
+		await _press_action(&"pause")
+		_record("%s：再按 Esc 关闭暂停菜单" % label, not GameManager.is_paused() and not get_tree().paused and menu != null and not menu.visible)
+		await _press_action(&"journal")
+		_record("%s：J 打开手册" % label, UIManager.is_screen_open("journal"))
+		UIManager.close_all()
+		await get_tree().process_frame
+		map.queue_free()
+		await get_tree().process_frame
+	GameManager.is_game_active = false
+
+
+## Idle breathing is visual only: feet stay anchored, body/collision don't move,
+## and it stops cleanly when walking, swinging a tool or in a dialogue.
+func _exercise_idle_breathing() -> void:
+	print("------------------------------------------------------------")
+	print("玩家站立呼吸动画：只动贴图、脚不离地，走路/挥工具/对话时停止复原")
+	TimeManager.reset()
+	Inventory.reset_with_starter_items()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	UserSettings.set_value("accessibility", "reduce_motion", false)
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	_record("呼吸用例有玩家", player != null)
+	if player == null:
+		farm.queue_free()
+		return
+	GameManager.current_state = GameManager.GameState.PLAYING
+	var body_pos := player.global_position
+	var shape := player.get_node("CollisionShape2D") as CollisionShape2D
+	var shape_pos := shape.position
+	var max_k := 0.0
+	var feet_ok := true
+	var t_end := Time.get_ticks_msec() + 1300
+	while Time.get_ticks_msec() < t_end:
+		await get_tree().process_frame
+		var k := player.sprite.scale.y / Player.SPRITE_BASE_SCALE.y - 1.0
+		max_k = maxf(max_k, k)
+		var feet := player.sprite.position.y + Player.SPRITE_FEET_Y * player.sprite.scale.y
+		feet_ok = feet_ok and absf(feet - Player.SPRITE_FEET_Y * Player.SPRITE_BASE_SCALE.y) < 0.01 and player.sprite.scale.x == Player.SPRITE_BASE_SCALE.x
+	_record("站着不动时有呼吸（最大拉伸 %.3f）" % max_k, player.is_breathing() and max_k > 0.015 and max_k <= Player.BREATH_AMOUNT + 0.0001)
+	_record("呼吸时脚底位置不变、只拉高不变宽", feet_ok)
+	_record("呼吸不移动角色本体和碰撞体", player.global_position.distance_to(body_pos) < 0.01 and shape.position == shape_pos)
+	await _hold_action(&"move_right", 1)
+	Input.action_press(&"move_right")
+	for i in 4:
+		await get_tree().physics_frame
+	await get_tree().process_frame
+	_record("走路时呼吸停止并复原", not player.is_breathing() and player.sprite.scale == Player.SPRITE_BASE_SCALE and player.sprite.position == Vector2.ZERO)
+	Input.action_release(&"move_right")
+	for i in 4:
+		await get_tree().physics_frame
+	await get_tree().create_timer(0.4).timeout
+	_record("停下后呼吸恢复", player.is_breathing())
+	player.tool_manager.equip_tool(ToolManager.ToolType.HOE)
+	Inventory.set_selected_hotbar_index(Inventory.HOTBAR_SIZE - 1)
+	await _press_action(&"interact", 1)
+	_record("挥工具时不呼吸（挥动动画接管贴图）", not player.is_breathing())
+	await _wait_swing_over(player)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_record("挥完贴图回到原样再继续呼吸", absf(player.sprite.position.x) < 0.01 and player.sprite.scale.x == Player.SPRITE_BASE_SCALE.x)
+	GameManager.current_state = GameManager.GameState.DIALOGUE
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_record("对话时呼吸停止并复原", not player.is_breathing() and player.sprite.scale == Player.SPRITE_BASE_SCALE and player.sprite.position == Vector2.ZERO)
+	GameManager.current_state = GameManager.GameState.PLAYING
+	UserSettings.set_value("accessibility", "reduce_motion", true)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_record("减少动态时不呼吸", not player.is_breathing() and player.sprite.scale == Player.SPRITE_BASE_SCALE)
+	UserSettings.set_value("accessibility", "reduce_motion", false)
+	FarmState.reset()
+	farm.queue_free()
+	await get_tree().process_frame
+
+
+func _visible_prompts() -> Array:
+	var out := []
+	for prompt in get_tree().root.find_children("InteractPrompt", "Node2D", true, false):
+		if (prompt as Node2D).is_visible_in_tree():
+			out.append(prompt)
+	return out
+
+
+## Interaction prompt bubble: shows above the one target E would act on, hides on
+## leave / dialogue / pause, follows the theme and the current key binding.
+func _exercise_interact_prompt() -> void:
+	print("------------------------------------------------------------")
+	print("交互提示气泡：进入范围显示、离开隐藏、对话/暂停时隐藏、只显示一个、跟随主题和按键")
+	DialogueManager.reset()
+	TimeManager.reset()
+	TimeManager.current_time = 10.0
+	var village := (load("res://src/world/maps/Village.tscn") as PackedScene).instantiate()
+	add_child(village)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	var player := village.find_child("Player", true, false) as Player
+	var mayor := village.get_node_or_null("NPCs/MayorThomas") as NPC
+	var farmer := village.get_node_or_null("NPCs/John") as NPC
+	_record("气泡用例有玩家、村长、农夫", player != null and mayor != null and farmer != null)
+	if player == null or mayor == null or farmer == null:
+		village.queue_free()
+		return
+	for npc in village.get_node("NPCs").get_children():
+		if npc is Node2D:
+			npc.process_mode = Node.PROCESS_MODE_DISABLED
+			if npc != mayor and npc != farmer:
+				(npc as Node2D).global_position += Vector2(4000, 4000)
+	mayor.process_mode = Node.PROCESS_MODE_INHERIT
+	mayor.set_physics_process(false)
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	var prompt := mayor.get_node_or_null("InteractPrompt") as InteractPrompt
+	_record("村长身上的 E 标签换成了交互气泡", prompt != null and mayor.get_node_or_null("InteractionLabel") == null)
+	if prompt == null:
+		village.queue_free()
+		return
+	# Out of the 128 px interaction box but clear of the village exits (one sits 380 px below).
+	var far := mayor.global_position + Vector2(180, 0)
+	farmer.global_position = mayor.global_position + Vector2(2000, 0)
+	player.global_position = far
+	for i in 4:
+		await get_tree().physics_frame
+	await get_tree().process_frame
+	_record("不在范围内时不显示气泡", not prompt.visible and _visible_prompts().is_empty())
+	player.global_position = mayor.global_position + Vector2(0, 40)
+	for i in 4:
+		await get_tree().physics_frame
+	await get_tree().process_frame
+	_record("走进村长交互范围显示气泡", prompt.visible and player.npc_in_range == mayor)
+	_record("气泡显示当前交互键（E）", prompt.key_label.text == InputManager.get_action_short_prompt(&"interact") and prompt.key_label.text == "E")
+	_record("气泡在村长头顶上方", prompt.global_position.y < mayor.global_position.y - 30.0 and absf(prompt.global_position.x - mayor.global_position.x) < 1.0)
+	# Two NPCs in range: only the one E would talk to (the nearest) shows its bubble.
+	farmer.global_position = player.global_position + Vector2(56, 0)
+	for i in 4:
+		await get_tree().physics_frame
+	await get_tree().process_frame
+	player._refresh_nearest_npc()
+	var farmer_prompt := farmer.get_node("InteractPrompt") as InteractPrompt
+	var shown := _visible_prompts()
+	_record("两个 NPC 都在范围内时只显示一个气泡（%d 个）" % shown.size(), shown.size() == 1)
+	_record("显示的气泡属于按 E 会交谈的那个 NPC", shown.size() == 1 and (shown[0] as Node).get_parent() == player.npc_in_range)
+	farmer.global_position = mayor.global_position + Vector2(2000, 0)
+	for i in 4:
+		await get_tree().physics_frame
+	await get_tree().process_frame
+	# Theme follow
+	_record("气泡使用当前主题", prompt.bubble.theme == UIStyles.active_theme())
+	UserSettings.set_value("accessibility", "high_contrast", true)
+	await get_tree().process_frame
+	_record("切到高对比时气泡跟随主题", prompt.bubble.theme == UIStyles.active_theme() and prompt.bubble.theme != load("res://src/ui/theme/GameTheme.tres"))
+	UserSettings.set_value("accessibility", "high_contrast", false)
+	await get_tree().process_frame
+	_record("切回普通主题时气泡跟随", prompt.bubble.theme == load("res://src/ui/theme/GameTheme.tres"))
+	# Remapped key
+	var saved_bindings := InputManager.serialize_bindings()
+	var f_key := InputEventKey.new()
+	f_key.physical_keycode = KEY_F
+	var remapped := InputManager.remap_action(&"interact", f_key)
+	await get_tree().process_frame
+	_record("改键后气泡显示新按键（%s）" % prompt.key_label.text, remapped and prompt.key_label.text == "F")
+	InputManager.apply_serialized_bindings(saved_bindings)
+	prompt._refresh_key()
+	_record("恢复按键后气泡回到 E", prompt.key_label.text == "E")
+	# Dialogue hides it; it comes back afterwards.
+	var box: DialogueBox = DialogueManager._dialogue_box
+	await _press_action(&"interact")
+	await get_tree().process_frame
+	_record("对话中隐藏气泡", DialogueManager.is_in_dialogue() and not prompt.visible and _visible_prompts().is_empty())
+	var steps := 0
+	while box.visible and steps < 30:
+		steps += 1
+		box._finish_typewriter()
+		await _press_action(&"interact")
+	for i in 4:
+		await get_tree().physics_frame
+	await get_tree().process_frame
+	_record("对话结束后气泡重新出现", not DialogueManager.is_in_dialogue() and prompt.visible)
+	GameManager.pause_game()
+	await get_tree().process_frame
+	_record("暂停时隐藏气泡", not prompt.visible or not prompt.is_visible_in_tree() or InteractPrompt.current() == null)
+	GameManager.resume_game()
+	UIManager.open_screen("journal", {})
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_record("打开手册时隐藏气泡", InteractPrompt.current() == null)
+	UIManager.close_all()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	player.global_position = far
+	for i in 4:
+		await get_tree().physics_frame
+	await get_tree().process_frame
+	_record("离开范围后隐藏气泡", not prompt.visible)
+	village.queue_free()
+	await get_tree().process_frame
+	DialogueManager.reset()
+
+	# Farm objects get the same bubble (shipping bin, workbench, coop, barn).
+	var farm = await _spawn_farm()
+	var farm_player := farm.find_child("Player", true, false) as Player
+	GameManager.current_state = GameManager.GameState.PLAYING
+	for target_name in ["ShippingBin", "Workbench", "Coop", "Barn"]:
+		var target := farm.find_child(target_name, true, false) as Node2D
+		var target_prompt := target.get_node_or_null("InteractPrompt") as InteractPrompt if target else null
+		var area_shape: CollisionShape2D = null
+		var area: Area2D = target if target is Area2D else target.get_node_or_null("InteractionArea") as Area2D if target else null
+		if area:
+			for child in area.get_children():
+				if child is CollisionShape2D:
+					area_shape = child
+					break
+		var ok := target_prompt != null and area_shape != null
+		if ok:
+			farm_player.global_position = area_shape.global_position
+			for i in 4:
+				await get_tree().physics_frame
+			await get_tree().process_frame
+			ok = target_prompt.visible and _visible_prompts().size() == 1 and target_prompt.global_position.y < target.global_position.y + 8.0
+			farm_player.global_position = area_shape.global_position + Vector2(0, 600)
+			for i in 4:
+				await get_tree().physics_frame
+			await get_tree().process_frame
+			ok = ok and not target_prompt.visible
+		_record("%s 走近显示气泡（%s）、离开隐藏" % [target_name, target_prompt.text_label.text if target_prompt else "-"], ok)
+	# Fishing spot: the bubble is always there (BUG-38); its verb follows the tool
+	# ("装水" with the watering can, "钓鱼" otherwise; E explains the rod).
+	var spot := farm.find_child("FishingSpot", true, false) as Node2D
+	var spot_prompt := spot.get_node_or_null("InteractPrompt") as InteractPrompt if spot else null
+	if spot_prompt:
+		farm_player.global_position = spot.global_position
+		farm_player.tool_manager.equip_tool(ToolManager.ToolType.WATERING_CAN)
+		for i in 4:
+			await get_tree().physics_frame
+		await get_tree().process_frame
+		var with_can := spot_prompt.visible and spot_prompt.text_label.text == "装水"
+		farm_player.tool_manager.equip_tool(ToolManager.ToolType.HOE)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		_record("钓鱼点：拿水壶显示“装水”气泡，拿锄头显示“钓鱼”", with_can and spot_prompt.visible and spot_prompt.text_label.text == "钓鱼")
+		farm_player.global_position = spot.global_position + Vector2(0, 600)
+	else:
+		_record("钓鱼点有交互气泡", false)
+	FarmState.reset()
+	farm.queue_free()
+	await get_tree().process_frame
+	# Player house kitchen
+	var house := (load("res://src/world/maps/PlayerHouse.tscn") as PackedScene).instantiate()
+	add_child(house)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	GameManager.current_state = GameManager.GameState.PLAYING
+	var house_player := house.find_child("Player", true, false) as Player
+	var kitchen: Node2D = null
+	for node in house.find_children("*", "Area2D", true, false):
+		if node is Kitchen:
+			kitchen = node
+			break
+	var kitchen_prompt := kitchen.get_node_or_null("InteractPrompt") as InteractPrompt if kitchen else null
+	var kitchen_ok := kitchen_prompt != null and house_player != null
+	if kitchen_ok:
+		house_player.global_position = kitchen.global_position
+		for i in 4:
+			await get_tree().physics_frame
+		await get_tree().process_frame
+		kitchen_ok = kitchen_prompt.visible and kitchen_prompt.text_label.text == "烹饪"
+	_record("厨房走近显示“烹饪”气泡", kitchen_ok)
+	house.queue_free()
+	await get_tree().process_frame
+	GameManager.is_game_active = false
+
+
+func _tap_key(keycode: Key, hold_frames: int) -> void:
+	var down := InputEventKey.new()
+	down.keycode = keycode
+	down.physical_keycode = keycode
+	down.pressed = true
+	Input.parse_input_event(down)
+	for i in hold_frames:
+		await get_tree().process_frame
+	var up := down.duplicate() as InputEventKey
+	up.pressed = false
+	Input.parse_input_event(up)
+	for i in 6:
+		await get_tree().physics_frame
+
+
+func _hold_action(action: StringName, frames: int) -> void:
+	var down := InputEventAction.new()
+	down.action = action
+	down.pressed = true
+	Input.parse_input_event(down)
+	for i in frames:
+		await get_tree().physics_frame
+	var up := InputEventAction.new()
+	up.action = action
+	up.pressed = false
+	Input.parse_input_event(up)
+	for i in 2:
+		await get_tree().physics_frame
+
+
+## BUG-21: villagers crowding the player by the fountain made WASD look dead.
+## A villager still blocks a single step, but pushing into one lets the player squeeze past.
+func _exercise_npc_crowd_squeeze() -> void:
+	print("------------------------------------------------------------")
+	print("BUG-21 村民挡路：一步撞上会挡住，持续推挤能挤过去，分开后恢复碰撞；村民按 Y 排序")
+	TimeManager.reset()
+	TimeManager.current_time = 10.0
+	var village := (load("res://src/world/maps/Village.tscn") as PackedScene).instantiate()
+	add_child(village)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	var player := village.find_child("Player", true, false) as Player
+	var mayor := village.get_node_or_null("NPCs/MayorThomas") as NPC
+	_record("挤过村民用例有玩家和村长", player != null and mayor != null)
+	if player == null or mayor == null:
+		village.queue_free()
+		return
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	var npcs := village.get_node("NPCs") as Node2D
+	_record("村民和玩家同层按 Y 排序（村民 z=%d，玩家 z=%d）" % [mayor.z_index, player.z_index],
+		npcs.y_sort_enabled and village.y_sort_enabled and mayor.z_index == player.z_index)
+	mayor.set_physics_process(false)  # hold the mayor still so only the player moves
+	player.global_position = mayor.global_position + Vector2(40, 4)
+	player.velocity = Vector2.ZERO
+	await get_tree().physics_frame
+	await _hold_action(&"move_left", 6)
+	_record("短按 A 撞上村长会被挡住（x 差 %.0f）" % (player.global_position.x - mayor.global_position.x),
+		player.global_position.x - mayor.global_position.x > 15.0)
+	await _hold_action(&"move_left", 50)
+	_record("持续按 A 能从村长身边挤过去（x 差 %.0f）" % (player.global_position.x - mayor.global_position.x),
+		player.global_position.x < mayor.global_position.x - 20.0)
+	await _hold_action(&"move_left", 20)
+	var far_ok := player.global_position.distance_to(mayor.global_position) > Player.NPC_SQUEEZE_CLEAR_DISTANCE
+	_record("走开后恢复对村长的碰撞", far_ok and not player.get_collision_exceptions().has(mayor))
+	player.velocity = Vector2.ZERO
+	player.global_position = mayor.global_position + Vector2(-60, 4)
+	var npc_collision := player.move_and_collide(Vector2(100, 0))
+	_record("恢复后再撞村长仍被挡住", npc_collision != null and npc_collision.get_collider() == mayor)
+	village.queue_free()
+	await get_tree().process_frame
+
+
+func _tilled_coords() -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for y in FarmState.GRID_HEIGHT:
+		for x in FarmState.GRID_WIDTH:
+			var c := Vector2i(x, y)
+			if int(FarmState.get_cell(c).get("state", FarmState.UNTILLED)) != FarmState.UNTILLED:
+				out.append(c)
+	return out
+
+
+func _wait_swing_over(player: Player) -> void:
+	var guard := 0
+	while player.is_tool_locked() and guard < 120:
+		await get_tree().physics_frame
+		guard += 1
+
+
+## Hoe target tile: one press per direction must till the 4 neighbouring plots
+## (it used to till the player's own plot twice from a plot's top-left area, and
+## nothing from a plot centre). Then: no walking during the swing, walking right after.
+func _exercise_hoe_facing_and_swing_lock() -> void:
+	print("------------------------------------------------------------")
+	print("锄头四个方向各锄一次 = 四块相邻的地；挥锄时站定，挥完能走")
+	TimeManager.reset()
+	Inventory.reset_with_starter_items()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	_record("锄地场景有玩家", player != null)
+	if player == null:
+		farm.queue_free()
+		return
+	player.tool_manager.equip_tool(ToolManager.ToolType.HOE)
+	Inventory.set_selected_hotbar_index(Inventory.HOTBAR_SIZE - 1)
+	var centre := Vector2i(4, 3)
+	var expected: Array[Vector2i] = [centre + Vector2i.UP, centre + Vector2i.DOWN, centre + Vector2i.LEFT, centre + Vector2i.RIGHT]
+	var plot_centre: Vector2 = farm.global_position + farm.PLOT_ORIGIN + Vector2(centre) * farm.PLOT_SPACING
+	var dirs := [Player.Direction.UP, Player.Direction.RIGHT, Player.Direction.DOWN, Player.Direction.LEFT]
+	for offset in [Vector2(-10, -10), Vector2.ZERO, Vector2(12, 14), Vector2(-20, 18)]:
+		FarmState.reset()
+		StaminaManager.set_stamina(StaminaManager.max_stamina)
+		player.global_position = plot_centre + offset
+		player.velocity = Vector2.ZERO
+		await get_tree().physics_frame
+		for d in dirs:
+			player.current_direction = d
+			await _press_action(&"interact", 2)
+			await _wait_swing_over(player)
+		var tilled := _tilled_coords()
+		var ok := tilled.size() == 4
+		for c in expected:
+			ok = ok and tilled.has(c)
+		_record("站在地块 %s 偏移 %s：四向各锄一次锄出四块相邻地（实际 %s）" % [centre, offset, tilled], ok)
+
+	# Swing lock: hold right, press interact; no movement during the swing, then walks on.
+	FarmState.reset()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	player.global_position = plot_centre
+	player.current_direction = Player.Direction.RIGHT
+	await get_tree().physics_frame
+	var hold := InputEventAction.new()
+	hold.action = &"move_right"
+	hold.pressed = true
+	var tap := InputEventAction.new()
+	tap.action = &"interact"
+	tap.pressed = true
+	Input.parse_input_event(tap)
+	Input.parse_input_event(hold)
+	var wait := 0
+	while not player.is_tool_locked() and wait < 5:
+		await get_tree().physics_frame
+		wait += 1
+	var locked_at := player.global_position
+	_record("按下锄头后进入挥动锁定", player.is_tool_locked())
+	var tap_up := InputEventAction.new()
+	tap_up.action = &"interact"
+	tap_up.pressed = false
+	Input.parse_input_event(tap_up)
+	for i in 8:
+		await get_tree().physics_frame
+	_record("挥锄期间按住 D 不移动（%.1fpx）" % player.global_position.distance_to(locked_at),
+		player.is_tool_locked() and player.global_position.distance_to(locked_at) < 0.5)
+	await _wait_swing_over(player)
+	var after_lock := player.global_position
+	for i in 15:
+		await get_tree().physics_frame
+	_record("挥完锄头继续按住 D 立刻能走（%.1fpx）" % (player.global_position.x - after_lock.x),
+		player.global_position.x - after_lock.x > 20.0)
+	var hold_up := InputEventAction.new()
+	hold_up.action = &"move_right"
+	hold_up.pressed = false
+	Input.parse_input_event(hold_up)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var stop_at := player.global_position
+	await _press_action(&"move_up", 12)
+	_record("挥锄后其它方向键正常（上移 %.1fpx）" % (stop_at.y - player.global_position.y),
+		stop_at.y - player.global_position.y > 15.0)
+	await _wait_swing_over(player)
+	var tilled_count := _tilled_coords().size()
+	await _press_action(&"interact", 2)
+	_record("挥完再按 E 还能锄地", _tilled_coords().size() == tilled_count + 1)
+	await _wait_swing_over(player)
+	FarmState.reset()
+	farm.queue_free()
+	await get_tree().process_frame
 
 
 func _record(name: String, condition: bool) -> void:

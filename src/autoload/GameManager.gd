@@ -137,6 +137,9 @@ func return_to_menu() -> void:
 
 
 func quit_game() -> void:
+	# Let the audio server drop the stopped music before shutdown (no leak at exit).
+	AudioManager.release_streams()
+	await get_tree().create_timer(0.25, true, false, true).timeout
 	get_tree().quit()
 
 
