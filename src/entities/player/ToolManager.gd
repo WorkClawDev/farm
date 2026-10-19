@@ -104,7 +104,7 @@ func equip_tool(tool_type: ToolType) -> void:
 ## 手持工具的姿态：放在角色手边，跟着朝向翻转；朝上时画在身体后面。
 ## ToolManager 是 Player 的子节点（Node2D），工具会跟着玩家移动。
 ## 偏移是 Player 本地坐标（角色 Sprite 以原点为中心、64×64）。
-const HOLD_SCALE := 2.0  # 和角色 Sprite 相同的像素倍率
+const HOLD_SCALE := 1.0  # tools are 64px (ninja ×4); was 2.0 when tools were 16px
 const HOLD_OFFSETS = {
 	0: Vector2(14, -2),   # DOWN：右手在画面右侧
 	1: Vector2(-14, -4),  # UP：背对镜头，右手在画面左侧（画在身后）

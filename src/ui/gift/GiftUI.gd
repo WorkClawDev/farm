@@ -154,6 +154,7 @@ func _create_slot(index: int) -> Control:
 	item_icon.name = "ItemIcon"
 	item_icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	item_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	item_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	item_icon.modulate = Color(1, 1, 1, 0)
 	item_icon.custom_minimum_size = Vector2(SLOT_SIZE - 8, SLOT_SIZE - 8)
 	item_icon.anchor_left = 0.5

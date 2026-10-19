@@ -64,7 +64,7 @@ func _build_ui() -> void:
 	tool_icon = TextureRect.new()
 	tool_icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	tool_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	tool_icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	tool_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # Stage D pixel icons
 	tool_icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_icon_card.add_child(tool_icon)
 

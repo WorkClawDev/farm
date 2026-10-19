@@ -180,6 +180,7 @@ func _build_ui() -> void:
 	_item_icon.custom_minimum_size = Vector2(144, 144)
 	_item_icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	_item_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_item_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	detail_content.add_child(_item_icon)
 	_item_name = UIFactory.title("选择商品", HORIZONTAL_ALIGNMENT_CENTER)
 	detail_content.add_child(_item_name)

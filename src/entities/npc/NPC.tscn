@@ -30,7 +30,7 @@ npc_id = "npc_001"
 npc_name = "NPC"
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-scale = Vector2(2, 2)
+scale = Vector2(1, 1)
 texture = ExtResource("2_npc_sprite")
 hframes = 1
 vframes = 1

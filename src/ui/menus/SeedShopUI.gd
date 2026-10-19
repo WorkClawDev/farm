@@ -123,6 +123,7 @@ func _build_ui() -> void:
 	_icon.custom_minimum_size = Vector2(140, 140)
 	_icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	detail_content.add_child(_icon)
 	_name = UIFactory.title("选择商品", HORIZONTAL_ALIGNMENT_CENTER)
 	detail_content.add_child(_name)

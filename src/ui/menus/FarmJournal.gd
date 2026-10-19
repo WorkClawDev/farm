@@ -246,6 +246,7 @@ func _create_inventory_slot(index: int) -> Button:
 		var icon := TextureRect.new()
 		icon.name = "Icon"
 		icon.texture = ItemDatabase.load_icon_texture(data.item_id)
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		icon.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 		icon.offset_left = 12
 		icon.offset_top = 6
@@ -299,6 +300,7 @@ func _populate_item_detail(container: VBoxContainer, index: int) -> void:
 	icon.texture = ItemDatabase.load_icon_texture(data.item_id)
 	icon.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	container.add_child(icon)
 	container.add_child(UIFactory.title(Inventory.get_item_name(data.item_id), HORIZONTAL_ALIGNMENT_CENTER))
 	var count := Label.new()

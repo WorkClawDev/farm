@@ -221,8 +221,13 @@ func get_icon_path(item_id: String) -> String:
 		if configured_path != "":
 			return configured_path
 
+	# Stage D: Ninja Adventure UI icons (64×64) before old placeholders.
+	var icon_path := _find_icon_in_directory("res://assets/sprites/items/ninja_adventure", item_id)
+	if icon_path != "":
+		return icon_path
+
 	# 自动映射：item_id -> assets/sprites/items/{item_id}.png
-	var icon_path := _find_icon_in_directory("res://assets/sprites/items", item_id)
+	icon_path = _find_icon_in_directory("res://assets/sprites/items", item_id)
 	if icon_path != "":
 		return icon_path
 

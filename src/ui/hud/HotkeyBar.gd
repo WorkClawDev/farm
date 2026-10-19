@@ -55,7 +55,7 @@ func _build_ui() -> void:
 		icon.offset_bottom = -18
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # Stage D pixel icons
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		slot.add_child(icon)
 		_slot_icons.append(icon)
