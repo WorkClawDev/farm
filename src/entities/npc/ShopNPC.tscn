@@ -38,11 +38,3 @@ texture = ExtResource("4_indicator")
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 
 [node name="NPCSchedule" type="Node" parent="."]
-script = ExtResource("2_schedule")
-schedule_data = {
-"morning": {"time": 6, "action": "idle", "position": Vector2(0, 0)},
-"work_start": {"time": 9, "action": "work", "position": Vector2(0, 0)},
-"lunch": {"time": 12, "action": "idle", "position": Vector2(50, 50)},
-"work_resume": {"time": 13, "action": "work", "position": Vector2(0, 0)},
-"work_end": {"time": 18, "action": "idle", "position": Vector2(0, 0)}
-}

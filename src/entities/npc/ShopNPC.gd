@@ -25,6 +25,7 @@ func _ready() -> void:
 ## 重写交互方法
 func interact() -> void:
 	if not can_interact():
+		notify_unavailable()
 		return
 	
 	# 先进行对话

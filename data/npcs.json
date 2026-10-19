@@ -24,15 +24,16 @@
           "fiber"
         ]
       },
+      "home_door": {"village": {"x": 200, "y": 204, "via": [{"x": 500, "y": 240}, {"x": 200, "y": 240}]}},
       "schedule": [
         {
           "start_time": 6.0,
           "end_time": 9.0,
-          "activity": 0,
+          "activity": 7,
           "location_id": "mayor_home",
           "location_position": {
-            "x": 200,
-            "y": 150
+            "x": 230,
+            "y": 236
           },
           "dialog_override": ""
         },
@@ -42,8 +43,8 @@
           "activity": 1,
           "location_id": "town_hall",
           "location_position": {
-            "x": 400,
-            "y": 300
+            "x": 380,
+            "y": 240
           }
         },
         {
@@ -62,8 +63,8 @@
           "activity": 1,
           "location_id": "town_hall",
           "location_position": {
-            "x": 400,
-            "y": 300
+            "x": 380,
+            "y": 240
           }
         },
         {
@@ -82,8 +83,8 @@
           "activity": 0,
           "location_id": "mayor_home",
           "location_position": {
-            "x": 200,
-            "y": 150
+            "x": 230,
+            "y": 236
           }
         },
         {
@@ -92,8 +93,8 @@
           "activity": 0,
           "location_id": "mayor_home",
           "location_position": {
-            "x": 200,
-            "y": 150
+            "x": 230,
+            "y": 236
           }
         }
       ],
@@ -123,6 +124,7 @@
           "fish_common"
         ]
       },
+      "home_door": {"village": {"x": 120, "y": 300, "via": [{"x": 520, "y": 250}, {"x": 330, "y": 250}]}},
       "schedule": [
         {
           "start_time": 5.0,
@@ -130,8 +132,8 @@
           "activity": 0,
           "location_id": "farm_house",
           "location_position": {
-            "x": 100,
-            "y": 100
+            "x": 120,
+            "y": 300
           }
         },
         {
@@ -141,7 +143,7 @@
           "location_id": "farm_field",
           "location_position": {
             "x": 150,
-            "y": 200
+            "y": 240
           }
         },
         {
@@ -150,8 +152,8 @@
           "activity": 3,
           "location_id": "farm_house",
           "location_position": {
-            "x": 100,
-            "y": 100
+            "x": 120,
+            "y": 300
           }
         },
         {
@@ -161,7 +163,7 @@
           "location_id": "farm_field",
           "location_position": {
             "x": 150,
-            "y": 200
+            "y": 240
           }
         },
         {
@@ -180,8 +182,8 @@
           "activity": 0,
           "location_id": "farm_house",
           "location_position": {
-            "x": 100,
-            "y": 100
+            "x": 120,
+            "y": 300
           }
         },
         {
@@ -190,8 +192,8 @@
           "activity": 0,
           "location_id": "farm_house",
           "location_position": {
-            "x": 100,
-            "y": 100
+            "x": 120,
+            "y": 300
           }
         }
       ],
@@ -222,15 +224,16 @@
           "wood"
         ]
       },
+      "home_door": {"village": {"x": 890, "y": 594, "via": [{"x": 500, "y": 620}, {"x": 890, "y": 620}]}},
       "schedule": [
         {
           "start_time": 6.0,
           "end_time": 8.0,
-          "activity": 0,
+          "activity": 7,
           "location_id": "shop_backroom",
           "location_position": {
-            "x": 300,
-            "y": 200
+            "x": 850,
+            "y": 610
           }
         },
         {
@@ -239,8 +242,8 @@
           "activity": 1,
           "location_id": "general_store",
           "location_position": {
-            "x": 350,
-            "y": 220
+            "x": 950,
+            "y": 610
           }
         },
         {
@@ -259,8 +262,8 @@
           "activity": 1,
           "location_id": "general_store",
           "location_position": {
-            "x": 350,
-            "y": 220
+            "x": 950,
+            "y": 610
           }
         },
         {
@@ -279,8 +282,8 @@
           "activity": 0,
           "location_id": "shop_backroom",
           "location_position": {
-            "x": 300,
-            "y": 200
+            "x": 850,
+            "y": 610
           }
         },
         {
@@ -289,8 +292,8 @@
           "activity": 0,
           "location_id": "shop_backroom",
           "location_position": {
-            "x": 300,
-            "y": 200
+            "x": 850,
+            "y": 610
           }
         }
       ],
@@ -320,11 +323,12 @@
           "flower_spring"
         ]
       },
+      "home_door": {"village": {"x": 178, "y": 829, "via": [{"x": 600, "y": 450}, {"x": 345, "y": 450}, {"x": 345, "y": 840}]}},
       "schedule": [
         {
-          "start_time": 7.0,
+          "start_time": 6.0,
           "end_time": 8.0,
-          "activity": 0,
+          "activity": 7,
           "location_id": "blacksmith_home",
           "location_position": {
             "x": 450,
@@ -383,7 +387,7 @@
         },
         {
           "start_time": 22.0,
-          "end_time": 7.0,
+          "end_time": 6.0,
           "activity": 0,
           "location_id": "blacksmith_home",
           "location_position": {
@@ -425,8 +429,8 @@
           "activity": 0,
           "location_id": "beach_hut",
           "location_position": {
-            "x": 100,
-            "y": 500
+            "x": -260,
+            "y": -60
           }
         },
         {
@@ -435,8 +439,8 @@
           "activity": 1,
           "location_id": "beach_pier",
           "location_position": {
-            "x": 200,
-            "y": 550
+            "x": 150,
+            "y": 100
           }
         },
         {
@@ -445,8 +449,8 @@
           "activity": 2,
           "location_id": "beach",
           "location_position": {
-            "x": 150,
-            "y": 520
+            "x": 300,
+            "y": 40
           }
         },
         {
@@ -455,8 +459,8 @@
           "activity": 3,
           "location_id": "beach_hut",
           "location_position": {
-            "x": 100,
-            "y": 500
+            "x": -260,
+            "y": -60
           }
         },
         {
@@ -465,8 +469,8 @@
           "activity": 1,
           "location_id": "beach_pier",
           "location_position": {
-            "x": 200,
-            "y": 550
+            "x": 150,
+            "y": 100
           }
         },
         {
@@ -475,8 +479,8 @@
           "activity": 2,
           "location_id": "tavern",
           "location_position": {
-            "x": 600,
-            "y": 350
+            "x": 480,
+            "y": 10
           }
         },
         {
@@ -485,8 +489,8 @@
           "activity": 0,
           "location_id": "beach_hut",
           "location_position": {
-            "x": 100,
-            "y": 500
+            "x": -260,
+            "y": -60
           }
         }
       ],
@@ -516,11 +520,12 @@
           "fish_common"
         ]
       },
+      "home_door": {"village": {"x": 660, "y": 204, "via": [{"x": 330, "y": 430}, {"x": 520, "y": 430}, {"x": 520, "y": 240}, {"x": 660, "y": 240}]}},
       "schedule": [
         {
           "start_time": 6.0,
           "end_time": 8.0,
-          "activity": 0,
+          "activity": 7,
           "location_id": "clinic_backroom",
           "location_position": {
             "x": 550,

@@ -34,6 +34,10 @@ func _ready() -> void:
 	_setup_map()
 	_setup_ui()
 	_connect_transition_areas()
+	# Also on GameManager.change_location (farm/house -> village), which does not go
+	# through SceneTransition: the scene's villagers get registered and placed by
+	# schedule, once (BUG-44).
+	_setup_npc_manager()
 
 	var player := get_tree().get_first_node_in_group("player") as Node2D
 	if player:

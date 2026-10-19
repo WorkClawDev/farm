@@ -1,5 +1,6 @@
 extends CharacterBody2D
 class_name NPC
+const InteractPromptScript = preload("res://src/ui/components/InteractPrompt.gd")  # preload: works before the class cache knows the class_name
 
 ## NPC - 非玩家角色基类
 ## 处理移动、动画、碰撞检测、玩家交互和日程AI
@@ -33,6 +34,19 @@ var current_location_id: String = ""
 var idle_timer: float = 0.0
 var is_doing_idle_action: bool = false
 
+# Going home to sleep: on a "sleep" schedule entry the villager walks to its own
+# door (npcs.json "home_door", per scene, optional "via" waypoints) and then rests:
+# hidden, no collision, no interaction. It reappears at the door when the next
+# non-sleep entry starts. No door here, or not there in time: fade out in place.
+const GO_HOME_TIMEOUT := 15.0
+const REST_FADE_SECONDS := 0.4
+var is_resting: bool = false
+var is_going_home: bool = false
+var _home_doors: Dictionary = {}
+var _home_path: Array[Vector2] = []
+var _home_elapsed: float = 0.0
+var _rest_tween: Tween = null
+
 # 节点引用
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var animation_player: AnimationPlayer = $AnimationPlayer
@@ -56,6 +70,8 @@ const IDLE_FRAMES = {
 	Direction.RIGHT: 4
 }
 const VillagerIllustrationScene = preload("res://src/entities/npc/VillagerIllustration.gd")
+const ILLUSTRATION_SCALE := 0.8
+const ILLUSTRATION_FEET_Y := 33.0  # bottom of the drawn shadow
 
 func _ready() -> void:
 	_setup_interaction_area()
@@ -64,6 +80,7 @@ func _ready() -> void:
 	_setup_animation()
 	_connect_time_signals()
 	_connect_dialogue_signals()
+	_rest_if_asleep_on_enter()
 	print("[NPC] %s initialized" % npc_name)
 
 func _setup_illustrated_character() -> void:
@@ -74,6 +91,23 @@ func _setup_illustrated_character() -> void:
 		illustration = VillagerIllustrationScene.new()
 		add_child(illustration)
 	illustration.setup(npc_id, current_direction)
+	# The drawn villager is ~84 px tall and 56 px wide vs the 64x30 px player; scale
+	# it to player size, keeping its shadow bottom on the same spot. Visual only:
+	# collision, interaction area and y-sort origin are unchanged.
+	illustration.scale = Vector2.ONE * ILLUSTRATION_SCALE
+	illustration.position = Vector2(0.0, ILLUSTRATION_FEET_Y * (1.0 - ILLUSTRATION_SCALE))
+	# The old static "E" label is now an InteractPrompt (NPC.tscn): shown only while
+	# this is the NPC the player would talk to (Player.nearby_npcs, nearest wins).
+	var prompt = get_node_or_null("InteractPrompt")
+	if prompt:
+		prompt.priority = InteractPromptScript.PRIORITY_NPC
+		prompt.is_available = _is_prompt_available
+
+func _is_prompt_available() -> bool:
+	if not can_interact():
+		return false
+	var player := get_tree().get_first_node_in_group("player")
+	return player != null and "nearby_npcs" in player and (player.nearby_npcs as Array).has(self)
 
 func _physics_process(delta: float) -> void:
 	if is_interacting:
@@ -83,6 +117,9 @@ func _physics_process(delta: float) -> void:
 
 	# 更新日程状态
 	_update_schedule()
+	if is_resting:
+		velocity = Vector2.ZERO
+		return
 
 	if has_target:
 		_move_towards_target(delta)
@@ -111,6 +148,9 @@ func _update_schedule() -> void:
 			time_manager.current_day,
 			time_manager.current_season
 		)
+		if _update_rest_state():
+			current_activity = schedule.current_activity
+			return
 
 		# 检查是否需要移动到新地点
 		if schedule.should_move_to_destination():
@@ -160,6 +200,7 @@ func _apply_npc_data(data: Dictionary) -> void:
 	npc_name = data.get("name", npc_name)
 	_apply_sprite_data(data)
 	# 初始化日程系统
+	_home_doors = data.get("home_door", {}) if data.get("home_door", {}) is Dictionary else {}
 	if data.has("schedule"):
 		schedule = NPCSchedule.new(data)
 		_connect_schedule_signals()
@@ -198,8 +239,125 @@ func _setup_animation() -> void:
 
 ## 移动到目标位置
 func move_to(target: Vector2) -> void:
+	if is_resting or is_going_home:
+		return  # the way home (or the bed) wins over schedule/other moves
 	target_position = target
 	has_target = true
+
+
+## Sleep handling for this frame; true while it owns movement.
+func _update_rest_state() -> bool:
+	if schedule.is_sleeping():
+		if is_resting:
+			return true
+		if not is_going_home:
+			_start_going_home()
+		elif _rest_tween == null:
+			_home_elapsed += get_physics_process_delta_time()
+			if _home_elapsed > GO_HOME_TIMEOUT:
+				print("[NPC] %s did not reach the door in time, resting here" % npc_name)
+				_fade_to_rest()
+		return true
+	if is_resting or is_going_home:
+		_wake_up()
+	return false
+
+
+## Entering a scene during sleep time: already in bed, never seen in the street.
+func _rest_if_asleep_on_enter() -> void:
+	var time_manager = get_node_or_null("/root/TimeManager")
+	if schedule == null or time_manager == null:
+		return
+	schedule.update(time_manager.current_time, time_manager.current_day, time_manager.current_season)
+	if schedule.is_sleeping():
+		var door := _door_here()
+		if not door.is_empty():
+			global_position = door["position"]
+		_set_resting(true)
+
+
+## This scene's door entry: {"position": Vector2, "path": [waypoints..., door]}; {} if none.
+func _door_here() -> Dictionary:
+	if _home_doors.is_empty():
+		return {}
+	var node: Node = self
+	while node:
+		var key := String(node.name).to_lower()
+		if _home_doors.has(key) and _home_doors[key] is Dictionary:
+			var data: Dictionary = _home_doors[key]
+			var door := Vector2(float(data.get("x", 0.0)), float(data.get("y", 0.0)))
+			var path: Array[Vector2] = []
+			for point in data.get("via", []):
+				if point is Dictionary:
+					path.append(Vector2(float(point.get("x", 0.0)), float(point.get("y", 0.0))))
+			path.append(door)
+			return {"position": door, "path": path}
+		node = node.get_parent()
+	return {}
+
+
+func _start_going_home() -> void:
+	is_going_home = true
+	_home_elapsed = 0.0
+	is_doing_idle_action = false
+	var door := _door_here()
+	if door.is_empty():
+		_fade_to_rest()
+		return
+	_home_path = door["path"]
+	target_position = _home_path.pop_front()
+	has_target = true
+	print("[NPC] %s is going home" % npc_name)
+
+
+func _fade_to_rest() -> void:
+	if _rest_tween:
+		return
+	has_target = false
+	is_walking = false
+	velocity = Vector2.ZERO
+	_home_path.clear()
+	_set_interactive(false)
+	_rest_tween = create_tween()
+	_rest_tween.tween_property(self, "modulate:a", 0.0, REST_FADE_SECONDS)
+	_rest_tween.tween_callback(_set_resting.bind(true))
+
+
+func _set_resting(rest: bool) -> void:
+	if _rest_tween:
+		_rest_tween.kill()
+		_rest_tween = null
+	is_resting = rest
+	is_going_home = false
+	_home_path.clear()
+	has_target = false
+	is_walking = false
+	velocity = Vector2.ZERO
+	visible = not rest
+	modulate.a = 1.0
+	_set_interactive(not rest)
+	if rest:
+		print("[NPC] %s is resting" % npc_name)
+
+
+## Collision + interaction area on/off; leaving also drops the player's "nearby" entry.
+func _set_interactive(on: bool) -> void:
+	if collision_shape:
+		collision_shape.set_deferred("disabled", not on)
+	if interaction_area:
+		interaction_area.set_deferred("monitoring", on)
+	if not on and is_inside_tree():
+		var player := get_tree().get_first_node_in_group("player")
+		if player and player.has_method("unregister_nearby_npc"):
+			player.unregister_nearby_npc(self)
+
+
+func _wake_up() -> void:
+	var door := _door_here()
+	if is_resting and not door.is_empty():
+		global_position = door["position"]
+	_set_resting(false)
+	print("[NPC] %s woke up" % npc_name)
 
 ## 向目标移动
 func _move_towards_target(_delta: float) -> void:
@@ -256,6 +414,13 @@ func _reached_destination() -> void:
 	has_target = false
 	is_walking = false
 	velocity = Vector2.ZERO
+	if is_going_home:
+		if _home_path.is_empty():
+			_fade_to_rest()
+		else:
+			target_position = _home_path.pop_front()
+			has_target = true
+		return
 
 	if schedule:
 		schedule.arrived_at_destination()
@@ -406,6 +571,9 @@ func _connect_dialogue_signals() -> void:
 
 ## 时间变化回调
 func _on_time_changed(new_time: float) -> void:
+	# The old scene is already out of the tree (but not yet freed) during a scene change.
+	if not is_inside_tree():
+		return
 	var time_manager = get_node_or_null("/root/TimeManager")
 	if schedule and time_manager:
 		schedule.update(new_time, time_manager.current_day, time_manager.current_season)
@@ -420,7 +588,7 @@ func _on_schedule_changed(new_activity: Dictionary) -> void:
 	var position_data = new_activity.get("position", Vector2.ZERO)
 	var position: Vector2 = position_data if position_data is Vector2 else Vector2(position_data.get("x", 0.0), position_data.get("y", 0.0))
 
-	if position != Vector2.ZERO:
+	if position != Vector2.ZERO and not (schedule and schedule.is_sleeping()):
 		move_to(position)
 
 	activity_changed.emit(new_activity.get("activity", "idle"))
@@ -444,8 +612,17 @@ func _on_dialogue_ended(npc_id_param: String) -> void:
 	if npc_id_param == npc_id:
 		end_interaction()
 
+## E on an NPC that can't talk right now (asleep): say so instead of doing nothing (BUG-31).
+func notify_unavailable() -> void:
+	if is_resting:
+		return  # in bed and hidden: E does nothing
+	if interactable and schedule and schedule.is_sleeping() and UIManager:
+		UIManager.show_toast("{name}正在休息，晚点再来吧", {"name": npc_name})
+
 ## 检查是否可交互
 func can_interact() -> bool:
+	if is_resting:
+		return false
 	if not schedule:
 		return interactable
 	return interactable and schedule.is_interactable()
@@ -567,6 +744,7 @@ func get_preference_for_item(item_id: String) -> String:
 ## 交互处理
 func interact() -> void:
 	if not can_interact():
+		notify_unavailable()
 		return
 
 	start_interaction()
