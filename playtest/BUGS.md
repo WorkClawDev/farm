@@ -589,3 +589,18 @@
 - 日志：唯一的 ERROR 是本机没有声卡导致的 ALSA 报错（ERR_CANT_OPEN），属于环境问题。
 - 环境：第一轮时另一个 godot 进程（不是我启动的）占用约 200% CPU，人物几乎走不动；第二轮该进程已退出，正常完成。
 - 补充：动物进出鸡舍、牛棚这一项不适用。据 Grok Build 说明（Animal.gd:306），动物只在换天时直接传送回窝点，不会走进门，所以没有进出过程可测。如果要测"过一天后动物是否出现在外面"，就需要在游戏里睡觉，这违反测试规则，本轮不测。
+
+## 2026-10-21 BUG-56 复测受阻（槽3，未存档，日志 run_b56.log）
+- 目标：F9 羊/马底色透明 + 脚底遮挡；鸡猪牛不变。
+- 阻塞：**进农场失败**。从村子走 ←农场 后，日志里 `[Farm] Scene loaded` 出现约 15 次，每次淡出未完成就立刻 `[Village] Scene loaded` 弹回村子。中间有 `[ShippingBin] Player entered/left interaction range`。全程 `DEBUG F9` = 0，羊马相关截图未拍。
+- 日志无 SCRIPT ERROR；仅有本机无声卡的 ALSA ERROR（环境问题）。
+- 误点开过「删除农场 3」确认框，已取消，存档未删。
+- 进出鸡舍：按约定标为不适用。
+
+## 2026-10-21 进农场弹回修复 + BUG-56 重测（槽3，未存档，日志 run_b56b.log）
+- 村子→农场：通过。淡出后停在农场，日志 Village/Farm 各加载 1 次后 Transition completed，无交替弹回（b56b_farm_enter.png）。
+- BUG-56 羊/马底色：通过。无白/淡蓝不透明方块；马蹄下仅有正常接触阴影（b56_sheep_bg、b56_horse_bg）。
+- 羊/马脚底遮挡：北边通过；南边通过但重叠很弱（b56_sheep_s/n、b56_horse_s/n）。
+- 鸡/猪/牛：通过，外观正常，无底板回退。
+- 日志：无 SCRIPT ERROR（仅本机 ALSA/V-Sync 环境警告）。
+- 开局视野：day1_farm_overview.png — 农舍、南侧田、土路、门南箱子与工作台同框（夜间 21:52）。
