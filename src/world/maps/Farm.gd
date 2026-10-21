@@ -373,7 +373,7 @@ func get_house_door_position() -> Vector2:
 func _setup_village_exit() -> void:
 	_village_exit = Area2D.new()
 	_village_exit.name = "VillageExit"
-	_village_exit.position = from_village_spawn.position + Vector2(60, 0)
+	_village_exit.position = from_village_spawn.position + Vector2(100, 0)  # clear of from_village spawn (no instant bounce)
 	_village_exit.collision_layer = 0
 	_village_exit.collision_mask = PHYSICS_LAYERS.PLAYER
 	var collision := CollisionShape2D.new()
