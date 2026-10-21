@@ -40,6 +40,7 @@ func _ready() -> void:
 	await _test_scene_coverage()
 	await _test_modal_pause_and_focus()
 	await _test_journal_lifecycle()
+	await _test_open_close_same_frame()
 	await _test_shipping_screen()
 	await _test_cooking_screen()
 	await _test_confirmation_pause()
@@ -142,6 +143,23 @@ func _test_journal_lifecycle() -> void:
 	UserSettings.set_value("ui", "last_journal_tab", original_tab, false)
 	GameManager.is_game_active = old_active
 	GameManager.current_state = old_state
+
+
+## open_screen awaits one frame before focusing; a close in that same frame used
+## to hand a freed screen to UIFactory.focus_first (SCRIPT ERROR in check.sh).
+func _test_open_close_same_frame() -> void:
+	var opened := [0]
+	var on_opened := func(_id: String, _node: Control): opened[0] += 1
+	UIManager.screen_opened.connect(on_opened)
+	UIManager.open_screen("journal", {"pause_game": true})
+	UIManager.close_all()
+	for i in 3:
+		await get_tree().process_frame
+	UIManager.screen_opened.disconnect(on_opened)
+	_record(
+		"同帧打开又关闭界面：不再抢焦点、不发 screen_opened、不报错",
+		opened[0] == 0 and not UIManager.is_screen_open("journal") and not get_tree().paused
+	)
 
 
 func _test_shipping_screen() -> void:

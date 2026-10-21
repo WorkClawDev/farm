@@ -93,6 +93,14 @@ func open_screen(screen_id: String, context := {}) -> Control:
 	elif screen_id == "inventory" and instance.has_method("open_tab"):
 		instance.open_tab("inventory")
 	await get_tree().process_frame
+	# The screen may have been closed (close_all / close_top_screen / another
+	# open_screen) while we waited; it is then freed or about to be.
+	if (
+		not is_instance_valid(instance)
+		or instance.is_queued_for_deletion()
+		or _find_entry(screen_id).get("node") != instance
+	):
+		return null
 	UIFactory.focus_first(instance)
 	screen_opened.emit(screen_id, instance)
 	modal_stack_changed.emit(_stack.size())

@@ -76,7 +76,11 @@ static func clear_children(node: Node) -> void:
 	for child in node.get_children():
 		child.queue_free()
 
-static func focus_first(root: Node) -> void:
-	var focusables := root.find_children("*", "Button", true, false)
+## Untyped on purpose: a typed Node parameter errors before the body runs when
+## a caller passes a freed object (e.g. a screen closed during an await).
+static func focus_first(root) -> void:
+	if not is_instance_valid(root) or not (root is Node) or (root as Node).is_queued_for_deletion():
+		return
+	var focusables := (root as Node).find_children("*", "Button", true, false)
 	if not focusables.is_empty():
 		(focusables[0] as Button).grab_focus()
