@@ -610,3 +610,15 @@
 - day1_day_dialogue.png：通过。与乔对话时快捷栏仍露在对话框下方（1:02 PM）。
 - day1_day_shop.png：通过。种子店物品名无压线（约 6:00 PM 营业内）。
 - 仅农场1被重新开始覆盖；退出未再存档。
+
+## 2026-10-21 栅栏对齐 before（槽3，未存档）
+- 用户反馈栅栏难看、未对齐。修前特写：
+  - fence_before_overview.png：田边栅栏是重复单柱，不是连成的栏杆；左右与田垄错位，底边有缺口。
+  - fence_before_corner.png：拐角无转角瓦，竖柱与横排重叠且错位，土从缝里露出来。
+  - fence_before_seam.png：直线段柱间距不均、有明显空隙，无横杆连接。
+
+## 2026-10-21 栅栏对齐 after（槽3，未存档，对照 fence_before_*）
+- fence_after_overview.png：通过。左右底边已是连栏（fence_h/v），不再是重复单柱。
+- fence_after_corner.png：通过。左下角为单段 L 接，不再竖横硬叠；拐角柱略粗于中段柱（小观感，可接受）。
+- fence_after_seam.png：通过。底边横栏连续、间距均匀，旧空隙消失；与田垄右侧对齐。北边留通路口属设计。
+- 三项验收（连栏 / 拐角 / 对齐补缺口）均通过。

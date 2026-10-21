@@ -101,6 +101,98 @@ func _setup_map() -> void:
 			push_warning("[FarmMap:%s] %s" % [issue.code, issue.message])
 	print("[Farm] Authored map loaded: ", map_root.map_id, " (", map_root.size_in_tiles, ")")
 	_setup_actor_layer()
+	_setup_field_fence()
+
+## Field fence follows the tilled plot rectangle. Straight runs use Kenney
+## fence_h / fence_v (rails meet: horizontal pitch 48, vertical pitch 64).
+## Corners and the open north ends use fence_post. The baked overlay was only
+## repeating posts, offset from the ridges, with a gap along the south edge.
+const TEX_FENCE_H := preload("res://assets/tiles/kenney/decor/fence_h.png")
+const TEX_FENCE_V := preload("res://assets/tiles/kenney/decor/fence_v.png")
+const TEX_FENCE_POST := preload("res://assets/tiles/kenney/decor/fence_post.png")
+const FENCE_H_PITCH := 48.0
+
+func _setup_field_fence() -> void:
+	if map_root == null:
+		return
+	_clear_baked_fence_tiles()
+	var rows := FarmState.GRID_HEIGHT
+	var cols := FarmState.GRID_WIDTH
+	var half := 30.0
+	var fence := Node2D.new()
+	fence.name = "FieldFence"
+	# Same draw band as TerrainOverlay (FarmMap z -3 + overlay z 1).
+	# Stays under the player; BUG-61 y-sort is left alone.
+	fence.z_index = -2
+	fence.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	add_child(fence)
+
+	var left_x := PLOT_ORIGIN.x - half - 16.0
+	var right_x := PLOT_ORIGIN.x + float(cols - 1) * PLOT_SPACING + half + 16.0
+	var bottom_y := PLOT_ORIGIN.y + float(rows - 1) * PLOT_SPACING + half + 16.0
+	for row in rows:
+		var row_y := PLOT_ORIGIN.y + float(row) * PLOT_SPACING
+		_add_fence_sprite(fence, TEX_FENCE_V, Vector2(left_x, row_y), PI * 0.5)
+		_add_fence_sprite(fence, TEX_FENCE_V, Vector2(right_x, row_y), -PI * 0.5)
+
+	var span := right_x - left_x
+	var h_count := int(round(span / FENCE_H_PITCH))
+	var h_run := float(h_count) * FENCE_H_PITCH
+	var h_start := (left_x + right_x) * 0.5 - h_run * 0.5
+	for i in h_count + 1:
+		_add_fence_sprite(fence, TEX_FENCE_H, Vector2(h_start + float(i) * FENCE_H_PITCH, bottom_y), 0.0)
+
+	var top_y := PLOT_ORIGIN.y - PLOT_SPACING * 0.5
+	var bot_post_y := PLOT_ORIGIN.y + float(rows - 1) * PLOT_SPACING + PLOT_SPACING * 0.5
+	for corner in [Vector2(left_x, top_y), Vector2(right_x, top_y), Vector2(left_x, bot_post_y), Vector2(right_x, bot_post_y)]:
+		_add_fence_sprite(fence, TEX_FENCE_POST, corner, 0.0)
+	# Short returns at the north corners. The middle stays open onto the road.
+	for i in 3:
+		_add_fence_sprite(fence, TEX_FENCE_H, Vector2(left_x + 16.0 + float(i) * FENCE_H_PITCH, top_y - 16.0), 0.0)
+		_add_fence_sprite(fence, TEX_FENCE_H, Vector2(right_x - 16.0 - float(i) * FENCE_H_PITCH, top_y - 16.0), 0.0)
+
+	var thickness := 16.0
+	# Start below the road so Joe's tavern stand (600, 350) stays clear.
+	var side_top := PLOT_ORIGIN.y - 24.0
+	_add_fence_blocker(fence, Rect2(left_x - thickness * 0.5, side_top, thickness, bot_post_y - side_top + 8.0))
+	_add_fence_blocker(fence, Rect2(right_x - thickness * 0.5, side_top, thickness, bot_post_y - side_top + 8.0))
+	_add_fence_blocker(fence, Rect2(h_start - 16.0, bottom_y - thickness * 0.5, h_run + 32.0, thickness))
+
+
+func _clear_baked_fence_tiles() -> void:
+	var overlay := map_root.get_layer(&"terrain_overlay") as TileMapLayer
+	if overlay == null:
+		return
+	var doomed: Array[Vector2i] = []
+	for cell in overlay.get_used_cells():
+		var atlas: Vector2i = overlay.get_cell_atlas_coords(cell)
+		if atlas.x == FarmTilesetBuilder.FENCE_HORIZONTAL or atlas.x == FarmTilesetBuilder.FENCE_VERTICAL:
+			doomed.append(cell)
+	for cell in doomed:
+		overlay.erase_cell(cell)
+
+
+func _add_fence_sprite(parent: Node2D, texture: Texture2D, pos: Vector2, rotation_radians: float) -> void:
+	var sprite := Sprite2D.new()
+	sprite.texture = texture
+	sprite.centered = true
+	sprite.position = pos
+	sprite.rotation = rotation_radians
+	parent.add_child(sprite)
+
+
+func _add_fence_blocker(parent: Node2D, rect: Rect2) -> void:
+	var body := StaticBody2D.new()
+	body.collision_layer = PHYSICS_LAYERS.WORLD
+	body.collision_mask = 0
+	body.position = rect.position + rect.size * 0.5
+	var shape := RectangleShape2D.new()
+	shape.size = rect.size
+	var collision := CollisionShape2D.new()
+	collision.shape = shape
+	body.add_child(collision)
+	parent.add_child(body)
+
 
 ## Animals share one Y-sorted layer with the player (z 0) so whoever stands lower
 ## on screen draws in front. FarmMap/Objects sits at z 7 and would always draw
