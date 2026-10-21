@@ -45,6 +45,7 @@ var pause_menu: PauseMenu
 var notification_label: Label
 var _house_entrance: Area2D
 var _village_exit: Area2D
+var actor_layer: Node2D
 var _player_at_house_door: Player = null
 var _entering_house := false
 ## BUG-59: steps only (door point is the bottom step; shape sits above it).
@@ -99,6 +100,29 @@ func _setup_map() -> void:
 		elif issue.severity == MapValidationIssue.Severity.WARNING:
 			push_warning("[FarmMap:%s] %s" % [issue.code, issue.message])
 	print("[Farm] Authored map loaded: ", map_root.map_id, " (", map_root.size_in_tiles, ")")
+	_setup_actor_layer()
+
+## Animals share one Y-sorted layer with the player (z 0) so whoever stands lower
+## on screen draws in front. FarmMap/Objects sits at z 7 and would always draw
+## animals over the player; any Animal that lands there is moved here.
+func _setup_actor_layer() -> void:
+	actor_layer = Node2D.new()
+	actor_layer.name = "Actors"
+	actor_layer.y_sort_enabled = true
+	add_child(actor_layer)
+	for node in layout_root.find_children("*", "Animal", true, false):
+		_adopt_actor(node)
+	get_tree().node_added.connect(_on_tree_node_added)
+
+func _on_tree_node_added(node: Node) -> void:
+	if node is Animal and layout_root and layout_root.is_ancestor_of(node):
+		_adopt_actor.call_deferred(node)
+
+func _adopt_actor(node: Node) -> void:
+	if not is_instance_valid(node) or actor_layer == null or node.get_parent() == actor_layer:
+		return
+	if layout_root and layout_root.is_ancestor_of(node):
+		node.reparent(actor_layer, true)
 
 func _setup_ui() -> void:
 	var hud := HUDScene.instantiate()
@@ -457,7 +481,7 @@ func debug_spawn_animals() -> Array[Animal]:
 			continue
 		taken.append(spot)
 		animal.add_to_group("debug_spawned_animal")
-		layout_root.add_child(animal)
+		actor_layer.add_child(animal)
 		animal.set_home_position(spot)
 		animal.go_outside()
 		spawned.append(animal)

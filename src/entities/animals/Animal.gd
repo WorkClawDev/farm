@@ -47,6 +47,8 @@ const PRIVATE_ROOT := "res://assets/private/topdown_farm/"
 @export var frame_px: int = 128
 @export var idle_frames: int = 6
 @export var walk_frames: int = 6
+## Feet must end up SORT_FEET_Y (32px, like Player.SPRITE_FEET_Y) below the origin
+## after private_sprite_scale, so Y-sort compares feet with the player and villagers.
 @export var sprite_offset: Vector2 = Vector2(0, -34)
 @export var private_body_radius: float = 0.0
 @export var private_interaction_radius: float = 0.0

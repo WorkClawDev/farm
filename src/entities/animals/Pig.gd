@@ -17,7 +17,7 @@ func _ready() -> void:
 	frame_px = 128
 	idle_frames = 4
 	walk_frames = 6
-	sprite_offset = Vector2(0, -32)
+	sprite_offset = Vector2(0, -7)  # BUG-60: feet 32px below origin, same as Player/NPC
 	private_body_radius = 22.0
 	private_interaction_radius = 56.0
 	private_sprite_scale = 0.8

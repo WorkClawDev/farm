@@ -454,6 +454,11 @@ func _exercise_collision(instance: Node, scene_path: String) -> void:
 		await get_tree().physics_frame
 		await get_tree().physics_frame
 		_record("Debug F9 spawns chicken/pig/cow/sheep/horse on the farm", debug_animals.size() == 5)
+		var actor_layer := instance.get_node_or_null("Actors") as Node2D
+		var same_sort_layer := actor_layer != null and actor_layer.y_sort_enabled and actor_layer.z_index == player.z_index
+		for debug_animal in debug_animals:
+			same_sort_layer = same_sort_layer and (debug_animal as Node).get_parent() == actor_layer
+		_record("Farm animals Y-sort with the player in one Actors layer", same_sort_layer)
 		var debug_clear := not debug_animals.is_empty()
 		var debug_types: Array[String] = []
 		for debug_animal in debug_animals:
