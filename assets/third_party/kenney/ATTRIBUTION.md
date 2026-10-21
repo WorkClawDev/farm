@@ -12,4 +12,4 @@ Credit to Kenney (www.kenney.nl) appreciated, not required.
 
 - Beach sand/water (`decor/sand_64.png`, `sand2_64.png`, `water_64.png`, `water2_64.png`): cropped from `farm_ground_atlas_64.png` (Tiny Town dirt + Roguelike water) for BUG-51.
 
-- UI Pack - Pixel Adventure 2.0 (CC0, `ui_pixel_adventure/`): Large tiles / Thick outline tile_0000, 0002, 0006, 0007, 0013, 0018, 0019, 0033 as 9-slice StyleBoxTexture in `src/ui/theme/GameTheme.tres`.
+- UI Pack - Pixel Adventure 2.0 (CC0, `ui_pixel_adventure/`): Large tiles / Thick outline tile_0000, 0002, 0006, 0007, 0013, 0018, 0019, 0033 (used as 9-slice StyleBoxTexture by the UI v1 theme). Kept in the repo but not referenced by the current UI v2 theme (`src/ui/theme/GameTheme.tres`).
