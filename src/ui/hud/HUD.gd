@@ -48,6 +48,8 @@ func _build_ui() -> void:
 	_info_panel.offset_right = -20
 	_info_panel.offset_bottom = 20  # height hugs the two text rows (was a fixed, half-empty 112px)
 	_info_panel.grow_vertical = Control.GROW_DIRECTION_END
+	# Long dates widen the panel leftwards instead of past the screen edge.
+	_info_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_info_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_info_panel)
 	var info := VBoxContainer.new()

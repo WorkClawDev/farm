@@ -32,6 +32,9 @@
 - Farm, animals, buildings and interior art: Top-Down Farm with Animals Pixel Art Asset Pack by CraftPix.net (https://craftpix.net) — via private submodule `assets/private/topdown_farm`
 - Character / world tiles (existing): [Ninja Adventure Asset Pack](https://pixel-boy.itch.io/ninja-adventure-asset-pack) by Pixel-Boy / AAA
 - Extra tiles / decor (existing): [Kenney](https://kenney.nl) CC0 asset packs
+- UI panels / buttons / slots: [Kenney UI Pack – Pixel Adventure](https://kenney.nl/assets/ui-pack-pixel-adventure) (CC0) — `assets/third_party/kenney/ui_pixel_adventure/`
+- UI 字体 Font: [Fusion Pixel Font](https://github.com/TakWolf/fusion-pixel-font) 12px proportional zh_hans v2026.10.16 by TakWolf — SIL Open Font License 1.1 (includes Ark Pixel, Cubic 11, Galmuri; all OFL 1.1) — `assets/fonts/fusion_pixel/`
+- UI 字体 Font (current theme): [Noto Sans SC](https://fonts.google.com/noto/specimen/Noto+Sans+SC) variable (google/fonts `ofl/notosanssc`) by Google / Adobe — SIL Open Font License 1.1 — `assets/fonts/noto_sans_sc/`
 
 ## 开发工具 Development Tools
 
