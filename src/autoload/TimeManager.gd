@@ -17,7 +17,7 @@ const DAYS_PER_SEASON: int = 28  # 每季28天
 const SEASONS: Array[String] = ["Spring", "Summer", "Fall", "Winter"]
 
 # 当前时间状态
-var current_time: float = 6.0  # 当前时间 (0.0 - 24.0)，从早上6点开始
+var current_time: float = 9.0  # new game boot: mid-morning; day reset stays 6:00
 var current_day: int = 1  # 当前日期 (1-28)
 var current_season: int = 0  # 当前季节 (0-3)
 var current_year: int = 1  # 当前年份
@@ -81,7 +81,7 @@ func advance_to_next_day() -> void:
 	_advance_day()
 
 func reset() -> void:
-	current_time = 6.0
+	current_time = 9.0  # new-game default mid-morning; _advance_day still wakes at 6:00
 	current_day = 1
 	current_season = 0
 	current_year = 1
@@ -149,7 +149,7 @@ func save_state() -> Dictionary:
 	}
 
 func load_state(data: Dictionary) -> void:
-	current_time = data.get("current_time", 6.0)
+	current_time = data.get("current_time", 9.0)
 	current_day = data.get("current_day", 1)
 	current_season = data.get("current_season", 0)
 	current_year = data.get("current_year", 1)

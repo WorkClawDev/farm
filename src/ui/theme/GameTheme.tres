@@ -670,7 +670,7 @@ corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
-anti_aliasing = true
+anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="V2PanelSmall"]
 content_margin_left = 12.0
@@ -687,7 +687,7 @@ corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
-anti_aliasing = true
+anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="V2Btn"]
 content_margin_left = 14.0
@@ -704,7 +704,7 @@ corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
-anti_aliasing = true
+anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="V2BtnHover"]
 content_margin_left = 14.0
@@ -721,7 +721,7 @@ corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
-anti_aliasing = true
+anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="V2BtnPressed"]
 content_margin_left = 14.0
@@ -738,7 +738,7 @@ corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
-anti_aliasing = true
+anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="V2BtnDisabled"]
 content_margin_left = 14.0
@@ -755,7 +755,7 @@ corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
-anti_aliasing = true
+anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="V2BtnFocus"]
 content_margin_left = 14.0
@@ -772,7 +772,7 @@ corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
-anti_aliasing = true
+anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="V2Primary"]
 content_margin_left = 16.0
@@ -789,7 +789,7 @@ corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
-anti_aliasing = true
+anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="V2Danger"]
 content_margin_left = 14.0
@@ -806,7 +806,7 @@ corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
-anti_aliasing = true
+anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="V2Slot"]
 content_margin_left = 4.0
@@ -823,7 +823,7 @@ corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
-anti_aliasing = true
+anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="V2SlotHover"]
 content_margin_left = 4.0
@@ -840,7 +840,7 @@ corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
-anti_aliasing = true
+anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="V2SlotPressed"]
 content_margin_left = 4.0
@@ -857,7 +857,7 @@ corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
-anti_aliasing = true
+anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="V2Field"]
 content_margin_left = 10.0
@@ -874,7 +874,7 @@ corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
-anti_aliasing = true
+anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="V2TabSel"]
 content_margin_left = 14.0
@@ -891,7 +891,7 @@ corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
-anti_aliasing = true
+anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="V2ProgBg"]
 content_margin_left = 0.0
@@ -903,7 +903,7 @@ corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
-anti_aliasing = true
+anti_aliasing = false
 
 [sub_resource type="StyleBoxFlat" id="V2ProgFill"]
 content_margin_left = 0.0
@@ -915,7 +915,7 @@ corner_radius_top_left = 4
 corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
-anti_aliasing = true
+anti_aliasing = false
 
 [resource]
 default_base_scale = 1.0
@@ -988,8 +988,8 @@ InteractPromptText/font_sizes/font_size = 13
 ItemList/styles/focus = SubResource("Button_focus")
 ItemList/styles/panel = SubResource("V2Panel")
 Label/colors/font_color = Color(0.93, 0.95, 0.92, 1.0)
-Label/colors/font_shadow_color = Color(1, 0.980392, 0.901961, 0.35)
-Label/constants/shadow_offset_x = 1
+Label/colors/font_shadow_color = Color(0, 0, 0, 0)
+Label/constants/shadow_offset_x = 0
 Label/constants/shadow_offset_y = 1
 LineEdit/styles/focus = SubResource("V2BtnFocus")
 LineEdit/styles/normal = SubResource("V2Field")

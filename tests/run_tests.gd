@@ -105,7 +105,7 @@ func _run_item_database_tests(results: Dictionary) -> Dictionary:
 # TimeManager Test Functions
 func _test_time_initial() -> bool:
 	var tm = TimeManager.new()
-	var ok = tm.current_time == 6.0 and tm.current_day == 1
+	var ok = tm.current_time == 9.0 and tm.current_day == 1
 	tm.free()
 	return ok
 

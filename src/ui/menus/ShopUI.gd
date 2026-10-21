@@ -303,17 +303,45 @@ func _refresh_items() -> void:
 			stock_text = "无限库存" if stock < 0 else "库存 %d" % stock
 		else:
 			stock_text = "持有 %d" % int(entry.quantity)
-		var button := UIFactory.button(
-			"%s\n%d 金  ·  %s" % [item_data.name, price, stock_text],
-			&"",
-			Vector2(0, 70)
-		)
-		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		button.icon = ItemDatabase.load_icon_texture(item_id)
-		button.expand_icon = true
+		var holder := Control.new()
+		holder.custom_minimum_size = Vector2(0, 70)
+		var button := Button.new()
+		button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		button.focus_mode = Control.FOCUS_ALL
 		button.tooltip_text = str(item_data.description)
 		button.pressed.connect(_select_item.bind(item_id))
-		_items.add_child(button)
+		holder.add_child(button)
+		var row := HBoxContainer.new()
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		row.offset_left = 12
+		row.offset_right = -12
+		row.add_theme_constant_override("separation", 12)
+		var icon := TextureRect.new()
+		icon.custom_minimum_size = Vector2(48, 48)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		icon.texture = ItemDatabase.load_icon_texture(item_id)
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(icon)
+		var texts := VBoxContainer.new()
+		texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		texts.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		texts.alignment = BoxContainer.ALIGNMENT_CENTER
+		texts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var name_l := Label.new()
+		name_l.text = str(item_data.name)
+		name_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var meta_l := Label.new()
+		meta_l.text = "%d 金  ·  %s" % [price, stock_text]
+		meta_l.theme_type_variation = &"SubtitleLabel"
+		meta_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		texts.add_child(name_l)
+		texts.add_child(meta_l)
+		row.add_child(texts)
+		holder.add_child(row)
+		_items.add_child(holder)
 
 
 func _select_item(item_id: String) -> void:

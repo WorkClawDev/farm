@@ -12,7 +12,7 @@ func after_each() -> void:
 	pass
 
 func test_initial_time() -> void:
-	assert_eq(time_manager.current_time, 6.0, "初始时间应该是早上6点")
+	assert_eq(time_manager.current_time, 9.0, "初始时间应该是早上9点")
 	assert_eq(time_manager.current_day, 1, "初始日期应该是第1天")
 	assert_eq(time_manager.current_season, 0, "初始季节应该是春季")
 	assert_eq(time_manager.current_year, 1, "初始年份应该是第1年")
