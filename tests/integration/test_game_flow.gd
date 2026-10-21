@@ -510,7 +510,7 @@ func _exercise_collision(instance: Node, scene_path: String) -> void:
 
 
 func _assert_animal_private_art(animal: Animal, animal_label: String) -> void:
-	var sheet_animals := ["Chicken", "Pig", "Cow"]
+	var sheet_animals := ["Chicken", "Pig", "Cow", "Sheep"]
 	var sprite := animal.get_node_or_null("Sprite2D") as Sprite2D
 	var has_private := ResourceLoader.exists("res://assets/private/topdown_farm/animals/x4/chicken_sheet_x4.png")
 	if animal_label in sheet_animals:
@@ -524,7 +524,7 @@ func _assert_animal_private_art(animal: Animal, animal_label: String) -> void:
 					var expect_idle := 6 if animal_label == "Chicken" else 4
 					_record("%s idle_down frame count" % animal_label, frames.get_frame_count("idle_down") == expect_idle)
 				_record("%s Sprite2D hidden when animated" % animal_label, sprite != null and sprite.visible == false)
-				var expect_scale := 0.8 if animal_label in ["Pig", "Cow"] else 1.0
+				var expect_scale := 0.8 if animal_label in ["Pig", "Cow", "Sheep"] else 1.0
 				_record(
 					"%s private sprite scale is %.1f" % [animal_label, expect_scale],
 					animal.anim_sprite.scale.is_equal_approx(Vector2.ONE * expect_scale)

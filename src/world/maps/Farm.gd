@@ -27,7 +27,7 @@ const DEBUG_ANIMAL_SCENES := [
 	"res://src/entities/animals/Horse.tscn",
 ]
 ## Open grass between the pond, the fenced field and the barn.
-const DEBUG_ANIMAL_AREA_CENTER := Vector2(640, 500)
+const DEBUG_ANIMAL_AREA_CENTER := Vector2(1100, 360)
 const DEBUG_ANIMAL_CLEARANCE := 40.0
 
 @onready var map_root: EditableMap2D = $FarmMap
@@ -57,7 +57,7 @@ const HOUSE_ENTRANCE_SIZE := Vector2(40, 24)
 #   < Player 0 == crop sprites 0 (Y-sorted together via Farm/TilledArea/FarmPlot y_sort)
 #   < Objects 7 (buildings, unchanged relative to the player).
 # Plot centres sit on tile centres of the fenced field interior (tiles x 2..11, y 10..17).
-const PLOT_ORIGIN := Vector2(160, 672)
+const PLOT_ORIGIN := Vector2(640, 400)  # south of farmhouse; house-plot-road triangle
 const PLOT_SPACING := 64.0
 
 func _ready() -> void:
