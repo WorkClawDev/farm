@@ -14,6 +14,12 @@ const MapMenuInput = preload("res://src/world/maps/MapMenuInput.gd")
 const IllustratedMapBackdropScene = preload("res://src/world/maps/IllustratedMapBackdrop.gd")
 const WorldCollisionLayoutScene = preload("res://src/world/maps/WorldCollisionLayout.gd")
 
+const BED_ATLAS_PATH := "res://assets/private/topdown_farm/interior/x4/hero_home/Interior_x4.png"
+## I1 single bed on Interior_x4 (already x4, so the sprite stays at scale 1).
+## Not preloaded: ResourceLoader.exists skips the sprite when the private submodule is absent.
+const BED_REGION := Rect2(268, 64, 92, 156)
+const BED_DISPLAY_SCALE := 1.0
+
 var tile_map: TileMap = null # Legacy builder compatibility; no longer part of the runtime scene.
 @onready var map_root: EditableMap2D = $PlayerHouseMap
 @onready var player_spawn: MapMarker2D = map_root.get_marker(&"player_spawn")
@@ -37,6 +43,7 @@ func _ready() -> void:
 	_connect_signals()
 	_apply_house_upgrades()
 	_setup_furniture()
+	_setup_bed_sprite()
 	# Leave by the door you came in through (BUG-40): the village door or the farm.
 	_exit_to_village = GameManager.current_spawn_point == "village_house_entrance"
 	var player := get_tree().get_first_node_in_group("player") as Node2D
@@ -278,3 +285,34 @@ func load_state(data: Dictionary) -> void:
 	house_data = data
 	_apply_house_upgrades()
 	_setup_furniture()
+
+## Visual bed only. Does not move BedZone or change the sleep prompt.
+func _setup_bed_sprite() -> void:
+	if furniture_container == null or not ResourceLoader.exists(BED_ATLAS_PATH):
+		return
+	var atlas := load(BED_ATLAS_PATH) as Texture2D
+	if atlas == null:
+		return
+	var texture := AtlasTexture.new()
+	texture.atlas = atlas
+	texture.region = BED_REGION
+	var marker := furniture_container.get_node_or_null("BedPosition") as Node2D
+	var feet := Vector2(HouseConstants.BED_POSITION) * float(GameConstants.WORLD_TILE_SIZE)
+	if marker != null:
+		feet = furniture_container.to_local(marker.global_position)
+	# Foot origin joins the player Y-sort, so someone standing at the foot draws in front.
+	y_sort_enabled = true
+	furniture_container.y_sort_enabled = true
+	var bed := Node2D.new()
+	bed.name = "BedSprite"
+	bed.position = feet
+	furniture_container.add_child(bed)
+	var sprite := Sprite2D.new()
+	sprite.name = "Sprite2D"
+	sprite.texture = texture
+	sprite.centered = true
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.scale = Vector2(BED_DISPLAY_SCALE, BED_DISPLAY_SCALE)
+	var display_h := BED_REGION.size.y * BED_DISPLAY_SCALE
+	sprite.position = Vector2(0.0, -display_h * 0.5)
+	bed.add_child(sprite)
