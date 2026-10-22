@@ -23,6 +23,7 @@ const WARDROBE_REGION := Rect2(408, 72, 76, 108) # I2
 const TABLE_REGION := Rect2(528, 232, 104, 128) # I7
 const CHAIR_FACE_RIGHT_REGION := Rect2(548, 636, 44, 100) # I14, faces right
 const CHAIR_FACE_LEFT_REGION := Rect2(756, 636, 44, 100) # I16, faces left
+const FOOD_SHELF_REGION := Rect2(88, 404, 204, 220) # I10 full food shelf
 
 var tile_map: TileMap = null # Legacy builder compatibility; no longer part of the runtime scene.
 @onready var map_root: EditableMap2D = $PlayerHouseMap
@@ -315,6 +316,9 @@ func _setup_extra_furniture(atlas: Texture2D) -> void:
 	_spawn_interior_sprite("ChairWestSprite", CHAIR_FACE_RIGHT_REGION, table_feet + Vector2(-82, 0), atlas)
 	_spawn_interior_sprite("ChairEastSprite", CHAIR_FACE_LEFT_REGION, table_feet + Vector2(82, 0), atlas)
 	_spawn_interior_sprite("WardrobeSprite", WARDROBE_REGION, _furniture_feet("ChestPosition", Vector2(600, 200)), atlas)
+	# I10 food shelf, east of the kitchen marker. Sprite only; Kitchen at (200, 435) stays clear.
+	var kitchen_feet := _furniture_feet("KitchenPosition", Vector2(200, 350))
+	_spawn_interior_sprite("FoodShelfSprite", FOOD_SHELF_REGION, kitchen_feet + Vector2(80, 20), atlas)
 
 func _furniture_feet(marker_name: String, fallback: Vector2) -> Vector2:
 	var marker := furniture_container.get_node_or_null(marker_name) as Node2D
