@@ -277,7 +277,11 @@ func show_confirmation(config: Dictionary) -> Control:
 	buttons.add_child(confirm)
 	cancel.pressed.connect(_on_confirmation_result.bind(false, config))
 	confirm.pressed.connect(_on_confirmation_result.bind(true, config))
-	cancel.grab_focus()
+	# focus_confirm: sleep dialog lands on 确认, not 取消 (BUG-8).
+	if bool(config.get("focus_confirm", false)):
+		confirm.grab_focus()
+	else:
+		cancel.grab_focus()
 	return shade
 
 

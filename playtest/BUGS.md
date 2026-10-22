@@ -622,3 +622,17 @@
 - fence_after_corner.png：通过。左下角为单段 L 接，不再竖横硬叠；拐角柱略粗于中段柱（小观感，可接受）。
 - fence_after_seam.png：通过。底边横栏连续、间距均匀，旧空隙消失；与田垄右侧对齐。北边留通路口属设计。
 - 三项验收（连栏 / 拐角 / 对齐补缺口）均通过。
+
+## 2026-10-22 开局 densify 验收（农场1，未存档；对照 day1_day_overview）
+- 日志：`[FarmMapDecor] opening decor 16 (private 12/12, edge 4)`。
+- day1_dense_overview.png：通过。白天 9:34，农舍+南田+路+门前箱，田边树/灌木/石可见。
+- day1_dense_field.png：通过。田边近景有树、灌木、石（11:45）。
+- day1_dense_path.png：通过。进村岔路明显加宽（两格土路）；西端支路曾入画但 HUD 遮住北端一格，未作为主路径帧。
+
+## 2026-10-22 BUG-8 复测（槽3，未存档；改动未 commit）
+- 目标：进床区不自动弹窗；Space/E 才开；默认焦点「确认」；取消后离开再进仍须按键。
+- 槽3：第1年春季第7天，村庄房内；未存档、未确认睡觉。
+- bug8_enter_no_dialog.png：通过。走进床区等待，无休息框（4:30 PM）。
+- bug8_press_confirm.png：通过。Space 弹出「休息 / 要睡觉到第二天吗？」；「确认」为绿色焦点，「取消」无焦点环（4:33 PM）。
+- bug8_reenter_needs_press.png：通过。Esc 取消→离开床区→再进入无自动弹窗→Space 才再开（仍在第7天，未睡过）。
+- 备注：房内地板空白无床精灵；床区在房间左上；其下厨房区 Space 会开食谱。无崩溃。

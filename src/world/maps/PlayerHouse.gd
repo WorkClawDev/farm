@@ -27,6 +27,7 @@ var ui_canvas: CanvasLayer
 var house_data: Dictionary = {}
 
 var _exit_to_village := false
+var _in_bed_zone := false
 
 func _ready() -> void:
 	print("[PlayerHouse] Scene loaded")
@@ -127,6 +128,7 @@ func _connect_signals() -> void:
 	var bed_zone = interaction_zones.get_node_or_null("BedZone")
 	if bed_zone:
 		bed_zone.body_entered.connect(_on_bed_zone_entered)
+		bed_zone.body_exited.connect(_on_bed_zone_exited)
 
 	# 连接升级站交互
 	var upgrade_station = interaction_zones.get_node_or_null("UpgradeStation")
@@ -150,12 +152,29 @@ func _on_exit_area_entered(body: Node2D) -> void:
 
 func _on_bed_zone_entered(body: Node2D) -> void:
 	if body is Player:
-		_show_sleep_dialog()
+		_in_bed_zone = true
+
+func _on_bed_zone_exited(body: Node2D) -> void:
+	if body is Player:
+		_in_bed_zone = false
+		if UIManager and UIManager.has_open_confirmation():
+			UIManager.close_top_screen()
 
 func _on_upgrade_station_entered(body: Node2D) -> void:
 	if body is Player:
 		# 显示房屋升级UI
 		_show_upgrade_ui()
+
+func _input(event: InputEvent) -> void:
+	# BUG-8: popup only on a fresh interact press while inside the zone.
+	if not _in_bed_zone or event.is_echo() or not event.is_action_pressed("interact"):
+		return
+	if UIManager == null or UIManager.has_open_confirmation():
+		return
+	if GameManager.current_state != GameManager.GameState.PLAYING:
+		return
+	get_viewport().set_input_as_handled()
+	_show_sleep_dialog()
 
 func _show_sleep_dialog() -> void:
 	UIManager.show_confirmation({
@@ -165,6 +184,7 @@ func _show_sleep_dialog() -> void:
 		"cancel_key": "ui.common.cancel",
 		"on_confirm": Callable(self, "_on_sleep_confirmed"),
 		"on_cancel": Callable(self, "_on_sleep_canceled"),
+		"focus_confirm": true,
 	})
 
 func _on_sleep_confirmed() -> void:
