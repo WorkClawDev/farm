@@ -19,6 +19,10 @@ const BED_ATLAS_PATH := "res://assets/private/topdown_farm/interior/x4/hero_home
 ## Not preloaded: ResourceLoader.exists skips the sprite when the private submodule is absent.
 const BED_REGION := Rect2(268, 64, 92, 156)
 const BED_DISPLAY_SCALE := 1.0
+const WARDROBE_REGION := Rect2(408, 72, 76, 108) # I2
+const TABLE_REGION := Rect2(528, 232, 104, 128) # I7
+const CHAIR_FACE_RIGHT_REGION := Rect2(548, 636, 44, 100) # I14, faces right
+const CHAIR_FACE_LEFT_REGION := Rect2(756, 636, 44, 100) # I16, faces left
 
 var tile_map: TileMap = null # Legacy builder compatibility; no longer part of the runtime scene.
 @onready var map_root: EditableMap2D = $PlayerHouseMap
@@ -286,33 +290,52 @@ func load_state(data: Dictionary) -> void:
 	_apply_house_upgrades()
 	_setup_furniture()
 
-## Visual bed only. Does not move BedZone or change the sleep prompt.
+## Visual furniture only. Bed feet and the sleep prompt are unchanged.
 func _setup_bed_sprite() -> void:
 	if furniture_container == null or not ResourceLoader.exists(BED_ATLAS_PATH):
 		return
 	var atlas := load(BED_ATLAS_PATH) as Texture2D
 	if atlas == null:
 		return
-	var texture := AtlasTexture.new()
-	texture.atlas = atlas
-	texture.region = BED_REGION
+	# Foot origin joins the player Y-sort, so someone standing at the foot draws in front.
+	y_sort_enabled = true
+	furniture_container.y_sort_enabled = true
 	var marker := furniture_container.get_node_or_null("BedPosition") as Node2D
 	var feet := Vector2(HouseConstants.BED_POSITION) * float(GameConstants.WORLD_TILE_SIZE)
 	if marker != null:
 		feet = furniture_container.to_local(marker.global_position)
-	# Foot origin joins the player Y-sort, so someone standing at the foot draws in front.
-	y_sort_enabled = true
-	furniture_container.y_sort_enabled = true
-	var bed := Node2D.new()
-	bed.name = "BedSprite"
-	bed.position = feet
-	furniture_container.add_child(bed)
+	_spawn_interior_sprite("BedSprite", BED_REGION, feet, atlas)
+	_setup_extra_furniture(atlas)
+
+## Wardrobe, square table, and two chairs. Sprites only; BedZone and other zones stay put.
+func _setup_extra_furniture(atlas: Texture2D) -> void:
+	var table_feet := _furniture_feet("TablePosition", Vector2(400, 200))
+	_spawn_interior_sprite("TableSprite", TABLE_REGION, table_feet, atlas)
+	# I14 faces right (west of the table). I16 faces left (east). 52 + 22 + 8px gap.
+	_spawn_interior_sprite("ChairWestSprite", CHAIR_FACE_RIGHT_REGION, table_feet + Vector2(-82, 0), atlas)
+	_spawn_interior_sprite("ChairEastSprite", CHAIR_FACE_LEFT_REGION, table_feet + Vector2(82, 0), atlas)
+	_spawn_interior_sprite("WardrobeSprite", WARDROBE_REGION, _furniture_feet("ChestPosition", Vector2(600, 200)), atlas)
+
+func _furniture_feet(marker_name: String, fallback: Vector2) -> Vector2:
+	var marker := furniture_container.get_node_or_null(marker_name) as Node2D
+	if marker == null:
+		return fallback
+	return furniture_container.to_local(marker.global_position)
+
+func _spawn_interior_sprite(node_name: String, region: Rect2, feet_local: Vector2, atlas: Texture2D) -> void:
+	var texture := AtlasTexture.new()
+	texture.atlas = atlas
+	texture.region = region
+	var root := Node2D.new()
+	root.name = node_name
+	root.position = feet_local
+	furniture_container.add_child(root)
 	var sprite := Sprite2D.new()
 	sprite.name = "Sprite2D"
 	sprite.texture = texture
 	sprite.centered = true
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	sprite.scale = Vector2(BED_DISPLAY_SCALE, BED_DISPLAY_SCALE)
-	var display_h := BED_REGION.size.y * BED_DISPLAY_SCALE
+	var display_h := region.size.y * BED_DISPLAY_SCALE
 	sprite.position = Vector2(0.0, -display_h * 0.5)
-	bed.add_child(sprite)
+	root.add_child(sprite)
