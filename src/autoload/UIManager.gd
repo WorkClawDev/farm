@@ -171,6 +171,11 @@ func show_toast(message_key: String, args := {}, variant := "info") -> void:
 	var panel := UIFactory.hud_panel()
 	panel.theme_type_variation = &"ToastPanel"
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.clip_contents = true
+	# Floor stays inside the 320px ToastRoot. A larger minimum grows the
+	# center anchor (GROW_DIRECTION_BOTH) and the right edge crosses into
+	# the date/gold panel. Clip anything that still paints past the slot.
+	panel.custom_minimum_size.x = 300
 	panel.modulate.a = 0.0
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
@@ -188,7 +193,9 @@ func show_toast(message_key: String, args := {}, variant := "info") -> void:
 	label.theme_type_variation = &"HUDText"
 	label.text = UIFactory.no_orphan(text)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.custom_minimum_size.x = 260
+	# 240 + marker + margins stays under the 320px slot, so the label's
+	# minimum cannot widen ToastRoot past viewport_width - 300.
+	label.custom_minimum_size.x = 240
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL  # use the whole toast width before wrapping
 	row.add_child(label)
 	panel.set_meta("toast_text", text)
@@ -335,13 +342,18 @@ func _build_overlay() -> void:
 	_overlay_layer.add_child(_screen_root)
 	_toast_root = VBoxContainer.new()
 	_toast_root.name = "ToastRoot"
-	# Top-center, clear of the top-left quest panel, the top-right date/gold
-	# panel and the bottom hotbar/tool display (BUG-4). Width stays 356px as before.
+	# Top-center, dropped below the date/gold panel (that panel starts at y=20
+	# and hugs two text rows). Width is 320px (±160): at 1280 the right edge
+	# is 800, left of viewport_width-300, and the left edge stays clear of the
+	# quest tracker (BUG-4).
 	_toast_root.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	_toast_root.offset_left = -178
-	_toast_root.offset_top = 32
-	_toast_root.offset_right = 178
+	_toast_root.offset_left = -160
+	_toast_root.offset_top = 88
+	_toast_root.offset_right = 160
 	_toast_root.offset_bottom = 400
+	# PRESET_CENTER_TOP grows both ways. Pin extra width to the left so the
+	# right edge stays at viewport/2+160 (800 at 1280, under viewport-300).
+	_toast_root.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_toast_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_toast_root.add_theme_constant_override("separation", 10)
 	UIStyles.follow_theme(_toast_root)
