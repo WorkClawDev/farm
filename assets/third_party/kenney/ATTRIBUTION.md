@@ -11,5 +11,6 @@ Credit to Kenney (www.kenney.nl) appreciated, not required.
 - Scale: 16×16 source → ×4 nearest-neighbor → 64px grid.
 
 - Beach sand/water (`decor/sand_64.png`, `sand2_64.png`, `water_64.png`, `water2_64.png`): cropped from `farm_ground_atlas_64.png` (Tiny Town dirt + Roguelike water) for BUG-51.
+- Beach sand and sea (`assets/tiles/kenney/roguelikeSheet_transparent.png`): Roguelike RPG sheet cols 8/0 sand, cols 0/0 sea, cols 10-12 rows 7-9 sand-edged pool. `beach_tiles.png` kept.
 
 - UI Pack - Pixel Adventure 2.0 (CC0, `ui_pixel_adventure/`): Large tiles / Thick outline tile_0000, 0002, 0006, 0007, 0013, 0018, 0019, 0033 (used as 9-slice StyleBoxTexture by the UI v1 theme). Kept in the repo but not referenced by the current UI v2 theme (`src/ui/theme/GameTheme.tres`).

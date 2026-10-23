@@ -24,10 +24,10 @@ const TEX_HOUSE_STONE := preload("res://assets/tiles/kenney/decor/house_stone_19
 const TEX_HOUSE_TAN := preload("res://assets/tiles/kenney/decor/house_tan_192.png")
 const TEX_HOUSE_RED := preload("res://assets/tiles/kenney/decor/house_red_192.png")
 const TEX_FLOWER := preload("res://assets/tiles/kenney/decor/flower_64.png")
-const TEX_SAND := preload("res://assets/tiles/kenney/decor/sand_64.png")
-const TEX_SAND2 := preload("res://assets/tiles/kenney/decor/sand2_64.png")
-const TEX_WATER := preload("res://assets/tiles/kenney/decor/water_64.png")
-const TEX_WATER2 := preload("res://assets/tiles/kenney/decor/water2_64.png")
+const BEACH_SHEET := preload("res://assets/tiles/kenney/roguelikeSheet_transparent.png")
+const BEACH_STRIDE := 17
+
+var _sheet_cache: Dictionary = {}
 
 
 func _ready() -> void:
@@ -142,21 +142,47 @@ func _draw_forest() -> void:
 		_stamp(TEX_FLOWER, pos + Vector2(48, 16), Vector2(CELL, CELL))
 
 
+func _sheet_tile(cell: Vector2i) -> AtlasTexture:
+	var key := cell.x + cell.y * BeachTilesetBuilder.COLUMNS
+	if not _sheet_cache.has(key):
+		var region := AtlasTexture.new()
+		region.atlas = BEACH_SHEET
+		region.region = Rect2(cell.x * BEACH_STRIDE, cell.y * BEACH_STRIDE, 16, 16)
+		_sheet_cache[key] = region
+	return _sheet_cache[key]
+
+
+func _fill_sheet(cell: Vector2i, alt: Vector2i, rect: Rect2) -> void:
+	_fill_tiles(_sheet_tile(cell), rect, _sheet_tile(alt))
+
+
 func _draw_beach() -> void:
-	# Keep ocean collision (top ~155) but paint shore/water so the beach reads as sand+sea (BUG-51).
-	const SHORE_Y := 80.0
-	_fill_tiles(TEX_WATER, OUTER_RECT, TEX_WATER2)
-	# Sand belt from inland down to the waterline (covers the playable shore).
-	_fill_tiles(TEX_SAND, Rect2(-1400, -400, 4200, SHORE_Y + 400), TEX_SAND2)
+	# Ocean collision stays at y=155. Sand is col 8 rows 0-1; sea is col 0 rows 0-1.
+	# The 3x3 pool edge (cols 10-12, rows 7-9) sits on the row at y=64.
+	const SHORE_Y := 64.0
+	const SAND_TOP := -448.0
+	_fill_sheet(BeachTilesetBuilder.SAND_A, BeachTilesetBuilder.SAND_B, Rect2(-1400, SAND_TOP, 4200, SHORE_Y + CELL - SAND_TOP))
+	_fill_sheet(BeachTilesetBuilder.SEA_A, BeachTilesetBuilder.SEA_B, Rect2(-1400, SHORE_Y + CELL, 4200, OUTER_RECT.end.y - (SHORE_Y + CELL)))
 	# Grass only farther inland (north), not the whole map.
 	_fill_tiles(TEX_GRASS, Rect2(-1400, -900, 4200, 500), TEX_GRASS2)
-	_path_v(0.0, -200.0, SHORE_Y + 20.0)
+	_path_v(0.0, -200.0, SHORE_Y)
 	for x in range(-200, 900, 96):
 		_stamp(TEX_BUSH, Vector2(x, -80), Vector2(CELL, CELL))
-	for x in range(-200, 1100, 64):
-		_stamp(TEX_SAND2, Vector2(x, SHORE_Y - 64.0), Vector2(CELL, CELL))
-		_stamp(TEX_STONE, Vector2(x, SHORE_Y - 32.0), Vector2(CELL, CELL))
-		_stamp(TEX_WATER2, Vector2(x, SHORE_Y), Vector2(CELL, CELL))
+	_draw_shore_edge(SHORE_Y)
+
+
+func _draw_shore_edge(y: float) -> void:
+	var x0 := int(floor(OUTER_RECT.position.x / CELL)) * int(CELL)
+	var x1 := int(ceil(OUTER_RECT.end.x / CELL)) * int(CELL)
+	var x := x0
+	while x < x1:
+		var cell := BeachTilesetBuilder.POOL_T
+		if x == x0:
+			cell = BeachTilesetBuilder.POOL_TL
+		elif x + int(CELL) >= x1:
+			cell = BeachTilesetBuilder.POOL_TR
+		_stamp(_sheet_tile(cell), Vector2(x, y), Vector2(CELL, CELL))
+		x += int(CELL)
 
 
 func _draw_mine_fallback() -> void:
