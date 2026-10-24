@@ -50,6 +50,7 @@ func _ready() -> void:
 	await _test_dialogue_long_text()
 	await _test_toast_eviction_timers()
 	await _test_pause_submenu_esc()
+	await _test_bug7_farm3_save_file()
 	print("============================================================")
 	print("RESULTS: %d/%d passed" % [_passed, _passed + _failed])
 	if _failed == 0:
@@ -354,6 +355,109 @@ func _test_pause_submenu_esc() -> void:
 	await get_tree().process_frame
 	GameManager.is_game_active = old_active
 	GameManager.current_state = old_state
+
+
+# BUG-7：选「农场 3」时日志是 Saved slot 2。槽从 0 计，农场 3 = 内部槽 2 = save_2.json。
+# 农场 2 是 save_1.json。按下第三张卡必须只写第三槽，不能写到前一个农场。
+func _test_bug7_farm3_save_file() -> void:
+	var stamps := _save_slot_md5s()
+	var prev_slot := SaveManager.get_current_slot()
+	var prev_play := SaveManager.get_play_time()
+	_relocate_save_files("user://saves", "user://bug7_save_hold")
+	var menu := (load("res://src/ui/menus/SaveLoadMenu.tscn") as PackedScene).instantiate() as SaveLoadMenu
+	var empty_before := not SaveManager.has_save(0) and not SaveManager.has_save(1) and not SaveManager.has_save(2)
+	var bound := -1
+	var heading_ok := false
+	if menu != null:
+		menu.mode = SaveLoadMenu.Mode.SAVE
+		add_child(menu)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		if menu._cards != null and menu._cards.get_child_count() >= 3 and menu._slot_buttons.size() >= 3:
+			var heading := menu._cards.get_child(2).get_node("Content/Heading") as Label
+			heading_ok = heading != null and heading.text == "农场 3"
+			var action := menu._slot_buttons[2] as Button
+			var conns: Array = action.pressed.get_connections()
+			if not conns.is_empty():
+				var cb: Callable = conns[0]["callable"]
+				var args: Array = cb.get_bound_arguments()
+				if not args.is_empty():
+					bound = int(args[0])
+			if heading_ok and empty_before:
+				action.pressed.emit()
+		menu.queue_free()
+	var wrote_third := FileAccess.file_exists(SaveManager.get_save_path(2))
+	var wrote_other := FileAccess.file_exists(SaveManager.get_save_path(0)) or FileAccess.file_exists(SaveManager.get_save_path(1)) or FileAccess.file_exists("user://saves/save_3.json")
+	_record("农场 3 是第三张卡，按钮传入内部槽 2", heading_ok and bound == 2)
+	_record(
+		"选农场 3 只写入第三槽 save_2.json",
+		empty_before and wrote_third and not wrote_other and SaveManager.get_current_slot() == 2
+	)
+	_remove_save_files("user://saves")
+	_relocate_save_files("user://bug7_save_hold", "user://saves")
+	_remove_empty_dir("user://bug7_save_hold")
+	_record("BUG-7 测试还原了原来的存档文件", _save_slot_md5s() == stamps)
+	SaveManager.reset_session(prev_slot)
+	SaveManager._play_time = prev_play
+
+
+func _save_slot_md5s() -> Dictionary:
+	var stamps := {}
+	for slot in range(SaveManager.MAX_SAVE_SLOTS):
+		var path := SaveManager.get_save_path(slot)
+		stamps[slot] = FileAccess.get_md5(path) if FileAccess.file_exists(path) else ""
+	return stamps
+
+
+func _relocate_save_files(from_dir: String, to_dir: String) -> void:
+	var from := DirAccess.open(from_dir)
+	if from == null:
+		return
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(to_dir))
+	var names: Array[String] = []
+	from.list_dir_begin()
+	var entry := from.get_next()
+	while entry != "":
+		if not from.current_is_dir():
+			names.append(entry)
+		entry = from.get_next()
+	from.list_dir_end()
+	for name in names:
+		var src := from_dir.path_join(name)
+		var dst := to_dir.path_join(name)
+		var bytes := FileAccess.get_file_as_bytes(src)
+		var out := FileAccess.open(dst, FileAccess.WRITE)
+		if out == null:
+			print("  [DETAIL] 无法复制存档 ", src)
+			continue
+		out.store_buffer(bytes)
+		out.close()
+		if FileAccess.get_md5(dst) != FileAccess.get_md5(src):
+			print("  [DETAIL] 存档复制校验失败 ", src)
+			continue
+		from.remove(name)
+
+
+func _remove_save_files(dir_path: String) -> void:
+	var dir := DirAccess.open(dir_path)
+	if dir == null:
+		return
+	var names: Array[String] = []
+	dir.list_dir_begin()
+	var entry := dir.get_next()
+	while entry != "":
+		if not dir.current_is_dir():
+			names.append(entry)
+		entry = dir.get_next()
+	dir.list_dir_end()
+	for name in names:
+		dir.remove(name)
+
+
+func _remove_empty_dir(dir_path: String) -> void:
+	var parent := DirAccess.open("user://")
+	if parent != null:
+		parent.remove(dir_path.get_file())
 
 
 func _record(label: String, passed: bool) -> void:
