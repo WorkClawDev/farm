@@ -76,8 +76,10 @@ func _build_forest() -> void:
 
 
 func _build_beach() -> void:
-	# Water begins at y=155. The interaction circles remain reachable from shore.
-	_add_rect("Ocean", Rect2(-1400, 155, 4200, 1960))
+	# Painted water starts at y=80: the shore row is the pool-top tiles at y=64,
+	# and their first 4 source pixels (x4) are sand. Fishing circles sit in the
+	# water and still reach a player standing on that sand.
+	_add_rect("Ocean", Rect2(-1400, 80, 4200, 2035))
 	_add_rect("BeachNorthBoundary", Rect2(-950, -760, 1900, 50))
 	_add_rect("BeachWestBoundary", Rect2(-980, -760, 50, 960))
 	_add_rect("BeachEastBoundary", Rect2(930, -760, 50, 960))

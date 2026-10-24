@@ -264,7 +264,7 @@ func _exercise_collision(instance: Node, scene_path: String) -> void:
 			motion = Vector2(300, 0)
 			label = "玩家不能从非桥梁位置穿过河流"
 		"res://src/world/maps/Beach.tscn":
-			start = Vector2(0, 100)
+			start = Vector2(0, 40)
 			motion = Vector2(0, 160)
 			label = "玩家不能走入海水"
 		"res://src/world/maps/Mine.tscn":
@@ -486,7 +486,7 @@ func _exercise_collision(instance: Node, scene_path: String) -> void:
 		var bridge_collision := player.move_and_collide(Vector2(300, 0))
 		_record("森林桥梁保持可通行", bridge_collision == null)
 	elif scene_path == "res://src/world/maps/Beach.tscn":
-		player.global_position = Vector2(0, 100)
+		player.global_position = Vector2(0, 40)
 		player.move_and_collide(Vector2(0, 100))
 		await get_tree().physics_frame
 		await get_tree().physics_frame

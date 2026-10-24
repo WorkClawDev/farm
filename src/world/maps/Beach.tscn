@@ -38,7 +38,7 @@ position = Vector2(0, -100)
 [node name="FishingSpots" type="Node2D" parent="."]
 
 [node name="FishingSpot1" type="Area2D" parent="FishingSpots"]
-position = Vector2(-150, 150)
+position = Vector2(-150, 100)
 collision_layer = 8
 collision_mask = 2
 script = ExtResource("2_fishingspot")
@@ -61,7 +61,7 @@ text = "[按E键钓鱼]"
 horizontal_alignment = 1
 
 [node name="FishingSpot2" type="Area2D" parent="FishingSpots"]
-position = Vector2(0, 180)
+position = Vector2(0, 100)
 collision_layer = 8
 collision_mask = 2
 script = ExtResource("2_fishingspot")
@@ -84,7 +84,7 @@ text = "[按E键钓鱼]"
 horizontal_alignment = 1
 
 [node name="FishingSpot3" type="Area2D" parent="FishingSpots"]
-position = Vector2(150, 150)
+position = Vector2(150, 100)
 collision_layer = 8
 collision_mask = 2
 script = ExtResource("2_fishingspot")

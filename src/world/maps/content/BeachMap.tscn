@@ -107,7 +107,7 @@ collision_presets = Array[ExtResource("4_ttx5w")]([SubResource("Resource_0aoe6")
 required_marker_ids = PackedStringArray("player_spawn")
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_g01ek"]
-size = Vector2(4200, 1960)
+size = Vector2(4200, 2035)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_l6q5r"]
 size = Vector2(90, 26)
@@ -172,7 +172,7 @@ layer_id = &"collision"
 layer_kind = 3
 
 [node name="Ocean" type="StaticBody2D" parent="Collision" unique_id=1273058164]
-position = Vector2(1680, 1895)
+position = Vector2(1680, 1857.5)
 collision_mask = 0
 script = ExtResource("11_oqbt1")
 preset = SubResource("Resource_0aoe6")

@@ -3,7 +3,7 @@ class_name BeachTilesetBuilder
 
 ## BeachTilesetBuilder - 海滩 TileSet 构建器
 ## Kenney Roguelike/RPG CC0 sheet: roguelikeSheet_transparent.png
-## 16px cells, 1px separation. Pure sand is col 8 rows 0-1; pure sea is col 0 rows 0-1.
+## 16px cells, 1px separation. Drawn sand/sea are beach_x4 64px tiles; sheet cell (0,1) is unused (grass corner).
 ## Sand-edged pool 3x3 (corners / edges / center): cols 10-12, rows 7-9.
 ## beach_tiles.png stays in the project; it is no longer the sand or sea source.
 
@@ -13,10 +13,10 @@ const TILE_SIZE := Vector2i(16, 16)
 const SEPARATION := Vector2i(1, 1)
 const COLUMNS := 57
 const ROWS := 31
-const SAND_A := Vector2i(8, 0)
-const SAND_B := Vector2i(8, 1)
-const SEA_A := Vector2i(0, 0)
-const SEA_B := Vector2i(0, 1)
+const SAND_A := "res://assets/tiles/kenney/beach_x4/shore_sand_a.png"
+const SAND_B := "res://assets/tiles/kenney/beach_x4/shore_sand_b.png"
+const SEA_A := "res://assets/tiles/kenney/beach_x4/shore_sea_a.png"
+const SEA_B := "res://assets/tiles/kenney/beach_x4/shore_sea_b.png"
 const POOL_TL := Vector2i(10, 7)
 const POOL_T := Vector2i(11, 7)
 const POOL_TR := Vector2i(12, 7)
@@ -60,7 +60,7 @@ const TILE_PROPERTIES := {
 	TileCoord.BEACH_PATH: {"tile_id": 8, "passable": true, "layer": 0, "name": "沙滩路"},
 	TileCoord.PEBBLES: {"tile_id": 65, "passable": true, "layer": 0, "name": "鹅卵石"},
 	TileCoord.SHALLOW_WATER: {"tile_id": 0, "passable": false, "layer": 1, "name": "浅水"},
-	TileCoord.DEEP_WATER: {"tile_id": 57, "passable": false, "layer": 1, "name": "深水"},
+	TileCoord.DEEP_WATER: {"tile_id": 0, "passable": false, "layer": 1, "name": "深水"},
 	TileCoord.WATER_SURFACE: {"tile_id": 467, "passable": false, "layer": 1, "name": "水面"},
 	TileCoord.WATER_EDGE_SAND_L: {"tile_id": 466, "passable": false, "layer": 1, "name": "水边左"},
 	TileCoord.WATER_EDGE_SAND_R: {"tile_id": 468, "passable": false, "layer": 1, "name": "水边右"},

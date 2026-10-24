@@ -26,6 +26,10 @@ const TEX_HOUSE_RED := preload("res://assets/tiles/kenney/decor/house_red_192.pn
 const TEX_FLOWER := preload("res://assets/tiles/kenney/decor/flower_64.png")
 const BEACH_SHEET := preload("res://assets/tiles/kenney/roguelikeSheet_transparent.png")
 const BEACH_STRIDE := 17
+const TEX_SAND_A := preload("res://assets/tiles/kenney/beach_x4/shore_sand_a.png")
+const TEX_SAND_B := preload("res://assets/tiles/kenney/beach_x4/shore_sand_b.png")
+const TEX_SEA_A := preload("res://assets/tiles/kenney/beach_x4/shore_sea_a.png")
+const TEX_SEA_B := preload("res://assets/tiles/kenney/beach_x4/shore_sea_b.png")
 
 var _sheet_cache: Dictionary = {}
 
@@ -142,30 +146,31 @@ func _draw_forest() -> void:
 		_stamp(TEX_FLOWER, pos + Vector2(48, 16), Vector2(CELL, CELL))
 
 
-func _sheet_tile(cell: Vector2i) -> AtlasTexture:
+func _sheet_tile(cell: Vector2i) -> Texture2D:
+	# The sheet's 1px separation is transparent. An AtlasTexture region shares that
+	# edge with the next cell; past world x=512 the canvas sampler steps onto it and
+	# the clear color shows up as a vertical seam. A clamped 64px texture does not.
 	var key := cell.x + cell.y * BeachTilesetBuilder.COLUMNS
 	if not _sheet_cache.has(key):
-		var region := AtlasTexture.new()
-		region.atlas = BEACH_SHEET
-		region.region = Rect2(cell.x * BEACH_STRIDE, cell.y * BEACH_STRIDE, 16, 16)
-		_sheet_cache[key] = region
+		var src := BEACH_SHEET.get_image()
+		var tile := Image.create(16, 16, false, src.get_format())
+		var origin := Vector2i(cell.x * BEACH_STRIDE, cell.y * BEACH_STRIDE)
+		tile.blit_rect(src, Rect2i(origin, Vector2i(16, 16)), Vector2i.ZERO)
+		tile.resize(64, 64, Image.INTERPOLATE_NEAREST)
+		_sheet_cache[key] = ImageTexture.create_from_image(tile)
 	return _sheet_cache[key]
 
 
-func _fill_sheet(cell: Vector2i, alt: Vector2i, rect: Rect2) -> void:
-	_fill_tiles(_sheet_tile(cell), rect, _sheet_tile(alt))
-
-
 func _draw_beach() -> void:
-	# Ocean collision stays at y=155. Sand is col 8 rows 0-1; sea is col 0 rows 0-1.
+	# Water pixels start at y=80 (pool-top row at y=64: first 4 source px are sand).
+	# Sand and sea are the pre-cut 64px tiles. Sheet cell (0,1) is not used (grass corner).
 	# The 3x3 pool edge (cols 10-12, rows 7-9) sits on the row at y=64.
 	const SHORE_Y := 64.0
 	const SAND_TOP := -448.0
-	_fill_sheet(BeachTilesetBuilder.SAND_A, BeachTilesetBuilder.SAND_B, Rect2(-1400, SAND_TOP, 4200, SHORE_Y + CELL - SAND_TOP))
-	_fill_sheet(BeachTilesetBuilder.SEA_A, BeachTilesetBuilder.SEA_B, Rect2(-1400, SHORE_Y + CELL, 4200, OUTER_RECT.end.y - (SHORE_Y + CELL)))
+	_fill_tiles(TEX_SAND_A, Rect2(-1400, SAND_TOP, 4200, SHORE_Y + CELL - SAND_TOP), TEX_SAND_B)
+	_fill_tiles(TEX_SEA_A, Rect2(-1400, SHORE_Y + CELL, 4200, OUTER_RECT.end.y - (SHORE_Y + CELL)), TEX_SEA_B)
 	# Grass only farther inland (north), not the whole map.
 	_fill_tiles(TEX_GRASS, Rect2(-1400, -900, 4200, 500), TEX_GRASS2)
-	_path_v(0.0, -200.0, SHORE_Y)
 	for x in range(-200, 900, 96):
 		_stamp(TEX_BUSH, Vector2(x, -80), Vector2(CELL, CELL))
 	_draw_shore_edge(SHORE_Y)
