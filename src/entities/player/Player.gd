@@ -218,6 +218,10 @@ func _use_tool_on_target() -> void:
 		if facing_coord.x >= 0:
 			farm.perform_farm_action(facing_coord, tool_manager.get_current_tool_type())
 			return
+		# BUG-9: 面向田地网格外（草地/土路）时锄头要有提示。不翻地、不扣体力。其它工具仍走下面的探测。
+		if tool_manager.get_current_tool_type() == ToolManager.ToolType.HOE:
+			UIManager.show_toast("这里不能耕地", {}, "info")
+			return
 
 	# 获取面向位置的目标
 	var target_pos = global_position + _get_direction_vector() * interaction_range
