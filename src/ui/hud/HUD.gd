@@ -11,7 +11,6 @@ var _stamina_label: Label
 var _hint_panel: PanelContainer
 var _hint_label: Label
 var _hint_tween: Tween
-var _stamina_hide_at := 0.0
 
 
 func _ready() -> void:
@@ -23,13 +22,6 @@ func _ready() -> void:
 	_update_stamina(StaminaManager.current_stamina, StaminaManager.max_stamina)
 	_update_input_hint(InputManager.get_current_device())
 	_apply_hud_visibility()
-
-
-func _process(_delta: float) -> void:
-	if _stamina_panel and _stamina_panel.visible and Time.get_ticks_msec() / 1000.0 > _stamina_hide_at:
-		var ratio: float = float(StaminaManager.get_stamina_percent()) if StaminaManager else 1.0
-		if ratio > 0.3:
-			_stamina_panel.visible = false
 
 
 func _build_ui() -> void:
@@ -146,8 +138,9 @@ func _update_stamina(current: float, maximum: float) -> void:
 	var ratio := clampf(current / maximum if maximum > 0 else 0.0, 0.0, 1.0)
 	_stamina_bar.value = ratio * 100.0
 	_stamina_label.text = "体力  %d / %d" % [int(current), int(maximum)]
-	_stamina_panel.visible = ratio < 0.78
-	_stamina_hide_at = Time.get_ticks_msec() / 1000.0 + 2.6
+	# Always on (including full stamina). Panel mouse_filter is IGNORE.
+	_stamina_panel.visible = true
+	_stamina_panel.modulate.a = 1.0
 	if ratio <= 0.2:
 		_stamina_bar.modulate = Color("#E5634F")
 	elif ratio <= 0.45:
