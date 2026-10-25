@@ -2,7 +2,7 @@
 	"crops": [
 		{
 			"id": "turnip",
-			"name": "芜菁",
+			"name": "防风草",
 			"seed_id": "turnip_seed",
 			"description": "春天最常见的作物，生长快速。",
 			"growth_days": [1, 1, 1, 1],

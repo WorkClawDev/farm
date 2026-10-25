@@ -192,7 +192,7 @@ func _test_item_database_load() -> bool:
 func _test_get_item() -> bool:
 	var db = ItemDatabase.new()
 	var item = db.get_item("turnip")
-	var ok = item != null and item.name == "芜菁"
+	var ok = item != null and item.name == "防风草"
 	db.free()
 	return ok
 

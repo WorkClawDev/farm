@@ -344,11 +344,20 @@ func perform_farm_action(coord: Vector2i, tool_type: ToolManager.ToolType) -> vo
 	var selected_item := Inventory.get_selected_item_id()
 	var selected_data = ItemDatabase.get_item(selected_item) if not selected_item.is_empty() else null
 	var cell := FarmState.get_cell(coord)
+	var debris := str(cell.get("debris", ""))
 
 	# 规则（BUG-14）：手里拿的东西决定动作。
 	# - 拿着工具（Q/R 切换）时只执行该工具的动作，快捷栏里选着种子也不会播种；
 	# - 按数字键选快捷栏物品会收起工具（ToolType.NONE），这时选中的是种子才播种。
-	if tool_type == ToolManager.ToolType.NONE:
+	# 格子上有杂物时，先用对应工具清除；用错工具只提示，不扣体力。
+	if not debris.is_empty():
+		if tool_type == ToolManager.ToolType.NONE:
+			message = "这里有%s，按 Q/R 拿工具清除" % FarmState.debris_display_name(debris)
+		else:
+			var cleared := _clear_debris_with_tool(coord, tool_type)
+			success = bool(cleared.get("success", false))
+			message = str(cleared.get("message", ""))
+	elif tool_type == ToolManager.ToolType.NONE:
 		if selected_data and selected_data.type == ItemDatabase.ItemType.SEED:
 			if int(cell.get("state", FarmState.UNTILLED)) == FarmState.UNTILLED:
 				message = "先用锄头翻地再播种"
@@ -393,12 +402,64 @@ func perform_farm_action(coord: Vector2i, tool_type: ToolManager.ToolType) -> vo
 						int(result.get("quantity", 0))
 					)
 				message = "收获 %d 个 %s" % [result.get("quantity", 0), result.get("crop_id", "")] if success else "作物尚未成熟"
+			ToolManager.ToolType.AXE:
+				message = "这里没有树枝或树桩"
+			ToolManager.ToolType.PICKAXE:
+				message = "这里没有石头"
 			_:
 				message = "选择种子或合适的工具"
 
 	if success:
 		StaminaManager.use_stamina(2.0)
 	_show_notification(message)
+
+
+func _farm_tool_key(tool_type: ToolManager.ToolType) -> String:
+	match tool_type:
+		ToolManager.ToolType.SICKLE:
+			return FarmState.TOOL_SICKLE
+		ToolManager.ToolType.PICKAXE:
+			return FarmState.TOOL_PICKAXE
+		ToolManager.ToolType.AXE:
+			return FarmState.TOOL_AXE
+		_:
+			return ""
+
+
+func _clear_debris_with_tool(coord: Vector2i, tool_type: ToolManager.ToolType) -> Dictionary:
+	var kind := FarmState.get_debris(coord)
+	if kind.is_empty():
+		return {"success": false, "message": ""}
+	if _farm_tool_key(tool_type) != FarmState.tool_for_debris(kind):
+		return {"success": false, "message": FarmState.debris_wrong_tool_message(kind)}
+	var drop := FarmState.peek_debris_drop(coord)
+	if drop != "" and not Inventory.can_add_item(drop, 1):
+		return {"success": false, "message": "背包已满"}
+	var result := FarmState.strike_debris(coord)
+	if result.is_empty():
+		return {"success": false, "message": "这里清不掉"}
+	var item_id := str(result.get("item_id", ""))
+	var quantity := int(result.get("quantity", 0))
+	if item_id != "" and quantity > 0:
+		Inventory.add_item(item_id, quantity)
+	return {"success": true, "message": _debris_cleared_message(result)}
+
+
+func _debris_cleared_message(result: Dictionary) -> String:
+	var kind := str(result.get("kind", ""))
+	if not bool(result.get("cleared", false)):
+		return "树桩还没砍倒（%d/%d）" % [int(result.get("hits", 0)), int(result.get("hits_needed", 3))]
+	match kind:
+		FarmState.DEBRIS_WEED:
+			return "清除了杂草，获得纤维"
+		FarmState.DEBRIS_STONE:
+			return "敲碎了石头，获得石头"
+		FarmState.DEBRIS_TWIG:
+			return "捡起了树枝，获得木材"
+		FarmState.DEBRIS_STUMP:
+			return "砍倒了树桩，获得木材"
+		_:
+			return "杂物已清除"
 
 func get_save_state() -> Dictionary:
 	return FarmState.get_save_state()

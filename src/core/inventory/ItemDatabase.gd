@@ -168,7 +168,7 @@ func _create_default_database() -> void:
 	var default_items := [
 		{
 			"id": "turnip_seed",
-			"name": "芜菁种子",
+			"name": "防风草种子",
 			"type": "seed",
 			"seasons": ["spring"],
 			"growth_days": 4,
@@ -179,11 +179,11 @@ func _create_default_database() -> void:
 		},
 		{
 			"id": "turnip",
-			"name": "芜菁",
+			"name": "防风草",
 			"type": "crop",
 			"buy_price": 0,
 			"sell_price": 35,
-			"description": "新鲜的芜菁"
+			"description": "新鲜的防风草"
 		},
 		{
 			"id": "hoe",

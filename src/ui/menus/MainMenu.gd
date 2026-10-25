@@ -40,10 +40,19 @@ var _transitioning := false
 func _ready() -> void:
 	print("[MainMenu] Ready")
 	var launch := DebugLaunchScript.from_cmdline()
+	if bool(launch.get("new_game", false)):
+		_boot_debug_new_game()
+		return
 	if int(launch.get("slot", -1)) >= 0:
 		_boot_debug_launch(launch)
 		return
 	_setup_menu()
+
+
+func _boot_debug_new_game() -> void:
+	DebugLaunchScript.apply_debug_new_game_save_dir()
+	print("[DebugLaunch] --new-game save_dir=%s" % SaveManager.save_dir)
+	await GameManager.start_new_game(0)
 
 
 func _boot_debug_launch(launch: Dictionary) -> void:

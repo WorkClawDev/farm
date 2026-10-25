@@ -101,7 +101,7 @@ func _on_tool_changed(tool_type: int, tool_name: String) -> void:
 		_switch_tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		_switch_tween.tween_property(_icon_card, "scale", Vector2.ONE, 0.16)
 
-## 没拿工具时显示手里的快捷栏物品（例如“手持 芜菁种子”）。
+## 没拿工具时显示手里的快捷栏物品（例如“手持 防风草种子”）。
 func _refresh_hand_item() -> void:
 	if _current_tool_type != ToolManager.ToolType.NONE or tool_name_label == null:
 		return

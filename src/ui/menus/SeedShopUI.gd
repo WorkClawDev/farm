@@ -5,7 +5,7 @@ signal shop_closed
 signal item_bought(item_id: String, quantity: int, total_price: int)
 
 const SHOP_ITEMS: Array[Dictionary] = [
-	{"id": "turnip_seed", "name": "芜菁种子", "description": "春天播种，4 天成熟。适合初次耕种。", "price": 20, "season": "spring"},
+	{"id": "turnip_seed", "name": "防风草种子", "description": "春天播种，4 天成熟。适合初次耕种。", "price": 20, "season": "spring"},
 	{"id": "potato_seed", "name": "土豆种子", "description": "春天播种，6 天成熟。适合做各种料理。", "price": 50, "season": "spring"},
 	{"id": "tomato_seed", "name": "番茄种子", "description": "夏天播种，11 天成熟。多汁酸甜。", "price": 50, "season": "summer"},
 	{"id": "corn_seed", "name": "玉米种子", "description": "夏天播种，14 天成熟。金灿灿的谷物。", "price": 80, "season": "summer"},

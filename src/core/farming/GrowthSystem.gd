@@ -101,7 +101,7 @@ func _create_default_crop_database() -> void:
 		"crops": [
 			{
 				"id": "turnip",
-				"name": "芜菁",
+				"name": "防风草",
 				"seed_id": "turnip_seed",
 				"growth_days": [1, 1, 1, 1],
 				"season": ["Spring"],

@@ -29,6 +29,8 @@ const REQUIRED_AUTOLOADS := [
 	"FarmState",
 ]
 
+const DebugLaunchScript = preload("res://src/core/debug/DebugLaunch.gd")
+
 var _total := 0
 var _passed := 0
 var _failures: Array[String] = []
@@ -67,6 +69,7 @@ func _ready() -> void:
 	await _exercise_interact_prompt()
 	await _exercise_hoe_facing_and_swing_lock()
 	await _exercise_npc_crowd_squeeze()
+	await _exercise_opening_debris()
 	_finish()
 
 
@@ -657,7 +660,8 @@ func _exercise_golden_path() -> void:
 	_record("首日种植任务自动接取", QuestSystem.get_quest_state("tutorial_farming") == QuestSystem.QuestState.ACTIVE)
 	_record("首日村庄任务自动接取", QuestSystem.get_quest_state("village_introduction") == QuestSystem.QuestState.ACTIVE)
 
-	var coords := [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)]
+	# Opening debris covers the field edge. These inner plots stay clear.
+	var coords := [Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)]
 	for coord in coords:
 		_record("耕地%s" % coord, FarmState.till(coord))
 		_record("播种%s" % coord, FarmState.plant(coord, "turnip_seed"))
@@ -737,7 +741,8 @@ func _exercise_watering_can() -> void:
 
 	var coords: Array[Vector2i] = []
 	for i in range(max_uses + 1):
-		var coord := Vector2i(i % FarmState.GRID_WIDTH, i / FarmState.GRID_WIDTH)
+		# Inner plots (x 1..8, y 1..6) have no opening debris.
+		var coord := Vector2i(1 + (i % 8), 1 + int(i / 8))
 		FarmState.till(coord)
 		coords.append(coord)
 
@@ -837,7 +842,7 @@ func _exercise_tool_vs_hotbar_dispatch() -> void:
 	_record("开局拿锄头且快捷栏选着种子",
 		tm.get_current_tool_type() == hoe and Inventory.get_selected_item_id() == "turnip_seed")
 
-	var a := Vector2i(0, 0)
+	var a := Vector2i(1, 1)
 	farm.perform_farm_action(a, tm.get_current_tool_type())
 	_record("锄头翻地", int(FarmState.get_cell(a).state) == FarmState.TILLED)
 	var stamina := StaminaManager.current_stamina
@@ -859,7 +864,7 @@ func _exercise_tool_vs_hotbar_dispatch() -> void:
 	farm.perform_farm_action(a, tm.get_current_tool_type())
 	_record("手持种子对耕地播种",
 		not Dictionary(FarmState.get_cell(a).crop).is_empty() and Inventory.get_item_count("turnip_seed") == seeds - 1)
-	var b := Vector2i(1, 0)
+	var b := Vector2i(2, 1)
 	farm.perform_farm_action(b, tm.get_current_tool_type())
 	_record("手持种子不能在未翻的地上播种",
 		Dictionary(FarmState.get_cell(b).crop).is_empty() and Inventory.get_item_count("turnip_seed") == seeds - 1)
@@ -1909,6 +1914,276 @@ func _exercise_hoe_facing_and_swing_lock() -> void:
 	FarmState.reset()
 	farm.queue_free()
 	await get_tree().process_frame
+
+
+## Opening field debris: new game scatters weed/stone/twig/stump, tools drop
+## fiber/stone/wood, and a save with no debris field stays clear.
+## Saves only under a temporary save_dir. Never reads or writes user://saves/.
+func _exercise_opening_debris() -> void:
+	print("------------------------------------------------------------")
+	print("开局清田：新档杂物、对的工具才掉落、旧档没有杂物字段")
+	var enabled := DebugLaunchScript.parse(PackedStringArray(["--new-game"]), true)
+	var release := DebugLaunchScript.parse(PackedStringArray(["--new-game"]), false)
+	var plain := DebugLaunchScript.parse(PackedStringArray(), true)
+	_record(
+		"debug 的 --new-game 会开新档且不指定读档槽",
+		bool(enabled.get("new_game", false)) and int(enabled.get("slot", 0)) == -1
+	)
+	_record("正式版忽略 --new-game", not bool(release.get("new_game", false)))
+	_record("没有 --new-game 不会开新档", not bool(plain.get("new_game", false)))
+	var dir_before_flag := SaveManager.save_dir
+	DebugLaunchScript.apply_debug_new_game_save_dir()
+	_record(
+		"--new-game 把存档目录指到调试临时目录",
+		SaveManager.save_dir == DebugLaunchScript.DEBUG_NEW_GAME_SAVE_DIR
+			and SaveManager.save_dir != "user://saves/"
+	)
+	SaveManager.save_dir = dir_before_flag
+
+	var prev_dir := SaveManager.save_dir
+	var prev_slot := SaveManager.get_current_slot()
+	var tmp_dir := "user://debris_test_saves_%d/" % Time.get_ticks_usec()
+	SaveManager.save_dir = tmp_dir
+	_record(
+		"清田测试只用临时 save_dir",
+		SaveManager.save_dir.begins_with("user://debris_test_saves_")
+			and not SaveManager.save_dir.begins_with("user://saves")
+	)
+
+	TimeManager.reset()
+	Inventory.reset_with_starter_items()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	FarmState.reset()
+
+	var counts := {"weed": 0, "stone": 0, "twig": 0, "stump": 0}
+	var debris_cells := 0
+	var edge_only := true
+	for y in FarmState.GRID_HEIGHT:
+		for x in FarmState.GRID_WIDTH:
+			var coord := Vector2i(x, y)
+			var kind := FarmState.get_debris(coord)
+			if kind.is_empty():
+				continue
+			debris_cells += 1
+			counts[kind] = int(counts.get(kind, 0)) + 1
+			if not FarmState.is_field_edge(coord):
+				edge_only = false
+	_record("新档有 %d 格杂物" % debris_cells, debris_cells == FarmState.OPENING_DEBRIS_COUNT)
+	_record("杂物都在田外圈", edge_only and debris_cells > 0)
+	_record(
+		"杂草、石头、树枝、树桩都有",
+		int(counts["weed"]) > 0 and int(counts["stone"]) > 0 and int(counts["twig"]) > 0 and int(counts["stump"]) > 0
+	)
+	var weed := _find_debris_cell("weed")
+	var stone := _find_debris_cell("stone")
+	var twig := _find_debris_cell("twig")
+	var stump := _find_debris_cell("stump")
+	_record("四种杂物都能找到格子", weed.x >= 0 and stone.x >= 0 and twig.x >= 0 and stump.x >= 0)
+	_record("有杂草时翻地失败", not FarmState.till(weed))
+	_record("有杂草时播种失败且不扣种子", not FarmState.plant(weed, "turnip_seed") and Inventory.get_item_count("turnip_seed") == 15)
+
+	for kind in ["weed", "stone", "twig", "stump"]:
+		var variant := int(FarmState.get_cell(_find_debris_cell(kind)).get("debris_variant", 0))
+		var art := FarmPlot.resolve_debris_texture_path(kind, variant)
+		var private_on := art.begins_with("res://assets/private/")
+		var fallback_ok := art.ends_with("fiber.png") or art.ends_with("stone.png") or art.ends_with("wood.png")
+		var art_label := "私有" if private_on else "物品图"
+		_record(
+			"%s 贴图可用（%s）" % [kind, art_label],
+			art != "" and ResourceLoader.exists(art) and (private_on or fallback_ok)
+		)
+
+	var farm_node := await _spawn_farm()
+	var farm := farm_node as Farm
+	_record("清田场景有农场", farm != null)
+	if farm == null:
+		_wipe_debris_test_saves(tmp_dir)
+		SaveManager.save_dir = prev_dir
+		SaveManager.reset_session(prev_slot)
+		return
+
+	var weed_plot := farm.farm_plots.get(weed) as FarmPlot
+	var stump_plot := farm.farm_plots.get(stump) as FarmPlot
+	var weed_sprite: Sprite2D = null
+	if weed_plot != null:
+		weed_sprite = weed_plot.get_node_or_null("DebrisSprite") as Sprite2D
+	var stump_sprite: Sprite2D = null
+	if stump_plot != null:
+		stump_sprite = stump_plot.get_node_or_null("DebrisSprite") as Sprite2D
+	var stump_shape := _debris_shape(stump_plot)
+	var weed_shape := _debris_shape(weed_plot)
+	var stump_rect: RectangleShape2D = null
+	if stump_shape != null:
+		stump_rect = stump_shape.shape as RectangleShape2D
+	var stump_art := ""
+	if stump_sprite != null and stump_sprite.texture != null:
+		stump_art = FarmPlot.resolve_debris_texture_path("stump", int(FarmState.get_cell(stump).get("debris_variant", 0)))
+	_record("杂草画在格子上", weed_sprite != null and weed_sprite.visible and weed_sprite.texture != null)
+	_record(
+		"树桩底边贴着格子底边，私有图 scale 为 1",
+		stump_sprite != null and stump_sprite.visible and stump_sprite.texture != null
+			and is_equal_approx(stump_sprite.position.y, FarmPlot.SIZE * 0.5)
+			and is_equal_approx(stump_sprite.offset.y, -stump_sprite.texture.get_height() * 0.5)
+			and (not stump_art.begins_with("res://assets/private/") or stump_sprite.scale == Vector2.ONE)
+	)
+	_record(
+		"树桩碰撞是一格",
+		stump_shape != null and not stump_shape.disabled and stump_rect != null
+			and stump_rect.size == Vector2(FarmPlot.SIZE, FarmPlot.SIZE)
+			and stump_shape.position == FarmPlot.STUMP_BLOCK_OFFSET
+	)
+	_record("杂草不挡路", weed_shape != null and weed_shape.disabled)
+
+	var seeds := Inventory.get_item_count("turnip_seed")
+	farm.perform_farm_action(weed, ToolManager.ToolType.NONE)
+	_record(
+		"手里拿种子清不掉杂草",
+		FarmState.get_debris(weed) == "weed" and Inventory.get_item_count("turnip_seed") == seeds
+	)
+	var stamina := StaminaManager.current_stamina
+	farm.perform_farm_action(weed, ToolManager.ToolType.HOE)
+	_record(
+		"锄头清不了杂草，也不扣体力",
+		FarmState.get_debris(weed) == "weed" and StaminaManager.current_stamina == stamina
+	)
+	farm.perform_farm_action(stone, ToolManager.ToolType.AXE)
+	_record("斧头清不了石头", FarmState.get_debris(stone) == "stone" and StaminaManager.current_stamina == stamina)
+	farm.perform_farm_action(twig, ToolManager.ToolType.PICKAXE)
+	_record("镐子清不了树枝", FarmState.get_debris(twig) == "twig" and StaminaManager.current_stamina == stamina)
+	farm.perform_farm_action(stump, ToolManager.ToolType.SICKLE)
+	_record("镰刀清不了树桩", FarmState.get_debris(stump) == "stump" and StaminaManager.current_stamina == stamina)
+
+	var fiber_before := Inventory.get_item_count("fiber")
+	farm.perform_farm_action(weed, ToolManager.ToolType.SICKLE)
+	_record(
+		"镰刀清草得到纤维",
+		FarmState.get_debris(weed).is_empty() and Inventory.get_item_count("fiber") == fiber_before + 1
+			and is_equal_approx(StaminaManager.current_stamina, stamina - 2.0)
+	)
+	_record("清掉后杂草贴图隐藏", weed_sprite != null and not weed_sprite.visible)
+	stamina = StaminaManager.current_stamina
+	var stone_before := Inventory.get_item_count("stone")
+	farm.perform_farm_action(stone, ToolManager.ToolType.PICKAXE)
+	_record(
+		"镐子清石头得到石头",
+		FarmState.get_debris(stone).is_empty() and Inventory.get_item_count("stone") == stone_before + 1
+			and is_equal_approx(StaminaManager.current_stamina, stamina - 2.0)
+	)
+	stamina = StaminaManager.current_stamina
+	var wood_before := Inventory.get_item_count("wood")
+	farm.perform_farm_action(twig, ToolManager.ToolType.AXE)
+	_record(
+		"斧头清树枝得到木材",
+		FarmState.get_debris(twig).is_empty() and Inventory.get_item_count("wood") == wood_before + 1
+			and is_equal_approx(StaminaManager.current_stamina, stamina - 2.0)
+	)
+	stamina = StaminaManager.current_stamina
+	wood_before = Inventory.get_item_count("wood")
+	farm.perform_farm_action(stump, ToolManager.ToolType.AXE)
+	farm.perform_farm_action(stump, ToolManager.ToolType.AXE)
+	_record(
+		"树桩砍两下还在，不掉木头",
+		FarmState.get_debris(stump) == "stump"
+			and int(FarmState.get_cell(stump).get("debris_hits", 0)) == 2
+			and Inventory.get_item_count("wood") == wood_before
+			and is_equal_approx(StaminaManager.current_stamina, stamina - 4.0)
+			and stump_sprite != null and stump_sprite.visible
+	)
+	farm.perform_farm_action(stump, ToolManager.ToolType.AXE)
+	_record(
+		"树桩第三下得到木材并消失",
+		FarmState.get_debris(stump).is_empty() and Inventory.get_item_count("wood") == wood_before + 1
+			and is_equal_approx(StaminaManager.current_stamina, stamina - 6.0)
+			and stump_sprite != null and not stump_sprite.visible
+			and stump_shape != null and stump_shape.disabled
+	)
+
+	var cleared_snapshot := FarmState.get_save_state()
+	FarmState.reset()
+	_record("杂物随存档恢复", FarmState.load_save_state(_json_round_trip(cleared_snapshot))
+		and FarmState.get_debris(weed).is_empty() and FarmState.get_debris(stone).is_empty()
+		and FarmState.count_debris() == debris_cells - 4)
+
+	FarmState.reset()
+	var fresh := FarmState.get_save_state()
+	SaveManager.reset_session(0)
+	var saved := SaveManager.save_game(0)
+	var save_path := SaveManager.get_save_path(0)
+	_record(
+		"新档杂物写进临时存档",
+		saved and save_path.begins_with(tmp_dir) and FileAccess.file_exists(save_path)
+	)
+	var loaded := {}
+	var applied := false
+	if saved:
+		loaded = SaveManager.load_snapshot(0)
+		FarmState.reset()
+		applied = not loaded.is_empty() and SaveManager.apply_global_snapshot(loaded)
+	var same_layout := applied
+	if applied:
+		for raw in fresh.get("cells", []):
+			var coord := Vector2i(int(raw.get("x", -1)), int(raw.get("y", -1)))
+			if FarmState.get_debris(coord) != str(raw.get("debris", "")):
+				same_layout = false
+				break
+			if str(raw.get("debris", "")) == "stump" and int(FarmState.get_cell(coord).get("debris_hits", -1)) != int(raw.get("debris_hits", 0)):
+				same_layout = false
+				break
+	_record("临时存档读回杂物布局", same_layout)
+
+	var legacy: Dictionary = fresh.duplicate(true)
+	var legacy_cells: Array = []
+	for raw in fresh.get("cells", []):
+		var copy: Dictionary = (raw as Dictionary).duplicate(true)
+		copy.erase("debris")
+		copy.erase("debris_hits")
+		copy.erase("debris_variant")
+		legacy_cells.append(copy)
+	legacy["cells"] = legacy_cells
+	var legacy_loaded := FarmState.load_save_state(_json_round_trip(legacy))
+	var inner := Vector2i(3, 3)
+	_record(
+		"旧档没有 debris 字段时视为无杂物，可以翻地",
+		legacy_loaded and FarmState.count_debris() == 0 and FarmState.till(inner)
+	)
+
+	farm.queue_free()
+	await get_tree().process_frame
+	_wipe_debris_test_saves(tmp_dir)
+	SaveManager.save_dir = prev_dir
+	SaveManager.reset_session(prev_slot)
+	FarmState.reset()
+	Inventory.reset_with_starter_items()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+
+
+func _find_debris_cell(kind: String) -> Vector2i:
+	for y in FarmState.GRID_HEIGHT:
+		for x in FarmState.GRID_WIDTH:
+			var coord := Vector2i(x, y)
+			if FarmState.get_debris(coord) == kind:
+				return coord
+	return Vector2i(-1, -1)
+
+
+func _debris_shape(plot: FarmPlot) -> CollisionShape2D:
+	if plot == null:
+		return null
+	var block := plot.get_node_or_null("DebrisBlock")
+	if block == null:
+		return null
+	return block.get_node_or_null("CollisionShape2D") as CollisionShape2D
+
+
+func _wipe_debris_test_saves(dir_path: String) -> void:
+	if not dir_path.begins_with("user://debris_test_saves_"):
+		return
+	var absolute := ProjectSettings.globalize_path(dir_path.trim_suffix("/"))
+	var listing := DirAccess.open(absolute)
+	if listing:
+		for file_name in listing.get_files():
+			listing.remove(file_name)
+	DirAccess.remove_absolute(absolute)
 
 
 func _record(name: String, condition: bool) -> void:

@@ -45,7 +45,7 @@ func run_item_database_tests():
 	assert_true(item != null, "Should get turnip item")
 	
 	# Test: Item properties
-	assert_true(item.name == "芜菁", "Turnip name should be 芜菁")
+	assert_true(item.name == "防风草", "Turnip name should be 防风草")
 	assert_true(item.type == ItemDatabase.ItemType.CROP, "Turnip should be CROP type")
 	assert_true(item.sell_price > 0, "Turnip should have sell price")
 	
