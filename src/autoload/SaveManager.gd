@@ -11,6 +11,8 @@ const SAVE_VERSION := 2
 const SAVE_DIR := "user://saves/"
 const MAX_SAVE_SLOTS := 3
 
+## 仅测试可改。正式游戏保持 SAVE_DIR（user://saves/）。
+var save_dir: String = SAVE_DIR
 var _current_slot := -1
 var _play_time := 0.0
 
@@ -26,7 +28,10 @@ func _process(delta: float) -> void:
 
 
 func get_save_path(slot: int) -> String:
-	return SAVE_DIR + "save_%d.json" % slot
+	var root := save_dir
+	if not root.ends_with("/"):
+		root += "/"
+	return root + "save_%d.json" % slot
 
 
 func has_save(slot: int) -> bool:
@@ -46,6 +51,7 @@ func save_game(slot: int = -1) -> bool:
 	if not _is_valid_slot(slot):
 		return _fail_save("Invalid save slot: %d" % slot)
 
+	_ensure_save_directory()
 	var snapshot := _gather_snapshot()
 	var json_text := JSON.stringify(snapshot, "\t")
 	var temp_path := get_save_path(slot) + ".tmp"
@@ -312,9 +318,14 @@ func _read_snapshot_file(path: String) -> Dictionary:
 
 
 func _ensure_save_directory() -> void:
-	var dir := DirAccess.open("user://")
-	if dir and not dir.dir_exists("saves"):
-		dir.make_dir("saves")
+	var root := save_dir
+	if root.ends_with("/"):
+		root = root.substr(0, root.length() - 1)
+	if root.is_empty():
+		return
+	var absolute := ProjectSettings.globalize_path(root)
+	if not DirAccess.dir_exists_absolute(absolute):
+		DirAccess.make_dir_recursive_absolute(absolute)
 
 
 func _is_valid_slot(slot: int) -> bool:

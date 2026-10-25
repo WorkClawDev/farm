@@ -359,11 +359,14 @@ func _test_pause_submenu_esc() -> void:
 
 # BUG-7：选「农场 3」时日志是 Saved slot 2。槽从 0 计，农场 3 = 内部槽 2 = save_2.json。
 # 农场 2 是 save_1.json。按下第三张卡必须只写第三槽，不能写到前一个农场。
+# 只写临时目录，不读不写真实 user://saves/。
 func _test_bug7_farm3_save_file() -> void:
-	var stamps := _save_slot_md5s()
 	var prev_slot := SaveManager.get_current_slot()
 	var prev_play := SaveManager.get_play_time()
-	_relocate_save_files("user://saves", "user://bug7_save_hold")
+	var prev_dir := SaveManager.save_dir
+	var tmp_dir := "user://test_tmp_saves_%d_%d/" % [Time.get_ticks_usec(), randi()]
+	SaveManager.save_dir = tmp_dir
+	SaveManager._ensure_save_directory()
 	var menu := (load("res://src/ui/menus/SaveLoadMenu.tscn") as PackedScene).instantiate() as SaveLoadMenu
 	var empty_before := not SaveManager.has_save(0) and not SaveManager.has_save(1) and not SaveManager.has_save(2)
 	var bound := -1
@@ -386,56 +389,32 @@ func _test_bug7_farm3_save_file() -> void:
 			if heading_ok and empty_before:
 				action.pressed.emit()
 		menu.queue_free()
-	var wrote_third := FileAccess.file_exists(SaveManager.get_save_path(2))
-	var wrote_other := FileAccess.file_exists(SaveManager.get_save_path(0)) or FileAccess.file_exists(SaveManager.get_save_path(1)) or FileAccess.file_exists("user://saves/save_3.json")
+	var names := _list_file_names(tmp_dir)
+	var wrote_third := names.size() == 1 and names[0] == "save_2.json" and FileAccess.file_exists(SaveManager.get_save_path(2))
+	var wrote_other := FileAccess.file_exists(SaveManager.get_save_path(0)) or FileAccess.file_exists(SaveManager.get_save_path(1)) or FileAccess.file_exists(tmp_dir + "save_3.json")
+	_remove_save_files(tmp_dir)
+	_remove_empty_dir(tmp_dir.trim_suffix("/"))
+	SaveManager.save_dir = prev_dir
+	var tmp_abs := ProjectSettings.globalize_path(tmp_dir.trim_suffix("/"))
+	var restored := SaveManager.save_dir == prev_dir and not DirAccess.dir_exists_absolute(tmp_abs)
 	_record("农场 3 是第三张卡，按钮传入内部槽 2", heading_ok and bound == 2)
 	_record(
 		"选农场 3 只写入第三槽 save_2.json",
 		empty_before and wrote_third and not wrote_other and SaveManager.get_current_slot() == 2
 	)
-	_remove_save_files("user://saves")
-	_relocate_save_files("user://bug7_save_hold", "user://saves")
-	_remove_empty_dir("user://bug7_save_hold")
-	_record("BUG-7 测试还原了原来的存档文件", _save_slot_md5s() == stamps)
+	_record("BUG-7 测试删除了临时目录并还原存档根目录", restored)
 	SaveManager.reset_session(prev_slot)
 	SaveManager._play_time = prev_play
 
 
-func _save_slot_md5s() -> Dictionary:
-	var stamps := {}
-	for slot in range(SaveManager.MAX_SAVE_SLOTS):
-		var path := SaveManager.get_save_path(slot)
-		stamps[slot] = FileAccess.get_md5(path) if FileAccess.file_exists(path) else ""
-	return stamps
-
-
-func _relocate_save_files(from_dir: String, to_dir: String) -> void:
-	var from := DirAccess.open(from_dir)
-	if from == null:
-		return
-	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(to_dir))
+func _list_file_names(dir_path: String) -> Array[String]:
 	var names: Array[String] = []
-	from.list_dir_begin()
-	var entry := from.get_next()
-	while entry != "":
-		if not from.current_is_dir():
-			names.append(entry)
-		entry = from.get_next()
-	from.list_dir_end()
-	for name in names:
-		var src := from_dir.path_join(name)
-		var dst := to_dir.path_join(name)
-		var bytes := FileAccess.get_file_as_bytes(src)
-		var out := FileAccess.open(dst, FileAccess.WRITE)
-		if out == null:
-			print("  [DETAIL] 无法复制存档 ", src)
-			continue
-		out.store_buffer(bytes)
-		out.close()
-		if FileAccess.get_md5(dst) != FileAccess.get_md5(src):
-			print("  [DETAIL] 存档复制校验失败 ", src)
-			continue
-		from.remove(name)
+	var dir := DirAccess.open(dir_path)
+	if dir == null:
+		return names
+	for entry in dir.get_files():
+		names.append(str(entry))
+	return names
 
 
 func _remove_save_files(dir_path: String) -> void:
