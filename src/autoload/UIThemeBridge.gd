@@ -97,7 +97,9 @@ func _apply_recursive(node: Node) -> void:
 
 
 func _style_button(button: Button) -> void:
-	button.focus_mode = Control.FOCUS_ALL
+	# set_disabled() leaves FOCUS_ALL, and this pass runs after menu _ready.
+	# A disabled button must stay out of keyboard focus or Down lands on it.
+	button.focus_mode = Control.FOCUS_NONE if button.disabled else Control.FOCUS_ALL
 	for style_name in ["normal", "hover", "pressed", "focus", "disabled"]:
 		button.remove_theme_stylebox_override(style_name)
 	for color_name in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color", "font_disabled_color"]:

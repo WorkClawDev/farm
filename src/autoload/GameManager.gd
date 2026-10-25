@@ -10,6 +10,7 @@ signal notification_requested(message: String)
 
 enum GameState { MENU, PLAYING, PAUSED, DIALOGUE, CUTSCENE }
 
+const DebugLaunchScript = preload("res://src/core/debug/DebugLaunch.gd")
 const FARM_SCENE := "res://src/world/maps/Farm.tscn"
 const MENU_SCENE := "res://src/ui/menus/MainMenu.tscn"
 const PLAYABLE_SCENES := [
@@ -57,27 +58,42 @@ func start_new_game(slot: int = 0) -> void:
 	SaveManager.save_game(slot)
 
 
-func load_game(slot: int = 0) -> void:
+## debug_spawn is a SPAWNS id (see DebugLaunch). Only debug builds honor it,
+## and only after the slot has loaded: the saved scene and player position are
+## replaced by that entry.
+func load_game(slot: int = 0, debug_spawn: String = "") -> bool:
 	var snapshot := SaveManager.load_snapshot(slot)
 	if snapshot.is_empty():
 		notification_requested.emit("存档读取失败")
-		return
+		return false
 	if not SaveManager.apply_global_snapshot(snapshot):
 		notification_requested.emit("存档数据无效")
-		return
+		return false
 
 	var game_data: Dictionary = snapshot.get("game", {})
 	var scene_path := str(game_data.get("scene_path", FARM_SCENE))
 	if scene_path not in PLAYABLE_SCENES:
 		scene_path = FARM_SCENE
 	current_spawn_point = str(game_data.get("spawn_point", "farm_start"))
+	var spawn_spec := {}
+	if OS.is_debug_build() and not debug_spawn.is_empty():
+		spawn_spec = DebugLaunchScript.spawn_spec(debug_spawn)
+	if not spawn_spec.is_empty():
+		var forced := str(spawn_spec.get("scene", ""))
+		if forced in PLAYABLE_SCENES:
+			scene_path = forced
+		current_spawn_point = str(spawn_spec.get("spawn_point", current_spawn_point))
+		print("[DebugLaunch] slot %d -> %s (%s)" % [slot, debug_spawn, scene_path])
 	current_state = GameState.PLAYING
 	is_game_active = true
 	get_tree().paused = false
 	await _change_scene(scene_path)
 	_apply_player_snapshot(snapshot.get("player", {}))
+	if not spawn_spec.is_empty():
+		_apply_debug_spawn(spawn_spec)
 	SaveManager.mark_loaded(slot)
 	game_loaded.emit()
+	return true
 
 
 func change_location(scene_path: String, spawn_point: String) -> void:
@@ -178,6 +194,13 @@ func _change_scene(scene_path: String) -> void:
 		return
 	await get_tree().scene_changed
 	await get_tree().process_frame
+
+
+func _apply_debug_spawn(spec: Dictionary) -> void:
+	var loaded_player := get_tree().get_first_node_in_group("player") as Node2D
+	if loaded_player == null:
+		return
+	loaded_player.global_position = spec.get("position", loaded_player.global_position)
 
 
 func _apply_player_snapshot(data: Dictionary) -> void:

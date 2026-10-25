@@ -51,6 +51,8 @@ func _ready() -> void:
 	await _test_toast_eviction_timers()
 	await _test_pause_submenu_esc()
 	await _test_bug7_farm3_save_file()
+	await _test_main_menu_down_does_not_activate()
+	await _test_debug_launch_args()
 	print("============================================================")
 	print("RESULTS: %d/%d passed" % [_passed, _passed + _failed])
 	if _failed == 0:
@@ -437,6 +439,157 @@ func _remove_empty_dir(dir_path: String) -> void:
 	var parent := DirAccess.open("user://")
 	if parent != null:
 		parent.remove(dir_path.get_file())
+
+
+const DebugLaunchScript = preload("res://src/core/debug/DebugLaunch.gd")
+
+
+func _test_main_menu_down_does_not_activate() -> void:
+	var prev_slot := SaveManager.get_current_slot()
+	var prev_play := SaveManager.get_play_time()
+	var prev_dir := SaveManager.save_dir
+	var tmp_dir := "user://test_tmp_menu_nav_%d_%d/" % [Time.get_ticks_usec(), randi()]
+	SaveManager.save_dir = tmp_dir
+	SaveManager._ensure_save_directory()
+	var no_save := await _exercise_menu_down(false)
+	var with_save := await _exercise_menu_down(true)
+	_remove_save_files(tmp_dir)
+	_remove_empty_dir(tmp_dir.trim_suffix("/"))
+	SaveManager.save_dir = prev_dir
+	SaveManager.reset_session(prev_slot)
+	SaveManager._play_time = prev_play
+	UIManager.close_all()
+	_record("主菜单按 ui_down 不触发任何按钮（无存档，跳过禁用项）", no_save)
+	_record("主菜单按 ui_down 两次不进入游戏（有存档）", with_save)
+	_record("主菜单方向键测试还原了存档目录", SaveManager.save_dir == prev_dir)
+
+
+func _note_menu_press(hits: Array, button_name: String) -> void:
+	hits.append(button_name)
+
+
+func _exercise_menu_down(with_save: bool) -> bool:
+	if with_save:
+		SaveManager.reset_session(0)
+		if not SaveManager.save_game(0):
+			return false
+	var state_before := GameManager.current_state
+	var active_before := GameManager.is_game_active
+	var menu := (load("res://src/ui/menus/MainMenu.tscn") as PackedScene).instantiate() as MainMenu
+	var hits: Array = []
+	add_child(menu)
+	for button in menu.find_children("*", "Button", true, false):
+		var btn := button as Button
+		btn.pressed.connect(_note_menu_press.bind(hits, str(btn.name)))
+	for i in 4:
+		await get_tree().process_frame
+	var focus_ok := true
+	if with_save:
+		focus_ok = _focus_name() == "ContinueBtn"
+		await _press_ui_key(KEY_DOWN)
+		focus_ok = focus_ok and _focus_name() == "NewGameBtn"
+		await _press_ui_key(KEY_DOWN)
+		focus_ok = focus_ok and _focus_name() == "LoadGameBtn"
+		focus_ok = focus_ok and hits.is_empty()
+	else:
+		focus_ok = _focus_name() == "NewGameBtn"
+		focus_ok = focus_ok and menu.load_button.focus_mode == Control.FOCUS_NONE
+		await _press_ui_key(KEY_DOWN)
+		focus_ok = focus_ok and _focus_name() == "SettingsBtn" and hits.is_empty()
+		await _press_ui_key(KEY_DOWN)
+		focus_ok = focus_ok and _focus_name() == "CreditsBtn" and hits.is_empty()
+		await _press_ui_key(KEY_ENTER)
+		await get_tree().process_frame
+		focus_ok = focus_ok and hits.size() == 1 and str(hits[0]) == "CreditsBtn" and UIManager.has_open_confirmation()
+		UIManager.close_all()
+		await get_tree().process_frame
+	var unchanged := GameManager.current_state == state_before and GameManager.is_game_active == active_before
+	if not focus_ok or not unchanged:
+		print("  [DETAIL] menu down with_save=", with_save, " focus=", _focus_name(), " hits=", hits, " state=", GameManager.current_state)
+	menu.queue_free()
+	await get_tree().process_frame
+	return focus_ok and unchanged and not UIManager.has_open_modal()
+
+
+func _press_ui_key(keycode: Key) -> void:
+	for pressed in [true, false]:
+		var ev := InputEventKey.new()
+		ev.keycode = keycode
+		ev.physical_keycode = keycode
+		ev.pressed = pressed
+		get_viewport().push_input(ev)
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+
+func _focus_name() -> String:
+	var owner := get_viewport().gui_get_focus_owner()
+	return owner.name if owner else ""
+
+
+func _test_debug_launch_args() -> void:
+	var parsed := DebugLaunchScript.parse(PackedStringArray(["--load-slot=3", "--spawn=village_west"]), true)
+	var rejected := DebugLaunchScript.parse(PackedStringArray(["--load-slot=0", "--load-slot=4", "--load-slot=abc", "--spawn=nowhere"]), true)
+	var release := DebugLaunchScript.parse(PackedStringArray(["--load-slot=3", "--spawn=village_west"]), false)
+	var slot_one := DebugLaunchScript.parse(PackedStringArray(["--load-slot=1"]), true)
+	var spec: Dictionary = DebugLaunchScript.spawn_spec("village_west")
+	_record("命令行 --load-slot=3 是内部槽 2，spawn=village_west", int(parsed.get("slot", -2)) == 2 and str(parsed.get("spawn", "")) == "village_west")
+	_record("--load-slot=1 是内部槽 0", int(slot_one.get("slot", -2)) == 0)
+	_record("非法槽和未知 spawn 被忽略", int(rejected.get("slot", 0)) == -1 and str(rejected.get("spawn", "x")) == "")
+	_record("非 debug 构建忽略 --load-slot 和 --spawn", int(release.get("slot", 0)) == -1 and str(release.get("spawn", "x")) == "")
+	_record(
+		"village_west 在村子西路、西出口东侧",
+		str(spec.get("scene", "")) == "res://src/world/maps/Village.tscn"
+			and str(spec.get("spawn_point", "")) == "village_west"
+			and spec.get("position", Vector2.ZERO) == Vector2(150, 300)
+	)
+	_record("本测试进程没有 --load-slot，不会自动读档", int(DebugLaunchScript.from_cmdline().get("slot", 0)) == -1)
+
+	var real_before := _list_file_names("user://saves/")
+	var prev_slot := SaveManager.get_current_slot()
+	var prev_play := SaveManager.get_play_time()
+	var prev_dir := SaveManager.save_dir
+	var prev_state := GameManager.current_state
+	var prev_active := GameManager.is_game_active
+	var tmp_dir := "user://test_tmp_dbgargs_%d_%d/" % [Time.get_ticks_usec(), randi()]
+	SaveManager.save_dir = tmp_dir
+	SaveManager._ensure_save_directory()
+	SaveManager.reset_session(2)
+	var wrote := SaveManager.save_game(2)
+	var only_third := wrote and FileAccess.file_exists(SaveManager.get_save_path(2)) and not FileAccess.file_exists(SaveManager.get_save_path(0)) and not FileAccess.file_exists(SaveManager.get_save_path(1))
+	# change_scene_to_file frees the current scene. Stay on root so this runner survives.
+	if get_tree().current_scene == self:
+		get_tree().current_scene = null
+	var loaded: bool = await GameManager.load_game(int(parsed["slot"]), str(parsed["spawn"]))
+	for i in 3:
+		await get_tree().process_frame
+	var player := get_tree().get_first_node_in_group("player") as Node2D
+	var scene := get_tree().current_scene
+	var placed := (
+		loaded
+		and scene != null
+		and scene.name == "Village"
+		and scene.scene_file_path == "res://src/world/maps/Village.tscn"
+		and SaveManager.get_current_slot() == 2
+		and GameManager.current_spawn_point == "village_west"
+		and player != null
+		and player.global_position.distance_to(Vector2(150, 300)) < 1.0
+		and scene.name == "Village"
+	)
+	_remove_save_files(tmp_dir)
+	_remove_empty_dir(tmp_dir.trim_suffix("/"))
+	SaveManager.save_dir = prev_dir
+	var real_after := _list_file_names("user://saves/")
+	var tmp_abs := ProjectSettings.globalize_path(tmp_dir.trim_suffix("/"))
+	_record("临时目录写入第三槽后 --load-slot=3 --spawn=village_west 把玩家放到村西", only_third and placed)
+	_record(
+		"调试读档只用了临时 save_dir，真实 user://saves/ 未改动",
+		SaveManager.save_dir == prev_dir and real_before == real_after and not DirAccess.dir_exists_absolute(tmp_abs)
+	)
+	SaveManager.reset_session(prev_slot)
+	SaveManager._play_time = prev_play
+	GameManager.is_game_active = prev_active
+	GameManager.current_state = prev_state
 
 
 func _record(label: String, passed: bool) -> void:
