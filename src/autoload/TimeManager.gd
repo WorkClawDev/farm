@@ -11,7 +11,7 @@ signal year_changed(new_year: int)
 signal day_end_requested(reason: String)
 
 # 时间配置
-const REAL_SECONDS_PER_GAME_MINUTE: float = 1.0  # 现实1秒 = 游戏1分钟
+const REAL_SECONDS_PER_GAME_MINUTE: float = 0.7  # 现实 0.7 秒 = 游戏 1 分钟（6:00–2:00 约 14 分钟）
 const GAME_HOURS_PER_DAY: int = 20  # 游戏一天20小时 (6:00-2:00)
 const DAYS_PER_SEASON: int = 28  # 每季28天
 const SEASONS: Array[String] = ["Spring", "Summer", "Fall", "Winter"]
@@ -25,6 +25,7 @@ var current_year: int = 1  # 当前年份
 # 控制状态
 var is_paused: bool = false
 var time_scale: float = 1.0
+var _pause_count: int = 0
 
 # 内部计时器
 var _time_accumulator: float = 0.0
@@ -34,13 +35,24 @@ func _ready() -> void:
 	print("[TimeManager] Starting time: ", _format_time(current_time))
 
 func _process(delta: float) -> void:
+	# Only the autoload clock moves. A second TimeManager in the tree must not.
+	var autoload := get_node_or_null("/root/TimeManager")
+	if autoload != null and autoload != self:
+		return
 	var game_manager = get_node_or_null("/root/GameManager")
 	if is_paused or (game_manager and not game_manager.is_game_active):
 		return
-	
-	_update_time(delta)
+	# _process delta is already multiplied by Engine.time_scale. Undo that so
+	# speeding up NPC walks does not speed up the day.
+	var real_delta := delta
+	var engine_scale := Engine.time_scale
+	if engine_scale > 0.0 and not is_equal_approx(engine_scale, 1.0):
+		real_delta = delta / engine_scale
+	_update_time(real_delta)
 
 func _update_time(delta: float) -> void:
+	if is_paused:
+		return
 	_time_accumulator += delta * time_scale
 	
 	# 计算游戏时间增量
@@ -87,6 +99,7 @@ func reset() -> void:
 	current_year = 1
 	is_paused = false
 	time_scale = 1.0
+	_pause_count = 0
 	_time_accumulator = 0.0
 	time_changed.emit(current_time)
 	day_changed.emit(current_day)
@@ -105,12 +118,15 @@ func _advance_season() -> void:
 	print("[TimeManager] Season changed to: ", SEASONS[current_season])
 
 func pause_time() -> void:
+	_pause_count += 1
 	is_paused = true
 	print("[TimeManager] Time paused")
 
 func resume_time() -> void:
-	is_paused = false
-	print("[TimeManager] Time resumed")
+	_pause_count = maxi(0, _pause_count - 1)
+	if _pause_count == 0:
+		is_paused = false
+		print("[TimeManager] Time resumed")
 
 func set_time_scale(scale: float) -> void:
 	time_scale = max(0.0, scale)

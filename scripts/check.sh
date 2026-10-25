@@ -19,6 +19,21 @@ resolve_godot() {
 resolve_godot
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
+stamp_real_saves() {
+    python3 - << 'PY'
+import os
+from pathlib import Path
+root = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+folder = Path(root) / "godot/app_userdata/Pastoral Tales/saves"
+if folder.is_dir():
+    for path in sorted(p for p in folder.iterdir() if p.is_file()):
+        st = path.stat()
+        print("%s\t%d\t%d" % (path.name, st.st_mtime_ns, st.st_size))
+PY
+}
+
+REAL_SAVE_STAMP_BEFORE="$(stamp_real_saves)"
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -412,6 +427,17 @@ else
     grep -E "\[FAIL\]|NIGHT CYCLE TESTS FAILED" "$NIGHT_TEST_LOG" | sed 's/^/    /' | head -30
 fi
 rm -f "$NIGHT_TEST_LOG"
+
+REAL_SAVE_STAMP_AFTER="$(stamp_real_saves)"
+if [ "$REAL_SAVE_STAMP_BEFORE" = "$REAL_SAVE_STAMP_AFTER" ]; then
+    ok "Real user://saves mtime and size unchanged"
+else
+    err "Real user://saves mtime or size changed"
+    echo "before:"
+    printf '%s\n' "$REAL_SAVE_STAMP_BEFORE" | sed 's/^/    /'
+    echo "after:"
+    printf '%s\n' "$REAL_SAVE_STAMP_AFTER" | sed 's/^/    /'
+fi
 
 echo ""
 echo -e "${BLUE}========================================${NC}"

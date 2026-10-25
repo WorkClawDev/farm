@@ -8,10 +8,10 @@ extends RefCounted
 ##
 ## --load-slot=N uses the menu number N (1..3). The save file is slot N-1.
 ## --spawn= selects an entry in SPAWNS and is applied after that save loads.
-## --new-game starts a new game. Saves go to DEBUG_NEW_GAME_SAVE_DIR via
-## SaveManager.save_dir, never to user://saves/.
+## --new-game starts a new game. Each launch gets its own save_dir under
+## user://debug_tmp_saves_<id>/, never user://saves/.
 
-## Debug --new-game writes here. Assigned to SaveManager.save_dir; real saves stay put.
+## Old fixed directory. Cleared on --new-game so a previous autosave cannot be loaded from it.
 const DEBUG_NEW_GAME_SAVE_DIR := "user://debug_tmp_saves/"
 
 const SPAWNS := {
@@ -30,7 +30,24 @@ static func from_cmdline() -> Dictionary:
 
 
 static func apply_debug_new_game_save_dir() -> void:
-	SaveManager.save_dir = DEBUG_NEW_GAME_SAVE_DIR
+	_clear_legacy_debug_saves()
+	SaveManager.save_dir = "user://debug_tmp_saves_%d_%d/" % [Time.get_ticks_usec(), randi()]
+
+
+static func _clear_legacy_debug_saves() -> void:
+	var dir := DirAccess.open(DEBUG_NEW_GAME_SAVE_DIR)
+	if dir == null:
+		return
+	var names: Array[String] = []
+	dir.list_dir_begin()
+	var entry := dir.get_next()
+	while entry != "":
+		if entry != "." and entry != ".." and not dir.current_is_dir():
+			names.append(entry)
+		entry = dir.get_next()
+	dir.list_dir_end()
+	for name in names:
+		dir.remove(name)
 
 
 static func parse(args: PackedStringArray, debug_build: bool) -> Dictionary:

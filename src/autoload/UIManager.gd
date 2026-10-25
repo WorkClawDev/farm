@@ -22,6 +22,7 @@ var _stack: Array[Dictionary] = []
 var _confirmation: Control
 var _confirmation_owns_pause := false
 var _pause_owned := false
+var _clock_paused := false
 
 const MAX_VISIBLE_TOASTS := 4
 const TOAST_DURATION := 3.0
@@ -401,12 +402,29 @@ func _acquire_pause() -> void:
 	if GameManager.current_state == GameManager.GameState.PLAYING:
 		GameManager.pause_game()
 		_pause_owned = true
+		_pause_clock()
 
 
 func _release_pause() -> void:
 	if _pause_owned and GameManager.current_state == GameManager.GameState.PAUSED:
 		GameManager.resume_game()
+	if _pause_owned:
+		_resume_clock()
 	_pause_owned = false
+
+
+func _pause_clock() -> void:
+	if _clock_paused:
+		return
+	_clock_paused = true
+	TimeManager.pause_time()
+
+
+func _resume_clock() -> void:
+	if not _clock_paused:
+		return
+	_clock_paused = false
+	TimeManager.resume_time()
 
 
 func _on_confirmation_result(confirmed: bool, config: Dictionary) -> void:

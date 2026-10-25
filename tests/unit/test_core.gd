@@ -128,6 +128,76 @@ func run_time_manager_tests():
 	var is_paused = tm.is_paused
 	tm.resume_time()
 	assert_true(is_paused and not tm.is_paused, "Pause/resume should work")
+
+	# 6:00 to 2:00 is GAME_HOURS_PER_DAY hours. Real length must be 12 to 15 minutes.
+	var day_real_seconds: float = tm.REAL_SECONDS_PER_GAME_MINUTE * float(tm.GAME_HOURS_PER_DAY) * 60.0
+	assert_true(day_real_seconds >= 12.0 * 60.0 and day_real_seconds <= 15.0 * 60.0,
+		"6:00 to 2:00 should take 12 to 15 real minutes")
+
+	var saved_time: float = tm.current_time
+	var saved_day: int = tm.current_day
+	var saved_paused: bool = tm.is_paused
+	var saved_scale: float = tm.time_scale
+	var saved_acc: float = tm._time_accumulator
+	var saved_count: int = tm._pause_count
+	var saved_active: bool = GameManager.is_game_active
+	var saved_engine: float = Engine.time_scale
+
+	tm.current_time = 6.0
+	tm.current_day = 1
+	tm.is_paused = false
+	tm._pause_count = 0
+	tm.time_scale = 1.0
+	tm._time_accumulator = 0.0
+	tm._update_time(tm.REAL_SECONDS_PER_GAME_MINUTE)
+	assert_true(is_equal_approx(tm.current_time, 6.0 + 1.0 / 60.0),
+		"One interval advances exactly one game minute")
+
+	GameManager.is_game_active = true
+	tm.pause_time()
+	var frozen: float = tm.current_time
+	tm._process(30.0)
+	assert_true(is_equal_approx(tm.current_time, frozen), "Paused clock ignores _process")
+	tm.resume_time()
+	assert_true(not tm.is_paused, "One pause and one resume clears the pause")
+
+	Engine.time_scale = 4.0
+	var before_scale: float = tm.current_time
+	tm._process(tm.REAL_SECONDS_PER_GAME_MINUTE * 4.0)
+	assert_true(is_equal_approx(tm.current_time, before_scale + 1.0 / 60.0),
+		"Engine.time_scale does not speed the clock")
+	Engine.time_scale = saved_engine
+
+	var dup = load("res://src/autoload/TimeManager.gd").new()
+	add_child(dup)
+	var before_dup: float = tm.current_time
+	dup.current_time = 6.0
+	dup.is_paused = false
+	dup._process(100.0)
+	assert_true(is_equal_approx(dup.current_time, 6.0) and is_equal_approx(tm.current_time, before_dup),
+		"A second TimeManager does not advance time")
+	dup.queue_free()
+
+	# Day-end emits day_end_requested. Keep the game inactive so that does not save.
+	GameManager.is_game_active = false
+	tm.current_time = 6.0
+	tm._time_accumulator = 0.0
+	tm.is_paused = false
+	tm._pause_count = 0
+	tm._update_time(tm.REAL_SECONDS_PER_GAME_MINUTE * float(tm.GAME_HOURS_PER_DAY) * 60.0)
+	assert_true(tm.current_time >= 26.0 and tm.is_paused, "A full day reaches 2:00 and pauses")
+	var ended: float = tm.current_time
+	tm._update_time(tm.REAL_SECONDS_PER_GAME_MINUTE * 60.0)
+	assert_true(is_equal_approx(tm.current_time, ended), "Time does not keep running after 2:00")
+
+	tm.current_time = saved_time
+	tm.current_day = saved_day
+	tm.is_paused = saved_paused
+	tm._pause_count = saved_count
+	tm.time_scale = saved_scale
+	tm._time_accumulator = saved_acc
+	GameManager.is_game_active = saved_active
+	Engine.time_scale = saved_engine
 	
 	# Test: Get current time value
 	var current_time = tm.current_time

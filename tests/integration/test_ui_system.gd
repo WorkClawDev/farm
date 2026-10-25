@@ -42,6 +42,7 @@ func _ready() -> void:
 	await _test_journal_lifecycle()
 	await _test_open_close_same_frame()
 	await _test_shipping_screen()
+	await _test_shop_and_dialogue_pause_clock()
 	await _test_cooking_screen()
 	await _test_confirmation_pause()
 	await _test_settings_validation()
@@ -100,13 +101,13 @@ func _test_modal_pause_and_focus() -> void:
 	var screen := await UIManager.open_screen("settings", {"pause_game": true})
 	await get_tree().process_frame
 	_record("UIManager 可打开主模态", screen != null and UIManager.is_screen_open("settings"))
-	_record("主模态打开后游戏暂停", GameManager.current_state == GameManager.GameState.PAUSED and get_tree().paused)
+	_record("主模态打开后游戏暂停", GameManager.current_state == GameManager.GameState.PAUSED and get_tree().paused and TimeManager.is_paused)
 	_record("设置页存在可达焦点", get_viewport().gui_get_focus_owner() != null)
 	var done_buttons := screen.find_children("*", "Button", true, false).filter(func(b): return b.text == "完成")
 	_record("设置页“完成”是绿色主按钮（BUG-28）", done_buttons.size() == 1 and done_buttons[0].theme_type_variation == &"PrimaryButton")
 	UIManager.close_top_screen()
 	await get_tree().process_frame
-	_record("最后模态关闭后恢复游戏", GameManager.current_state == GameManager.GameState.PLAYING and not get_tree().paused)
+	_record("最后模态关闭后恢复游戏", GameManager.current_state == GameManager.GameState.PLAYING and not get_tree().paused and not TimeManager.is_paused)
 	GameManager.is_game_active = old_active
 	GameManager.current_state = old_state
 
@@ -120,17 +121,19 @@ func _test_journal_lifecycle() -> void:
 	UserSettings.set_value("ui", "last_journal_tab", "quests", false)
 	var journal := await UIManager.open_screen("journal", {"pause_game": true}) as FarmJournal
 	_record("手册恢复上次打开页签", journal != null and journal.get_active_tab_id() == "quests")
+	_record("手册打开时时间暂停", TimeManager.is_paused)
 	if journal:
 		journal.close()
 	await get_tree().process_frame
 	_record("手册自行关闭会同步模态栈", not UIManager.is_screen_open("journal"))
-	_record("手册关闭后恢复游戏时间", GameManager.current_state == GameManager.GameState.PLAYING and not get_tree().paused)
+	_record("手册关闭后恢复游戏时间", GameManager.current_state == GameManager.GameState.PLAYING and not get_tree().paused and not TimeManager.is_paused)
 
 	var inventory_journal := await UIManager.open_screen("journal", {
 		"pause_game": true,
 		"tab": "inventory",
 	}) as FarmJournal
 	_record("背包快捷键语义固定打开背包页", inventory_journal != null and inventory_journal.get_active_tab_id() == "inventory")
+	_record("背包打开时时间暂停", TimeManager.is_paused)
 	var same_journal := await UIManager.open_screen("journal", {
 		"tab": "crafting",
 		"workbench_type": "workbench",
@@ -143,6 +146,7 @@ func _test_journal_lifecycle() -> void:
 	)
 	UIManager.close_top_screen()
 	await get_tree().process_frame
+	_record("背包关闭后时间继续", not TimeManager.is_paused and GameManager.current_state == GameManager.GameState.PLAYING)
 	UserSettings.set_value("ui", "last_journal_tab", original_tab, false)
 	GameManager.is_game_active = old_active
 	GameManager.current_state = old_state
@@ -161,7 +165,7 @@ func _test_open_close_same_frame() -> void:
 	UIManager.screen_opened.disconnect(on_opened)
 	_record(
 		"同帧打开又关闭界面：不再抢焦点、不发 screen_opened、不报错",
-		opened[0] == 0 and not UIManager.is_screen_open("journal") and not get_tree().paused
+		opened[0] == 0 and not UIManager.is_screen_open("journal") and not get_tree().paused and not TimeManager.is_paused
 	)
 
 
@@ -172,11 +176,38 @@ func _test_shipping_screen() -> void:
 	GameManager.current_state = GameManager.GameState.PLAYING
 	var screen := await UIManager.open_screen("shipping_bin", {"pause_game": true})
 	_record("出货箱使用统一模态页面", screen != null and UIManager.is_screen_open("shipping_bin"))
+	_record("出货箱打开时时间暂停", TimeManager.is_paused)
 	_record("出货箱页面具备可达焦点", get_viewport().gui_get_focus_owner() != null)
 	if screen:
 		screen.close()
 	await get_tree().process_frame
-	_record("关闭出货箱会恢复游戏时间", GameManager.current_state == GameManager.GameState.PLAYING and not get_tree().paused)
+	_record("关闭出货箱会恢复游戏时间", GameManager.current_state == GameManager.GameState.PLAYING and not get_tree().paused and not TimeManager.is_paused)
+	GameManager.is_game_active = old_active
+	GameManager.current_state = old_state
+
+
+func _test_shop_and_dialogue_pause_clock() -> void:
+	var old_active := GameManager.is_game_active
+	var old_state := GameManager.current_state
+	var old_paused := TimeManager.is_paused
+	var old_count := TimeManager._pause_count
+	var old_flags: Dictionary = DialogueManager._player_flags.duplicate()
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	TimeManager.is_paused = false
+	TimeManager._pause_count = 0
+	var shop := await UIManager.open_screen("shop", {"pause_game": true, "shop_id": "general_store"})
+	_record("商店打开时时间暂停", shop != null and UIManager.is_screen_open("shop") and TimeManager.is_paused)
+	UIManager.close_top_screen()
+	await get_tree().process_frame
+	_record("商店关闭后时间继续", not UIManager.is_screen_open("shop") and not TimeManager.is_paused and not get_tree().paused)
+	var started := DialogueManager.start_dialogue("mayor")
+	_record("对话打开时时间暂停", started and DialogueManager.is_in_dialogue() and TimeManager.is_paused)
+	DialogueManager.force_end_dialogue()
+	_record("对话关闭后时间继续", not DialogueManager.is_in_dialogue() and not TimeManager.is_paused)
+	DialogueManager._player_flags = old_flags
+	TimeManager.is_paused = old_paused
+	TimeManager._pause_count = old_count
 	GameManager.is_game_active = old_active
 	GameManager.current_state = old_state
 
@@ -189,12 +220,13 @@ func _test_cooking_screen() -> void:
 	var screen := await UIManager.open_screen("cooking", {"pause_game": true}) as CookingUI
 	await get_tree().process_frame
 	_record("厨房使用统一模态页面", screen != null and UIManager.is_screen_open("cooking"))
+	_record("烹饪页面打开时时间暂停", TimeManager.is_paused)
 	_record("新档至少有三个基础食谱", screen != null and screen.get_recipe_count() >= 3)
 	_record("烹饪页面具备可达焦点", get_viewport().gui_get_focus_owner() != null)
 	if screen:
 		screen.close()
 	await get_tree().process_frame
-	_record("关闭烹饪页面会恢复游戏时间", GameManager.current_state == GameManager.GameState.PLAYING and not get_tree().paused)
+	_record("关闭烹饪页面会恢复游戏时间", GameManager.current_state == GameManager.GameState.PLAYING and not get_tree().paused and not TimeManager.is_paused)
 	GameManager.is_game_active = old_active
 	GameManager.current_state = old_state
 
@@ -208,10 +240,10 @@ func _test_confirmation_pause() -> void:
 		"title": "测试确认框",
 		"message": "确认框应独立持有暂停状态。",
 	})
-	_record("独立确认框会暂停游戏", GameManager.current_state == GameManager.GameState.PAUSED and get_tree().paused)
+	_record("独立确认框会暂停游戏", GameManager.current_state == GameManager.GameState.PAUSED and get_tree().paused and TimeManager.is_paused)
 	UIManager.close_top_screen()
 	await get_tree().process_frame
-	_record("关闭独立确认框会恢复游戏", GameManager.current_state == GameManager.GameState.PLAYING and not get_tree().paused)
+	_record("关闭独立确认框会恢复游戏", GameManager.current_state == GameManager.GameState.PLAYING and not get_tree().paused and not TimeManager.is_paused)
 	GameManager.is_game_active = old_active
 	GameManager.current_state = old_state
 

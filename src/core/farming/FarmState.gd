@@ -19,12 +19,12 @@ const WATERED := 2
 const WATERING_CAN_MAX_WATER := 100
 const WATERING_CAN_WATER_PER_USE := 5
 
-## 开局杂物。优先铺在田的外圈，大约 30 格。有杂物时不能翻地、不能播种。
+## 开局杂物。只铺在不挡路的田外圈（避开北侧小路和东出口）。有杂物时不能翻地、不能播种。
 const DEBRIS_WEED := "weed"
 const DEBRIS_STONE := "stone"
 const DEBRIS_TWIG := "twig"
 const DEBRIS_STUMP := "stump"
-const OPENING_DEBRIS_COUNT := 30
+const OPENING_DEBRIS_COUNT := 20
 const STUMP_HITS_TO_CLEAR := 3
 const TOOL_SICKLE := "sickle"
 const TOOL_PICKAXE := "pickaxe"
@@ -76,6 +76,13 @@ func get_cell(coord: Vector2i) -> Dictionary:
 
 func is_field_edge(coord: Vector2i) -> bool:
 	return coord.x == 0 or coord.y == 0 or coord.x == GRID_WIDTH - 1 or coord.y == GRID_HEIGHT - 1
+
+
+## 北侧整行压在农场小路上；东侧第 3、4 行对着通往村庄的出口。开局杂物不放这里。
+func is_opening_blocked_cell(coord: Vector2i) -> bool:
+	if coord.y == 0:
+		return true
+	return coord.x == GRID_WIDTH - 1 and (coord.y == 3 or coord.y == 4)
 
 
 func get_debris(coord: Vector2i) -> String:
@@ -395,6 +402,8 @@ func _seed_opening_debris() -> void:
 	for y in range(GRID_HEIGHT):
 		for x in range(GRID_WIDTH):
 			var coord := Vector2i(x, y)
+			if is_opening_blocked_cell(coord):
+				continue
 			if is_field_edge(coord):
 				outer.append(coord)
 			else:

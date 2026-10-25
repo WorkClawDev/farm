@@ -36,6 +36,7 @@ const DIALOGUE_BOX_SCENE := preload("res://src/ui/dialogs/DialogueBox.tscn")
 ## BUG-20 re-entrancy guards (see start_dialogue / _on_event_dialogue_started).
 var _emitting_started := false
 var _starting := false
+var _dialogue_clock_paused := false
 
 const DIALOGUE_ID_ALIASES := {
 	"farmer_joe": "farmer",
@@ -150,6 +151,7 @@ func start_dialogue(npc_id: String, dialogue_key: String = "") -> bool:
 	if not _is_in_dialogue:
 		# The box already finished (and dialogue_ended was emitted) synchronously.
 		return false
+	_pause_dialogue_clock()
 	dialogue_started.emit(npc_id)
 	if EventBus:
 		# This emit comes back to _on_event_dialogue_started; the guard there stops
@@ -263,6 +265,7 @@ func _get_npc_name(npc_id: String) -> String:
 func _on_dialogue_finished() -> void:
 	if not _is_in_dialogue:
 		return
+	_resume_dialogue_clock()
 
 	var npc_id = _current_npc_id
 	_is_in_dialogue = false
@@ -475,7 +478,22 @@ func load_state(data: Dictionary) -> void:
 	print("[DialogueManager] State loaded")
 
 
+func _pause_dialogue_clock() -> void:
+	if _dialogue_clock_paused:
+		return
+	_dialogue_clock_paused = true
+	TimeManager.pause_time()
+
+
+func _resume_dialogue_clock() -> void:
+	if not _dialogue_clock_paused:
+		return
+	_dialogue_clock_paused = false
+	TimeManager.resume_time()
+
+
 func reset() -> void:
+	_resume_dialogue_clock()
 	_player_flags.clear()
 	_friendship_data.clear()
 	_current_npc_id = ""

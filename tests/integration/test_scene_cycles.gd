@@ -27,6 +27,10 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	var real_saves_before := _real_save_stamps()
+	var save_manager := root.get_node("SaveManager")
+	var tmp_save_dir := "user://scene_cycle_saves_%d/" % Time.get_ticks_usec()
+	save_manager.save_dir = tmp_save_dir
 	var gm := root.get_node("GameManager")
 	await gm.start_new_game(1)
 	await _settle(10)
@@ -74,6 +78,8 @@ func _run() -> void:
 	for scene_name in _instance_checks.keys():
 		_record("BUG-44 %s：%d 次进入后每个 NPC id 都正好 1 个实例" % [scene_name, _instance_checks[scene_name]], not _instance_bad.has(scene_name))
 	_record("BUG-44 村庄被检查过（含 SceneTransition 进入）", _instance_checks.get("Village", 0) >= CYCLES)
+	_wipe_user_dir(tmp_save_dir)
+	_record("场景往返没有改写真实存档的内容或修改时间", _real_save_stamps() == real_saves_before)
 	print("RESULTS: %d/%d passed" % [_passed, _passed + _failed])
 	print("SCENE CYCLE TESTS PASSED" if _failed == 0 else "SCENE CYCLE TESTS FAILED")
 	# Let pending NPC idle-action timers (1.5 s) run out so quitting leaks nothing.
@@ -246,3 +252,33 @@ func _record(name: String, condition: bool) -> void:
 	else:
 		_failed += 1
 		print("[FAIL] %s" % name)
+
+func _real_save_stamps() -> Dictionary:
+	var stamps := {}
+	for slot in 3:
+		var path := "user://saves/save_%d.json" % slot
+		if FileAccess.file_exists(path):
+			stamps[path] = "%s:%d" % [FileAccess.get_md5(path), FileAccess.get_modified_time(path)]
+		else:
+			stamps[path] = "missing"
+	return stamps
+
+
+func _wipe_user_dir(dir_path: String) -> void:
+	var trimmed := dir_path.trim_suffix("/")
+	var dir := DirAccess.open(trimmed)
+	if dir != null:
+		var names: Array[String] = []
+		dir.list_dir_begin()
+		var entry := dir.get_next()
+		while entry != "":
+			if not dir.current_is_dir():
+				names.append(entry)
+			entry = dir.get_next()
+		dir.list_dir_end()
+		for name in names:
+			dir.remove(name)
+	var parent := DirAccess.open("user://")
+	if parent != null:
+		parent.remove(trimmed.get_file())
+

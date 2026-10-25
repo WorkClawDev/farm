@@ -49,16 +49,11 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	# This run must not keep data in the real user:// save slots.
-	var save_stamps := _save_slot_md5s()
-	if not _relocate_save_files("user://saves", "user://mapwalk_save_hold"):
-		_relocate_save_files("user://mapwalk_save_hold", "user://saves")
-		_remove_empty_dir("user://mapwalk_save_hold")
-		_record("地图行走测试开始前移走了真实存档", false)
-		print("RESULTS: %d/%d passed" % [_passed, _passed + _failed])
-		print("MAP WALK TESTS FAILED")
-		quit(1)
-		return
+	# This run must not read or write the real user:// save slots.
+	var real_saves_before := _real_save_stamps()
+	var save_manager := root.get_node("SaveManager")
+	var tmp_save_dir := "user://mapwalk_test_saves_%d/" % Time.get_ticks_usec()
+	save_manager.save_dir = tmp_save_dir
 	var gm := root.get_node("GameManager")
 	await gm.start_new_game(1)
 	await _settle(10)
@@ -67,11 +62,9 @@ func _run() -> void:
 	await _check_prompts()
 	await _check_mine_floors()
 	_check_dialogue_data()
-	_remove_save_files("user://saves")
-	if not _relocate_save_files("user://mapwalk_save_hold", "user://saves"):
-		_record("地图行走测试还原了真实存档", false)
-	_remove_empty_dir("user://mapwalk_save_hold")
-	_record("地图行走没有改写真实存档槽", _save_slot_md5s() == save_stamps)
+	_remove_save_files(tmp_save_dir.trim_suffix("/"))
+	_remove_empty_dir(tmp_save_dir.trim_suffix("/"))
+	_record("地图行走没有改写真实存档的内容或修改时间", _real_save_stamps() == real_saves_before)
 	print("RESULTS: %d/%d passed" % [_passed, _passed + _failed])
 	print("MAP WALK TESTS PASSED" if _failed == 0 else "MAP WALK TESTS FAILED")
 	quit(0 if _failed == 0 else 1)
@@ -514,6 +507,17 @@ func _record(name: String, condition: bool) -> void:
 	else:
 		_failed += 1
 		print("[FAIL] %s" % name)
+
+
+func _real_save_stamps() -> Dictionary:
+	var stamps := {}
+	for slot in 3:
+		var path := "user://saves/save_%d.json" % slot
+		if FileAccess.file_exists(path):
+			stamps[path] = "%s:%d" % [FileAccess.get_md5(path), FileAccess.get_modified_time(path)]
+		else:
+			stamps[path] = "missing"
+	return stamps
 
 
 func _save_slot_md5s() -> Dictionary:

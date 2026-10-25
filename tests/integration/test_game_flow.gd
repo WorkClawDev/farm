@@ -1931,12 +1931,30 @@ func _exercise_opening_debris() -> void:
 	)
 	_record("正式版忽略 --new-game", not bool(release.get("new_game", false)))
 	_record("没有 --new-game 不会开新档", not bool(plain.get("new_game", false)))
+	var legacy_dir := DebugLaunchScript.DEBUG_NEW_GAME_SAVE_DIR
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(legacy_dir))
+	var planted := FileAccess.open(legacy_dir + "save_0.json", FileAccess.WRITE)
+	var planted_ok := planted != null
+	if planted != null:
+		planted.store_string("{\"day\":7}")
+		planted.close()
 	var dir_before_flag := SaveManager.save_dir
 	DebugLaunchScript.apply_debug_new_game_save_dir()
+	var first_dir := str(SaveManager.save_dir)
+	DebugLaunchScript.apply_debug_new_game_save_dir()
+	var second_dir := str(SaveManager.save_dir)
 	_record(
-		"--new-game 把存档目录指到调试临时目录",
-		SaveManager.save_dir == DebugLaunchScript.DEBUG_NEW_GAME_SAVE_DIR
-			and SaveManager.save_dir != "user://saves/"
+		"--new-game 每次使用独立调试目录，并清掉固定目录里的旧档",
+		planted_ok
+			and first_dir != second_dir
+			and first_dir.begins_with("user://debug_tmp_saves_")
+			and second_dir.begins_with("user://debug_tmp_saves_")
+			and first_dir != "user://saves/"
+			and second_dir != "user://saves/"
+			and first_dir != legacy_dir
+			and second_dir != legacy_dir
+			and not FileAccess.file_exists(legacy_dir + "save_0.json")
+			and not FileAccess.file_exists(second_dir + "save_0.json")
 	)
 	SaveManager.save_dir = dir_before_flag
 
@@ -1970,6 +1988,13 @@ func _exercise_opening_debris() -> void:
 				edge_only = false
 	_record("新档有 %d 格杂物" % debris_cells, debris_cells == FarmState.OPENING_DEBRIS_COUNT)
 	_record("杂物都在田外圈", edge_only and debris_cells > 0)
+	var path_clear := true
+	for path_y in FarmState.GRID_HEIGHT:
+		for path_x in FarmState.GRID_WIDTH:
+			var blocked := Vector2i(path_x, path_y)
+			if FarmState.is_opening_blocked_cell(blocked) and not FarmState.get_debris(blocked).is_empty():
+				path_clear = false
+	_record("出口和小路的格子上没有杂物", path_clear)
 	_record(
 		"杂草、石头、树枝、树桩都有",
 		int(counts["weed"]) > 0 and int(counts["stone"]) > 0 and int(counts["twig"]) > 0 and int(counts["stump"]) > 0
