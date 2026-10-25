@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://village_map_001"]
+[gd_scene load_steps=16 format=3 uid="uid://village_map_001"]
 
 [ext_resource type="Script" path="res://src/world/maps/Village.gd" id="1_village"]
 [ext_resource type="PackedScene" uid="uid://npc_base_001" path="res://src/entities/npc/NPC.tscn" id="2_npc"]
@@ -15,6 +15,9 @@
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_tofarm"]
 size = Vector2(40, 60)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_westroad"]
+size = Vector2(232, 124)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_toforest"]
 size = Vector2(120, 60)
@@ -42,7 +45,8 @@ collision_layer = 0
 collision_mask = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="TransitionAreas/ToFarmArea"]
-shape = SubResource("RectangleShape2D_tofarm")
+position = Vector2(-96, 6)
+shape = SubResource("RectangleShape2D_westroad")
 
 [node name="ToPlayerHouseArea" type="Area2D" parent="TransitionAreas"]
 position = Vector2(400, 580)

@@ -49,6 +49,16 @@ func _initialize() -> void:
 
 
 func _run() -> void:
+	# This run must not keep data in the real user:// save slots.
+	var save_stamps := _save_slot_md5s()
+	if not _relocate_save_files("user://saves", "user://mapwalk_save_hold"):
+		_relocate_save_files("user://mapwalk_save_hold", "user://saves")
+		_remove_empty_dir("user://mapwalk_save_hold")
+		_record("地图行走测试开始前移走了真实存档", false)
+		print("RESULTS: %d/%d passed" % [_passed, _passed + _failed])
+		print("MAP WALK TESTS FAILED")
+		quit(1)
+		return
 	var gm := root.get_node("GameManager")
 	await gm.start_new_game(1)
 	await _settle(10)
@@ -57,6 +67,11 @@ func _run() -> void:
 	await _check_prompts()
 	await _check_mine_floors()
 	_check_dialogue_data()
+	_remove_save_files("user://saves")
+	if not _relocate_save_files("user://mapwalk_save_hold", "user://saves"):
+		_record("地图行走测试还原了真实存档", false)
+	_remove_empty_dir("user://mapwalk_save_hold")
+	_record("地图行走没有改写真实存档槽", _save_slot_md5s() == save_stamps)
 	print("RESULTS: %d/%d passed" % [_passed, _passed + _failed])
 	print("MAP WALK TESTS PASSED" if _failed == 0 else "MAP WALK TESTS FAILED")
 	quit(0 if _failed == 0 else 1)
@@ -329,7 +344,9 @@ func _check_mine_floors() -> void:
 func _check_exits() -> void:
 	# [label, map, arrival spawn, waypoints, expected scene, expected arrival key]
 	var routes := [
-		["村庄 → 农场（西路）", VILLAGE, "from_farm", [Vector2(90, 300)], "Farm", "Farm/from_village"],
+		# North edge of the west road (y=256). The old 40×60 exit sat on the sign
+		# and left this lane free, so the player walked into the west wall.
+		["村庄 → 农场（西路）", VILLAGE, "from_farm", [Vector2(220, 256), Vector2(-150, 256)], "Farm", "Farm/from_village"],
 		["村庄 → 森林（北路）", VILLAGE, "from_forest", [Vector2(410, -110)], "Forest", "Forest/from_village"],
 		["村庄 → 海滩（东路）", VILLAGE, "from_beach", [Vector2(1205, 690)], "Beach", "Beach/from_village"],
 		["村庄 → 矿洞（从矿洞落点往下）", VILLAGE, "from_mine", [Vector2(520, 958), Vector2(200, 958)], "Mine", "Mine/from_village"],
@@ -497,3 +514,64 @@ func _record(name: String, condition: bool) -> void:
 	else:
 		_failed += 1
 		print("[FAIL] %s" % name)
+
+
+func _save_slot_md5s() -> Dictionary:
+	var stamps := {}
+	var save_manager := root.get_node("SaveManager")
+	for slot in range(int(save_manager.MAX_SAVE_SLOTS)):
+		var path := str(save_manager.get_save_path(slot))
+		stamps[slot] = FileAccess.get_md5(path) if FileAccess.file_exists(path) else ""
+	return stamps
+
+
+func _relocate_save_files(from_dir: String, to_dir: String) -> bool:
+	var from := DirAccess.open(from_dir)
+	if from == null:
+		return true
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(to_dir))
+	var names: Array[String] = []
+	from.list_dir_begin()
+	var entry := from.get_next()
+	while entry != "":
+		if not from.current_is_dir():
+			names.append(entry)
+		entry = from.get_next()
+	from.list_dir_end()
+	for name in names:
+		var src := from_dir.path_join(name)
+		var dst := to_dir.path_join(name)
+		var bytes := FileAccess.get_file_as_bytes(src)
+		var out := FileAccess.open(dst, FileAccess.WRITE)
+		if out == null:
+			push_error("Cannot copy save %s" % src)
+			return false
+		out.store_buffer(bytes)
+		out.close()
+		if FileAccess.get_md5(dst) != FileAccess.get_md5(src):
+			push_error("Save copy mismatch %s" % src)
+			return false
+		from.remove(name)
+	return true
+
+
+func _remove_save_files(dir_path: String) -> void:
+	var dir := DirAccess.open(dir_path)
+	if dir == null:
+		return
+	var names: Array[String] = []
+	dir.list_dir_begin()
+	var entry := dir.get_next()
+	while entry != "":
+		if not dir.current_is_dir():
+			names.append(entry)
+		entry = dir.get_next()
+	dir.list_dir_end()
+	for name in names:
+		dir.remove(name)
+
+
+func _remove_empty_dir(dir_path: String) -> void:
+	var parent := DirAccess.open("user://")
+	if parent != null:
+		parent.remove(dir_path.get_file())
