@@ -177,17 +177,17 @@ func _draw_beach() -> void:
 
 
 func _draw_shore_edge(y: float) -> void:
+	# 64px shore strips. Alternate a/b along the row; no corner cells.
+	var edge_a := preload("res://assets/tiles/kenney/beach_x4/shore_edge_a.png")
+	var edge_b := preload("res://assets/tiles/kenney/beach_x4/shore_edge_b.png")
 	var x0 := int(floor(OUTER_RECT.position.x / CELL)) * int(CELL)
 	var x1 := int(ceil(OUTER_RECT.end.x / CELL)) * int(CELL)
 	var x := x0
+	var index := 0
 	while x < x1:
-		var cell := BeachTilesetBuilder.POOL_T
-		if x == x0:
-			cell = BeachTilesetBuilder.POOL_TL
-		elif x + int(CELL) >= x1:
-			cell = BeachTilesetBuilder.POOL_TR
-		_stamp(_sheet_tile(cell), Vector2(x, y), Vector2(CELL, CELL))
+		_stamp(edge_a if index % 2 == 0 else edge_b, Vector2(x, y), Vector2(CELL, CELL))
 		x += int(CELL)
+		index += 1
 
 
 func _draw_mine_fallback() -> void:
