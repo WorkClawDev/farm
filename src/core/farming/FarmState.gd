@@ -19,6 +19,11 @@ const WATERED := 2
 const WATERING_CAN_MAX_WATER := 100
 const WATERING_CAN_WATER_PER_USE := 5
 
+## --debug-crops plants tomato here and green bean on the next cell.
+## Both are on the north ridge, which opening debris skips.
+const DEBUG_FIRST_RIDGE := Vector2i(0, 0)
+const DEBUG_SECOND_RIDGE := Vector2i(1, 0)
+
 ## 开局杂物。只铺在不挡路的田外圈（避开北侧小路和东出口）。有杂物时不能翻地、不能播种。
 const DEBRIS_WEED := "weed"
 const DEBRIS_STONE := "stone"
@@ -231,6 +236,53 @@ func plant(coord: Vector2i, seed_id: String) -> bool:
 	return true
 
 
+## One watered night from mature. Stage sits on the last growth_days entry with
+## days_in_stage = required - 1, so the next watered advance_day sets mature.
+static func progress_one_day_before_mature(growth_days) -> Dictionary:
+	if growth_days.is_empty():
+		return {}
+	var stage: int = int(growth_days.size()) - 1
+	var days_in_stage: int = maxi(0, int(growth_days[stage]) - 1)
+	var total: int = days_in_stage
+	for i in stage:
+		total += int(growth_days[i])
+	return {
+		"stage": stage,
+		"days_in_stage": days_in_stage,
+		"total_days": total,
+	}
+
+
+## Debug only. Tills coord, clears debris, waters, and plants crop_id one day
+## before mature. Does not take a seed or watering-can water.
+func place_debug_crop_before_mature(crop_id: String, coord: Vector2i = DEBUG_FIRST_RIDGE) -> bool:
+	var crop_data = GrowthSystem.get_crop_data(crop_id)
+	if crop_data == null or crop_data.growth_days.is_empty():
+		return false
+	var progress := progress_one_day_before_mature(crop_data.growth_days)
+	if progress.is_empty():
+		return false
+	var cell := _cell_ref(coord)
+	if cell.is_empty():
+		return false
+	cell.debris = ""
+	cell.debris_hits = 0
+	cell.debris_variant = 0
+	cell.state = WATERED
+	cell.moisture = 100
+	cell.crop = {
+		"crop_id": crop_id,
+		"stage": int(progress["stage"]),
+		"days_in_stage": int(progress["days_in_stage"]),
+		"total_days": int(progress["total_days"]),
+		"watered": true,
+		"quality": CropData.Quality.NORMAL,
+		"mature": false,
+	}
+	_emit_changed(coord)
+	return true
+
+
 func water(coord: Vector2i) -> bool:
 	var cell := _cell_ref(coord)
 	if cell.is_empty() or int(cell.state) == UNTILLED:
@@ -324,6 +376,8 @@ func harvest(coord: Vector2i) -> Dictionary:
 		cell.crop.days_in_stage = 0
 		cell.crop.mature = false
 		cell.crop.watered = false
+		# 再成熟只看 regrow_days，不再用 growth_days[stage]。
+		cell.crop.regrow_days_left = int(crop_data.regrow_days)
 	else:
 		cell.crop = {}
 	_emit_changed(coord)
@@ -331,11 +385,16 @@ func harvest(coord: Vector2i) -> Dictionary:
 
 
 func advance_day() -> void:
+	# GameManager 先长田，再让 TimeManager 进入下一天。今天已是季末时，这一夜会换季。
+	var season_changes := _season_changes_tonight()
+	var next_season := _next_season_name()
 	for key in _cells.keys():
 		var cell: Dictionary = _cells[key]
 		var coord := Vector2i(int(cell.x), int(cell.y))
 		if not cell.crop.is_empty():
 			_advance_crop(cell.crop)
+			if season_changes and _should_wilt(cell.crop, next_season):
+				cell.crop = {}
 		if int(cell.state) != UNTILLED:
 			cell.state = TILLED
 			cell.moisture = 0
@@ -381,6 +440,9 @@ func _advance_crop(crop: Dictionary) -> void:
 	var crop_data = GrowthSystem.get_crop_data(str(crop.get("crop_id", "")))
 	if crop_data == null:
 		return
+	if _is_regrowing(crop, crop_data):
+		_advance_regrow(crop, crop_data)
+		return
 	if crop_data.requires_water and not bool(crop.get("watered", false)):
 		return
 	crop.total_days = int(crop.get("total_days", 0)) + 1
@@ -394,6 +456,58 @@ func _advance_crop(crop: Dictionary) -> void:
 		else:
 			crop.mature = true
 	crop.watered = false
+
+
+## 季末这一夜 TimeManager 还停在旧日期。下一天会换季。
+func _season_changes_tonight() -> bool:
+	if TimeManager == null:
+		return false
+	return int(TimeManager.current_day) >= int(TimeManager.DAYS_PER_SEASON)
+
+
+func _next_season_name() -> String:
+	if TimeManager == null:
+		return ""
+	var seasons: Array = TimeManager.SEASONS
+	if seasons.is_empty():
+		return ""
+	var index := posmod(int(TimeManager.current_season) + 1, seasons.size())
+	return str(seasons[index])
+
+
+## dies_out_of_season 且下一季不在作物季节里才清掉。跨季作物（玉米夏秋）留着。土地仍是已翻。
+func _should_wilt(crop: Dictionary, next_season: String) -> bool:
+	if crop.is_empty() or next_season == "":
+		return false
+	var crop_data = GrowthSystem.get_crop_data(str(crop.get("crop_id", "")))
+	if crop_data == null or not crop_data.dies_out_of_season:
+		return false
+	return not crop_data.can_grow_in_season(next_season)
+
+
+## 已收过的再生作物走倒计时。旧存档没有 regrow_days_left：第一次长成后 total_days 已经走完。
+func _is_regrowing(crop: Dictionary, crop_data) -> bool:
+	if not bool(crop_data.regrow):
+		return false
+	if crop.has("regrow_days_left"):
+		return true
+	return int(crop.get("total_days", 0)) >= crop_data.get_total_growth_days()
+
+
+func _advance_regrow(crop: Dictionary, crop_data) -> void:
+	if not crop.has("regrow_days_left"):
+		crop.regrow_days_left = int(crop_data.regrow_days)
+	var watered := bool(crop.get("watered", false))
+	crop.watered = false
+	if crop_data.requires_water and not watered:
+		return
+	var left := int(crop.regrow_days_left) - 1
+	crop.regrow_days_left = left
+	if left <= 0:
+		crop.regrow_days_left = 0
+		crop.mature = true
+		if crop_data.growth_days.size() > 0:
+			crop.stage = crop_data.growth_days.size() - 1
 
 
 func _seed_opening_debris() -> void:

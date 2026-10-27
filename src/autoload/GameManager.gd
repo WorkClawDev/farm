@@ -48,6 +48,9 @@ func start_new_game(slot: int = 0) -> void:
 			ForagingSystem, CraftingSystem, CookingManager, FishingSystem]:
 		if system and system.has_method("reset"):
 			system.reset()
+	# After resets, so day/season/crop are not wiped. Before the tutorial, so
+	# quest timers start on the debug calendar. No-op unless --new-game is set.
+	DebugLaunchScript.apply_new_game_options(DebugLaunchScript.from_cmdline())
 	QuestSystem.start_tutorial()
 	SaveManager.reset_session(slot)
 	current_spawn_point = "farm_start"

@@ -7,6 +7,7 @@ signal item_bought(item_id: String, quantity: int, total_price: int)
 const SHOP_ITEMS: Array[Dictionary] = [
 	{"id": "turnip_seed", "name": "防风草种子", "description": "春天播种，4 天成熟。适合初次耕种。", "price": 20, "season": "spring"},
 	{"id": "potato_seed", "name": "土豆种子", "description": "春天播种，6 天成熟。适合做各种料理。", "price": 50, "season": "spring"},
+	{"id": "green_bean_seed", "name": "青豆种子", "description": "春天播种，成熟后还可以再收几次。", "price": 60, "season": "spring"},
 	{"id": "tomato_seed", "name": "番茄种子", "description": "夏天播种，11 天成熟。多汁酸甜。", "price": 50, "season": "summer"},
 	{"id": "corn_seed", "name": "玉米种子", "description": "夏天播种，14 天成熟。金灿灿的谷物。", "price": 80, "season": "summer"},
 	{"id": "pumpkin_seed", "name": "南瓜种子", "description": "秋天播种，13 天成熟。丰收季的明星。", "price": 100, "season": "fall"},
@@ -176,6 +177,8 @@ func _refresh_items() -> void:
 	item_list.clear()
 	var current_season := _get_current_season()
 	for item in shop_items:
+		if str(item.get("season", "")).to_lower() != current_season:
+			continue
 		item_list.add_item(str(item.name))
 		var in_season := str(item.season) == current_season
 		var button := UIFactory.button(
@@ -243,6 +246,11 @@ func _update_money_display() -> void:
 
 func _on_buy_button_pressed() -> void:
 	if selected_item.is_empty():
+		return
+	if str(selected_item.get("season", "")).to_lower() != _get_current_season():
+		_status.text = "这种种子不是当季的"
+		if UIManager:
+			UIManager.show_toast("这种种子不是当季的", {}, "warning")
 		return
 	var item_id := str(selected_item.id)
 	var total := int(selected_item.price) * selected_quantity

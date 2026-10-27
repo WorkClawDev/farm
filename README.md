@@ -59,6 +59,7 @@
 
 - 调试启动（仅 debug 构建，跳过主菜单读档）：`godot --path . -- --load-slot=3 --spawn=village_west`（界面槽 1..3，`--spawn=village_west` 把玩家放到村子西路靠西出口）。
 - 调试新档（仅 debug 构建，跳过主菜单）：`godot --path . -- --new-game`。每次启动使用新的 `user://debug_tmp_saves_<随机>/`（赋值给 SaveManager.save_dir），并清空旧的固定目录 `user://debug_tmp_saves/`。不读写真实 `user://saves/`。
+- 新档调试参数（必须和 `--new-game` 一起用，否则忽略）：`--start-day=N`（1-28，时间 9:00）、`--season=spring|summer|fall|winter`、`--debug-crops`（北侧田垄种一株已浇水、距成熟 1 天的番茄和一株青豆，不带参数）。不写真实 `user://saves/`。
 
 ### 工具切换
 - **1-6**: 快速选择工具

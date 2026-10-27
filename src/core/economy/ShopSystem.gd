@@ -259,7 +259,34 @@ func get_shop_items(shop_id: String = "") -> Array:
 	if target_shop == null:
 		return []
 
-	return target_shop.items
+	var listed: Array = []
+	for shop_item in target_shop.items:
+		if is_buyable_this_season(str(shop_item.get("item_id", ""))):
+			listed.append(shop_item)
+	return listed
+
+
+## 非种子，或种子季节包含当前季，才能买、也会出现在货架上。
+func is_buyable_this_season(item_id: String) -> bool:
+	var item_data = ItemDatabase.get_item(item_id)
+	if item_data == null:
+		return false
+	if item_data.type != ItemDatabase.ItemType.SEED:
+		return true
+	return _seed_matches_current_season(item_data)
+
+
+func _seed_matches_current_season(item_data) -> bool:
+	if item_data.seasons.is_empty():
+		return true
+	var current := "spring"
+	if TimeManager:
+		current = TimeManager.get_season_name().to_lower()
+	for season in item_data.seasons:
+		if str(season).to_lower() == current:
+			return true
+	return false
+
 
 ## 获取商品库存
 func get_item_stock(shop_id: String, item_id: String) -> int:
@@ -325,6 +352,18 @@ func buy_item(item_id: String, quantity: int = 1) -> bool:
 
 	if not is_in_shop:
 		purchase_failed.emit("item_not_available")
+		return false
+
+	var season_item = ItemDatabase.get_item(item_id)
+	if (
+		season_item != null
+		and season_item.type == ItemDatabase.ItemType.SEED
+		and not _seed_matches_current_season(season_item)
+	):
+		purchase_failed.emit("wrong_season")
+		var ui_manager = get_node_or_null("/root/UIManager")
+		if ui_manager:
+			ui_manager.show_toast("这种种子不是当季的", {}, "warning")
 		return false
 
 	# 计算价格

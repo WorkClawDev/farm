@@ -200,11 +200,16 @@ func _exercise_scene(scene_name: String, scene_path: String) -> void:
 			_record("NPC交互会打开真实对话框", DialogueManager.is_in_dialogue())
 			DialogueManager.force_end_dialogue()
 			_record("关闭对话后恢复玩家控制", GameManager.current_state == GameManager.GameState.PLAYING)
+			TimeManager.current_season = 0
 			shopkeeper.interact()
 			await get_tree().process_frame
 			_record("店主交互会打开种子商店", shopkeeper.shop_ui != null and shopkeeper.shop_ui.visible)
 			if shopkeeper.shop_ui:
-				_record("种子商店全部货架商品可显示", shopkeeper.shop_ui.item_list.item_count == 10)
+				var shelf_has_fiber := shopkeeper.shop_ui.find_child("ShopItem_fiber_seeds", true, false) != null
+				_record(
+					"种子商店当季货架可显示，且没有纤维种子",
+					shopkeeper.shop_ui.item_list.item_count == 7 and not shelf_has_fiber
+				)
 				shopkeeper.shop_ui._on_close_button_pressed()
 			_record("关闭商店后恢复玩家控制", GameManager.current_state == GameManager.GameState.PLAYING)
 			GameManager.is_game_active = false

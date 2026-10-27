@@ -54,6 +54,7 @@ func _ready() -> void:
 	await _test_bug7_farm3_save_file()
 	await _test_main_menu_down_does_not_activate()
 	await _test_debug_launch_args()
+	await _test_shop_keyboard_buy_and_scroll()
 	print("============================================================")
 	print("RESULTS: %d/%d passed" % [_passed, _passed + _failed])
 	if _failed == 0:
@@ -622,6 +623,145 @@ func _test_debug_launch_args() -> void:
 	SaveManager._play_time = prev_play
 	GameManager.is_game_active = prev_active
 	GameManager.current_state = prev_state
+
+
+## BUG-S1: Tab/方向键要能走到商品、数量、购买、关闭。
+## BUG-S2: 焦点移到视口外的一行时，列表要滚到那一行。
+func _test_shop_keyboard_buy_and_scroll() -> void:
+	var old_active := GameManager.is_game_active
+	var old_state := GameManager.current_state
+	var saved_time := TimeManager.current_time
+	var saved_day := TimeManager.current_day
+	var saved_season := TimeManager.current_season
+	var money_before := MoneySystem.get_money()
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	TimeManager.current_time = 10.0
+	TimeManager.current_day = 10
+	TimeManager.current_season = 0
+	var paused_before := TimeManager.is_paused
+	var shop := await UIManager.open_screen("shop", {"pause_game": true, "shop_id": "seed_shop"}) as ShopUI
+	for _i in 4:
+		await get_tree().process_frame
+	var items: Array[Button] = []
+	if shop != null:
+		for button in shop._item_buttons:
+			items.append(button)
+	var listed_fiber := false
+	for button in items:
+		if str(button.get_meta("shop_item_id", "")) == "fiber_seeds":
+			listed_fiber = true
+	_record("种子店键盘列表里没有纤维种子", shop != null and items.size() >= 2 and not listed_fiber)
+	var scroll: ScrollContainer = shop._list_scroll if shop != null else null
+	_record("商品列表会跟随焦点滚动", scroll != null and scroll.follow_focus)
+	var scrolled := false
+	var row_visible := false
+	if scroll != null and items.size() >= 2:
+		var box := scroll.get_child(0) as VBoxContainer
+		var probe := Control.new()
+		probe.name = "ScrollProbe"
+		probe.custom_minimum_size = Vector2(10, 2400)
+		probe.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.add_child(probe)
+		box.move_child(probe, 0)
+		for _i in 3:
+			await get_tree().process_frame
+		scroll.scroll_vertical = 0
+		items[items.size() - 1].grab_focus()
+		for _i in 3:
+			await get_tree().process_frame
+		scrolled = int(scroll.scroll_vertical) > 0
+		row_visible = _row_inside_scroll(scroll, items[items.size() - 1])
+		if not scrolled or not row_visible:
+			print("  [DETAIL] scroll_v=", scroll.scroll_vertical, " scroll_size=", scroll.size, " row=", _row_rect(items[items.size() - 1]))
+		probe.queue_free()
+		scroll.scroll_vertical = 0
+		await get_tree().process_frame
+	_record("焦点移到列表下方时滚动条跟着走，选中行仍在视口里", scrolled and row_visible)
+
+	var bought_id := ""
+	var bought_before := 0
+	var path_ok := false
+	if shop != null and items.size() >= 2 and scroll != null:
+		var close_button: Button = shop._close_button
+		close_button.grab_focus()
+		await get_tree().process_frame
+		var on_item := false
+		for _step in 6:
+			await _press_ui_key(KEY_TAB)
+			if _focus_name().begins_with("ShopItem_"):
+				on_item = true
+				break
+		var first_name := str(items[0].name)
+		on_item = on_item and _focus_name() == first_name
+		await _press_ui_key(KEY_DOWN)
+		var moved_down := _focus_name() == str(items[1].name)
+		await _press_ui_key(KEY_UP)
+		var moved_up := _focus_name() == first_name
+		await _press_ui_key(KEY_ENTER)
+		await get_tree().process_frame
+		var selected := shop.selected_item_id == str(items[0].get_meta("shop_item_id", "")) and not shop._confirm.disabled
+		await _press_ui_key(KEY_RIGHT)
+		await get_tree().process_frame
+		var on_qty := shop._is_quantity_focus(get_viewport().gui_get_focus_owner())
+		await _press_ui_key(KEY_UP)
+		await get_tree().process_frame
+		var qty_ok := int(shop._quantity.value) == 2 and shop.selected_quantity == 2
+		await _press_ui_key(KEY_TAB)
+		await get_tree().process_frame
+		var on_buy := _focus_name() == "ShopConfirm" and shop._confirm.text == "购买"
+		bought_id = shop.selected_item_id
+		bought_before = Inventory.get_item_count(bought_id)
+		await _press_ui_key(KEY_ENTER)
+		for _i in 3:
+			await get_tree().process_frame
+		var bought := Inventory.get_item_count(bought_id) == bought_before + 2 and MoneySystem.get_money() < money_before
+		await _press_ui_key(KEY_TAB)
+		await get_tree().process_frame
+		var on_close := _focus_name() == "ShopClose"
+		await _press_ui_key(KEY_ENTER)
+		for _i in 3:
+			await get_tree().process_frame
+		var closed := not UIManager.is_screen_open("shop") and TimeManager.is_paused == paused_before
+		path_ok = on_item and moved_down and moved_up and selected and on_qty and qty_ok and on_buy and bought and on_close and closed
+		if not path_ok:
+			print("  [DETAIL] shop keys item=", on_item, " down=", moved_down, " up=", moved_up, " selected=", selected, " qty=", on_qty, " qty2=", qty_ok, " buy=", on_buy, " bought=", bought, " close=", on_close, " closed=", closed, " focus=", _focus_name(), " id=", bought_id)
+	_record("键盘可以选商品、改数量、购买并关闭种子店", path_ok)
+
+	if UIManager.is_screen_open("shop"):
+		UIManager.close_all()
+		await get_tree().process_frame
+	if bought_id != "":
+		var extra := Inventory.get_item_count(bought_id) - bought_before
+		if extra > 0:
+			Inventory.remove_item(bought_id, extra)
+	var money_delta := MoneySystem.get_money() - money_before
+	if money_delta > 0:
+		MoneySystem.spend_money(money_delta, MoneySystem.ExpenseType.OTHER, "shop_key_test_restore")
+	elif money_delta < 0:
+		MoneySystem.add_money(-money_delta, MoneySystem.IncomeSource.OTHER, "shop_key_test_restore")
+	TimeManager.current_time = saved_time
+	TimeManager.current_day = saved_day
+	TimeManager.current_season = saved_season
+	GameManager.is_game_active = old_active
+	GameManager.current_state = old_state
+	_record("商店键盘测试还原金币", MoneySystem.get_money() == money_before)
+
+
+func _row_inside_scroll(scroll: ScrollContainer, button: Control) -> bool:
+	var row := button.get_parent() as Control
+	var target := row if row != null else button
+	if scroll.size.y <= 1.0 or target.size.y <= 1.0:
+		return false
+	var view := Rect2(scroll.global_position, scroll.size)
+	var rect := Rect2(target.global_position, target.size)
+	return view.encloses(rect)
+
+
+func _row_rect(button: Control) -> Rect2:
+	var row := button.get_parent() as Control
+	var target := row if row != null else button
+	return Rect2(target.global_position, target.size)
 
 
 func _record(label: String, passed: bool) -> void:

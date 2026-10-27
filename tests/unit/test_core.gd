@@ -1,4 +1,5 @@
 extends Node
+const DebugLaunchScript = preload("res://src/core/debug/DebugLaunch.gd")
 
 ## Core Unit Tests - 核心系统单元测试
 ## 使用公共 API 进行测试
@@ -23,6 +24,8 @@ func _ready() -> void:
 	run_quest_system_tests()
 	run_player_visual_tests()
 	run_map_editor_resource_tests()
+	run_season_regrow_shop_tests()
+	run_debug_launch_parse_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -570,6 +573,527 @@ func run_map_editor_resource_tests():
 
 	print("  Map editor resources: All tests completed")
 
+func run_season_regrow_shop_tests():
+	print("\n[Season Regrow Shop Tests]")
+
+	var farm_baseline: Dictionary = FarmState.get_save_state()
+	var plot := _season_open_plot(farm_baseline)
+	var saved_time: float = TimeManager.current_time
+	var saved_day: int = TimeManager.current_day
+	var saved_season: int = TimeManager.current_season
+	var saved_year: int = TimeManager.current_year
+	var saved_paused: bool = TimeManager.is_paused
+	var saved_pause_count: int = TimeManager._pause_count
+	var saved_scale: float = TimeManager.time_scale
+	var saved_acc: float = TimeManager._time_accumulator
+	var money_before: int = MoneySystem.get_money()
+	var tracked := ["turnip_seed", "potato_seed", "green_bean_seed", "tomato_seed", "corn_seed", "pumpkin_seed", "green_bean", "fiber_seeds"]
+	var counts := {}
+	for item_id in tracked:
+		counts[item_id] = Inventory.get_item_count(item_id)
+
+	var turnip_data = GrowthSystem.get_crop_data("turnip")
+	var bean_data = GrowthSystem.get_crop_data("green_bean")
+	var corn_data = GrowthSystem.get_crop_data("corn")
+	assert_true(turnip_data != null and bean_data != null and corn_data != null, "Season fixtures should resolve turnip, green bean, and corn")
+	var saved_dies: bool = turnip_data.dies_out_of_season if turnip_data != null else true
+
+	var young_turnip := {
+		"crop_id": "turnip",
+		"stage": 1,
+		"days_in_stage": 0,
+		"total_days": 2,
+		"watered": false,
+		"quality": 0,
+		"mature": false,
+	}
+	TimeManager.current_season = 0
+	TimeManager.current_day = TimeManager.DAYS_PER_SEASON
+	TimeManager.current_time = 10.0
+	assert_true(FarmState.load_save_state(_season_with_crop(farm_baseline, plot, young_turnip, FarmState.WATERED)), "Wilt fixture should load")
+	FarmState.advance_day()
+	var wilted := FarmState.get_cell(plot)
+	assert_true(Dictionary(wilted.get("crop", {})).is_empty(), "Season change clears an out-of-season crop")
+	assert_true(int(wilted.get("state", -1)) == FarmState.TILLED, "Wilted soil stays tilled")
+
+	TimeManager.current_day = 10
+	assert_true(FarmState.load_save_state(_season_with_crop(farm_baseline, plot, young_turnip, FarmState.WATERED)), "Mid-season fixture should load")
+	FarmState.advance_day()
+	var stayed := FarmState.get_cell(plot)
+	assert_true(str(Dictionary(stayed.get("crop", {})).get("crop_id", "")) == "turnip", "A day that does not change season does not wilt")
+	assert_true(int(stayed.get("state", -1)) == FarmState.TILLED, "A watered plot dries back to tilled overnight")
+
+	var young_corn := {
+		"crop_id": "corn",
+		"stage": 1,
+		"days_in_stage": 0,
+		"total_days": 2,
+		"watered": false,
+		"quality": 0,
+		"mature": false,
+	}
+	TimeManager.current_season = 1
+	TimeManager.current_day = TimeManager.DAYS_PER_SEASON
+	assert_true(FarmState.load_save_state(_season_with_crop(farm_baseline, plot, young_corn, FarmState.WATERED)), "Corn fixture should load")
+	FarmState.advance_day()
+	var corn_cell := FarmState.get_cell(plot)
+	assert_true(str(Dictionary(corn_cell.get("crop", {})).get("crop_id", "")) == "corn", "Summer to fall keeps corn because fall is in its seasons")
+
+	if turnip_data != null:
+		turnip_data.dies_out_of_season = false
+	TimeManager.current_season = 0
+	TimeManager.current_day = TimeManager.DAYS_PER_SEASON
+	assert_true(FarmState.load_save_state(_season_with_crop(farm_baseline, plot, young_turnip, FarmState.TILLED)), "Persistent crop fixture should load")
+	FarmState.advance_day()
+	var kept := FarmState.get_cell(plot)
+	assert_true(str(Dictionary(kept.get("crop", {})).get("crop_id", "")) == "turnip", "dies_out_of_season false keeps the crop across a season change")
+	if turnip_data != null:
+		turnip_data.dies_out_of_season = saved_dies
+
+	TimeManager.current_season = 0
+	TimeManager.current_day = 5
+	var mature_bean := {
+		"crop_id": "green_bean",
+		"stage": bean_data.growth_days.size() - 1,
+		"days_in_stage": 0,
+		"total_days": bean_data.get_total_growth_days(),
+		"watered": true,
+		"quality": 0,
+		"mature": true,
+	}
+	assert_true(FarmState.load_save_state(_season_with_crop(farm_baseline, plot, mature_bean, FarmState.TILLED)), "Regrow fixture should load")
+	assert_true(Inventory.can_add_item("green_bean", bean_data.max_harvest), "Inventory should have room for a green bean harvest")
+	var harvested: Dictionary = FarmState.harvest(plot)
+	var after_harvest := Dictionary(FarmState.get_cell(plot).get("crop", {}))
+	assert_true(not harvested.is_empty() and str(harvested.get("crop_id", "")) == "green_bean", "Harvesting a mature green bean yields the crop")
+	assert_true(not bool(after_harvest.get("mature", true)) and int(after_harvest.get("regrow_days_left", -1)) == int(bean_data.regrow_days), "Harvest starts a regrow_days countdown")
+	assert_true(int(after_harvest.get("stage", -1)) == bean_data.growth_days.size() - 2, "Regrow harvest steps back one stage")
+
+	FarmState.advance_day()
+	var dry := Dictionary(FarmState.get_cell(plot).get("crop", {}))
+	assert_true(int(dry.get("regrow_days_left", -1)) == int(bean_data.regrow_days) and not bool(dry.get("mature", true)), "An unwatered regrow day does not decrement")
+
+	FarmState.water(plot)
+	FarmState.advance_day()
+	var once := Dictionary(FarmState.get_cell(plot).get("crop", {}))
+	assert_true(int(once.get("regrow_days_left", -1)) == int(bean_data.regrow_days) - 1 and not bool(once.get("mature", true)), "One watered regrow day decrements by 1")
+	FarmState.water(plot)
+	FarmState.advance_day()
+	var twice := Dictionary(FarmState.get_cell(plot).get("crop", {}))
+	assert_true(int(twice.get("regrow_days_left", -1)) == int(bean_data.regrow_days) - 2 and not bool(twice.get("mature", true)), "Two watered regrow days stay immature when regrow_days is 3")
+	FarmState.water(plot)
+	FarmState.advance_day()
+	var ripe := Dictionary(FarmState.get_cell(plot).get("crop", {}))
+	assert_true(bool(ripe.get("mature", false)) and int(ripe.get("regrow_days_left", -1)) == 0, "Regrow matures only when the countdown reaches 0")
+	assert_true(int(ripe.get("stage", -1)) == bean_data.growth_days.size() - 1, "A regrown crop returns to the final stage")
+
+	var old_save := {
+		"crop_id": "green_bean",
+		"stage": bean_data.growth_days.size() - 2,
+		"days_in_stage": 0,
+		"total_days": bean_data.get_total_growth_days(),
+		"watered": false,
+		"quality": 0,
+		"mature": false,
+	}
+	assert_true(FarmState.load_save_state(_season_with_crop(farm_baseline, plot, old_save, FarmState.TILLED)), "Old regrow save should load")
+	FarmState.advance_day()
+	var migrated := Dictionary(FarmState.get_cell(plot).get("crop", {}))
+	assert_true(migrated.has("regrow_days_left") and int(migrated.get("regrow_days_left", -1)) == int(bean_data.regrow_days), "An old save without regrow_days_left starts the countdown and skips an unwatered day")
+	FarmState.water(plot)
+	FarmState.advance_day()
+	var migrated_wet := Dictionary(FarmState.get_cell(plot).get("crop", {}))
+	assert_true(int(migrated_wet.get("regrow_days_left", -1)) == int(bean_data.regrow_days) - 1 and not bool(migrated_wet.get("mature", true)), "A migrated countdown decrements only after watering")
+
+	var fresh_bean := {
+		"crop_id": "green_bean",
+		"stage": 0,
+		"days_in_stage": 0,
+		"total_days": 0,
+		"watered": true,
+		"quality": 0,
+		"mature": false,
+	}
+	assert_true(FarmState.load_save_state(_season_with_crop(farm_baseline, plot, fresh_bean, FarmState.WATERED)), "First-growth fixture should load")
+	FarmState.advance_day()
+	var first := Dictionary(FarmState.get_cell(plot).get("crop", {}))
+	assert_true(not first.has("regrow_days_left") and int(first.get("total_days", -1)) == 1 and int(first.get("stage", -1)) == 1 and not bool(first.get("mature", true)), "First growth still uses growth_days and does not start regrow")
+
+	if MoneySystem.get_money() < 300:
+		MoneySystem.add_money(1000, MoneySystem.IncomeSource.OTHER, "season_test_pad")
+	TimeManager.current_time = 10.0
+	TimeManager.current_day = 10
+	TimeManager.current_season = 0
+	TimeManager.is_paused = false
+	TimeManager._pause_count = 0
+	var shop = load("res://src/core/economy/ShopSystem.gd").new()
+	add_child(shop)
+	var caught := {"reason": ""}
+	shop.purchase_failed.connect(func(reason: String) -> void: caught["reason"] = reason)
+	assert_true(shop.open_shop("seed_shop"), "Seed shop should be open at 10:00")
+
+	var spring_ids: Array = _season_shop_ids(shop, "seed_shop")
+	assert_true(spring_ids.has("green_bean_seed") and spring_ids.has("turnip_seed") and spring_ids.has("potato_seed"), "Spring seed shop lists spring seeds including green beans")
+	assert_true(not spring_ids.has("fiber_seeds") and spring_ids.has("basic_fertilizer") and spring_ids.has("sunflower") and spring_ids.has("daffodil"), "Spring seed shop keeps fertilizer and decorations, and does not sell fiber seeds")
+	assert_true(not spring_ids.has("tomato_seed") and not spring_ids.has("corn_seed") and not spring_ids.has("pumpkin_seed"), "Spring seed shop hides summer and fall seeds")
+
+	caught["reason"] = ""
+	var tomato_before: int = Inventory.get_item_count("tomato_seed")
+	var money_at_reject: int = MoneySystem.get_money()
+	assert_true(not shop.buy_item("tomato_seed", 1), "Spring purchase of tomato seeds should fail")
+	assert_true(str(caught["reason"]) == "wrong_season", "Out-of-season seed purchase reports wrong_season")
+	assert_true(MoneySystem.get_money() == money_at_reject and Inventory.get_item_count("tomato_seed") == tomato_before, "A rejected seasonal purchase changes neither money nor inventory")
+
+	var turnip_before: int = Inventory.get_item_count("turnip_seed")
+	var money_at_turnip: int = MoneySystem.get_money()
+	var bought_turnip: bool = shop.buy_item("turnip_seed", 1)
+	assert_true(bought_turnip and Inventory.get_item_count("turnip_seed") == turnip_before + 1, "Spring turnip seeds can be bought")
+	assert_true(money_at_turnip - MoneySystem.get_money() == shop.calculate_buy_price("turnip_seed", 1), "Spring turnip seeds charge the shop price")
+
+	var bean_before: int = Inventory.get_item_count("green_bean_seed")
+	var bought_bean: bool = shop.buy_item("green_bean_seed", 1)
+	assert_true(bought_bean and Inventory.get_item_count("green_bean_seed") == bean_before + 1, "Spring green bean seeds can be bought")
+
+	TimeManager.current_season = 1
+	var summer_ids: Array = _season_shop_ids(shop, "seed_shop")
+	assert_true(summer_ids.has("tomato_seed") and summer_ids.has("corn_seed") and not summer_ids.has("fiber_seeds"), "Summer seed shop lists summer seeds without fiber seeds")
+	assert_true(not summer_ids.has("green_bean_seed") and not summer_ids.has("turnip_seed") and not summer_ids.has("potato_seed") and not summer_ids.has("pumpkin_seed"), "Summer seed shop hides spring and fall seeds")
+	caught["reason"] = ""
+	var summer_turnip_before: int = Inventory.get_item_count("turnip_seed")
+	var money_at_summer: int = MoneySystem.get_money()
+	assert_true(not shop.buy_item("turnip_seed", 1) and str(caught["reason"]) == "wrong_season", "Summer purchase of turnip seeds should fail as wrong_season")
+	assert_true(MoneySystem.get_money() == money_at_summer and Inventory.get_item_count("turnip_seed") == summer_turnip_before, "Summer rejection keeps money and turnip seeds")
+	var summer_tomato_before: int = Inventory.get_item_count("tomato_seed")
+	assert_true(shop.buy_item("tomato_seed", 1) and Inventory.get_item_count("tomato_seed") == summer_tomato_before + 1, "Summer tomato seeds can be bought")
+
+	var shelf_has_fiber := false
+	for shop_id in shop.get_all_shop_ids():
+		var shelf = shop.get_shop(str(shop_id))
+		if shelf == null:
+			continue
+		for entry in shelf.items:
+			if str(entry.get("item_id", "")) == "fiber_seeds":
+				shelf_has_fiber = true
+	assert_true(not shelf_has_fiber, "No shop shelf lists fiber_seeds")
+	assert_true(ItemDatabase.has_item("fiber_seeds"), "fiber_seeds stays in the item database")
+
+	shop.close_shop()
+	remove_child(shop)
+	shop.free()
+
+	if turnip_data != null:
+		turnip_data.dies_out_of_season = saved_dies
+	FarmState.load_save_state(farm_baseline)
+	TimeManager.current_time = saved_time
+	TimeManager.current_day = saved_day
+	TimeManager.current_season = saved_season
+	TimeManager.current_year = saved_year
+	TimeManager.is_paused = saved_paused
+	TimeManager._pause_count = saved_pause_count
+	TimeManager.time_scale = saved_scale
+	TimeManager._time_accumulator = saved_acc
+	var money_delta := MoneySystem.get_money() - money_before
+	if money_delta > 0:
+		MoneySystem.spend_money(money_delta, MoneySystem.ExpenseType.OTHER, "season_test_restore")
+	elif money_delta < 0:
+		MoneySystem.add_money(-money_delta, MoneySystem.IncomeSource.OTHER, "season_test_restore")
+	for item_id in tracked:
+		_season_restore_count(item_id, int(counts[item_id]))
+	assert_true(MoneySystem.get_money() == money_before, "Season tests restore the original money")
+	assert_true(Inventory.get_item_count("green_bean") == int(counts["green_bean"]), "Season tests restore harvested green beans")
+	assert_true(Inventory.get_item_count("tomato_seed") == int(counts["tomato_seed"]), "Season tests restore tomato seeds")
+
+	print("  Season regrow shop: All tests completed")
+
+
+func _season_open_plot(state: Dictionary) -> Vector2i:
+	for raw in state.get("cells", []):
+		if str(raw.get("debris", "")) == "":
+			return Vector2i(int(raw.get("x", 0)), int(raw.get("y", 0)))
+	return Vector2i(1, 1)
+
+
+func _season_with_crop(state: Dictionary, coord: Vector2i, crop: Dictionary, soil: int) -> Dictionary:
+	var data := state.duplicate(true) as Dictionary
+	for raw in data.get("cells", []):
+		if int(raw.get("x", -1)) == coord.x and int(raw.get("y", -1)) == coord.y:
+			raw["state"] = soil
+			raw["debris"] = ""
+			raw["debris_hits"] = 0
+			raw["crop"] = crop.duplicate(true)
+			break
+	return data
+
+
+func _season_shop_ids(shop, shop_id: String) -> Array:
+	var ids: Array = []
+	for entry in shop.get_shop_items(shop_id):
+		ids.append(str(entry.get("item_id", "")))
+	return ids
+
+
+func _season_restore_count(item_id: String, before: int) -> void:
+	var now := Inventory.get_item_count(item_id)
+	if now > before:
+		Inventory.remove_item(item_id, now - before)
+	elif now < before:
+		Inventory.add_item(item_id, before - now)
+
+
+func run_debug_launch_parse_tests() -> void:
+	print("\n[Debug Launch Parse Tests]")
+
+	var enabled := DebugLaunchScript.parse(PackedStringArray([
+		"--new-game",
+		"--start-day=14",
+		"--season=summer",
+		"--debug-crops",
+	]), true)
+	assert_true(
+		bool(enabled.get("new_game", false))
+			and int(enabled.get("start_day", 0)) == 14
+			and str(enabled.get("season", "")) == "summer"
+			and bool(enabled.get("debug_crops", false))
+			and int(enabled.get("slot", 0)) == -1,
+		"--new-game with start-day, season and debug-crops parses all three"
+	)
+
+	var reordered := DebugLaunchScript.parse(PackedStringArray([
+		"--start-day=7",
+		"--season=Winter",
+		"--debug-crops",
+		"--new-game",
+	]), true)
+	assert_true(
+		bool(reordered.get("new_game", false))
+			and int(reordered.get("start_day", 0)) == 7
+			and str(reordered.get("season", "")) == "winter"
+			and bool(reordered.get("debug_crops", false)),
+		"Flags before --new-game still parse, and season is case-insensitive"
+	)
+
+	var bounds := DebugLaunchScript.parse(PackedStringArray([
+		"--new-game",
+		"--start-day=1",
+		"--start-day=28",
+		"--start-day=29",
+		"--season=fall",
+		"--season=autumn",
+		"--debug-crops",
+		"--debug-crop=tomato",
+		"--debug-crops=tomato",
+	]), true)
+	assert_true(int(bounds.get("start_day", 0)) == 28, "start-day 1 and 28 are valid; 29 does not replace 28")
+	assert_true(str(bounds.get("season", "")) == "fall", "season=fall is kept and autumn is ignored")
+	assert_true(bool(bounds.get("debug_crops", false)), "--debug-crops is a flag; an old --debug-crop= value does not turn it off")
+
+	var rejected := DebugLaunchScript.parse(PackedStringArray([
+		"--new-game",
+		"--start-day=0",
+		"--start-day=abc",
+		"--start-day=",
+		"--season=",
+		"--season=springtime",
+		"--debug-crop=tomato",
+		"--debug-crops=green_bean",
+	]), true)
+	assert_true(
+		bool(rejected.get("new_game", false))
+			and int(rejected.get("start_day", -1)) == 0
+			and str(rejected.get("season", "x")) == ""
+			and not bool(rejected.get("debug_crops", true)),
+		"Out-of-range values are ignored, and --debug-crops does not take an id"
+	)
+
+	var plain := DebugLaunchScript.parse(PackedStringArray([
+		"--start-day=14",
+		"--season=winter",
+		"--debug-crops",
+		"--load-slot=2",
+	]), true)
+	assert_true(
+		not bool(plain.get("new_game", false))
+			and int(plain.get("start_day", -1)) == 0
+			and str(plain.get("season", "x")) == ""
+			and not bool(plain.get("debug_crops", true))
+			and int(plain.get("slot", -1)) == 1,
+		"Without --new-game the day, season and debug-crops flags are dropped"
+	)
+
+	var only_new := DebugLaunchScript.parse(PackedStringArray(["--new-game"]), true)
+	assert_true(
+		bool(only_new.get("new_game", false))
+			and int(only_new.get("start_day", -1)) == 0
+			and str(only_new.get("season", "x")) == ""
+			and not bool(only_new.get("debug_crops", true)),
+		"--new-game alone leaves day, season and debug-crops unset"
+	)
+
+	var release := DebugLaunchScript.parse(PackedStringArray([
+		"--new-game",
+		"--start-day=14",
+		"--season=summer",
+		"--debug-crops",
+	]), false)
+	assert_true(
+		not bool(release.get("new_game", false))
+			and int(release.get("start_day", -1)) == 0
+			and str(release.get("season", "x")) == ""
+			and not bool(release.get("debug_crops", true)),
+		"Release builds ignore --new-game and the debug calendar flags"
+	)
+
+	var last_day := DebugLaunchScript.parse(PackedStringArray([
+		"--new-game",
+		"--start-day=3",
+		"--start-day=10",
+		"--start-day=99",
+	]), true)
+	assert_true(int(last_day.get("start_day", 0)) == 10, "The last valid --start-day wins")
+
+	var pinned := FarmState.progress_one_day_before_mature([2, 2, 2, 3])
+	assert_true(
+		int(pinned.get("stage", -1)) == 3
+			and int(pinned.get("days_in_stage", -1)) == 2
+			and int(pinned.get("total_days", -1)) == 8,
+		"Tomato-shaped growth [2,2,2,3] is one watered day from mature"
+	)
+	var bean_pin := FarmState.progress_one_day_before_mature([1, 2, 2, 3])
+	assert_true(
+		int(bean_pin.get("stage", -1)) == 3
+			and int(bean_pin.get("days_in_stage", -1)) == 2
+			and int(bean_pin.get("total_days", -1)) == 7,
+		"Green-bean-shaped growth [1,2,2,3] is one watered day from mature"
+	)
+	var single := FarmState.progress_one_day_before_mature([1])
+	assert_true(
+		int(single.get("stage", -1)) == 0 and int(single.get("days_in_stage", -1)) == 0,
+		"A one-day crop sits at stage 0 with zero days in that stage"
+	)
+	assert_true(FarmState.progress_one_day_before_mature([]).is_empty(), "Empty growth_days has no debug progress")
+
+	var saved_day := TimeManager.current_day
+	var saved_season := TimeManager.current_season
+	var saved_time := TimeManager.current_time
+	var saved_game_season := -1
+	if GameSession != null and GameSession.season != null:
+		saved_game_season = int(GameSession.season.current_season)
+	var farm_baseline: Dictionary = FarmState.get_save_state()
+	var tomato_seeds_before := Inventory.get_item_count("tomato_seed")
+	var bean_seeds_before := Inventory.get_item_count("green_bean_seed")
+	var can_before := FarmState.get_watering_can_water()
+	var day_before_noop := TimeManager.current_day
+	DebugLaunchScript.apply_new_game_options({
+		"new_game": false,
+		"start_day": 14,
+		"season": "winter",
+		"debug_crops": true,
+	})
+	assert_true(TimeManager.current_day == day_before_noop, "apply without --new-game does not change the day")
+
+	var launch := DebugLaunchScript.parse(PackedStringArray([
+		"--debug-crops",
+		"--season=summer",
+		"--start-day=14",
+		"--new-game",
+	]), true)
+	DebugLaunchScript.apply_new_game_options(launch)
+	var tomato_cell := FarmState.get_cell(FarmState.DEBUG_FIRST_RIDGE)
+	var bean_cell := FarmState.get_cell(FarmState.DEBUG_SECOND_RIDGE)
+	var tomato_crop: Dictionary = tomato_cell.get("crop", {})
+	var bean_crop: Dictionary = bean_cell.get("crop", {})
+	var tomato = GrowthSystem.get_crop_data("tomato")
+	var green_bean = GrowthSystem.get_crop_data("green_bean")
+	var tomato_expected: Dictionary = {}
+	var bean_expected: Dictionary = {}
+	if tomato != null:
+		tomato_expected = FarmState.progress_one_day_before_mature(tomato.growth_days)
+	if green_bean != null:
+		bean_expected = FarmState.progress_one_day_before_mature(green_bean.growth_days)
+	var planted := 0
+	for y in FarmState.GRID_HEIGHT:
+		for x in FarmState.GRID_WIDTH:
+			var other: Dictionary = FarmState.get_cell(Vector2i(x, y)).get("crop", {})
+			if not other.is_empty():
+				planted += 1
+	assert_true(
+		TimeManager.current_day == 14 and is_equal_approx(TimeManager.current_time, 9.0),
+		"apply sets day 14 at 9:00"
+	)
+	assert_true(TimeManager.current_season == 1, "summer is season index 1")
+	assert_true(
+		GameSession != null and GameSession.season != null and int(GameSession.season.current_season) == 1,
+		"SeasonSystem follows the debug season"
+	)
+	assert_true(
+		int(tomato_cell.get("state", -1)) == FarmState.WATERED
+			and str(tomato_cell.get("debris", "x")) == ""
+			and str(tomato_crop.get("crop_id", "")) == "tomato"
+			and bool(tomato_crop.get("watered", false))
+			and not bool(tomato_crop.get("mature", true))
+			and not tomato_crop.has("regrow_days_left")
+			and int(tomato_crop.get("stage", -1)) == int(tomato_expected.get("stage", -2))
+			and int(tomato_crop.get("days_in_stage", -1)) == int(tomato_expected.get("days_in_stage", -2))
+			and int(tomato_crop.get("total_days", -1)) == int(tomato_expected.get("total_days", -2)),
+		"First ridge holds one watered tomato one day before mature"
+	)
+	assert_true(
+		int(bean_cell.get("state", -1)) == FarmState.WATERED
+			and str(bean_cell.get("debris", "x")) == ""
+			and str(bean_crop.get("crop_id", "")) == "green_bean"
+			and bool(bean_crop.get("watered", false))
+			and not bool(bean_crop.get("mature", true))
+			and not bean_crop.has("regrow_days_left")
+			and int(bean_crop.get("stage", -1)) == int(bean_expected.get("stage", -2))
+			and int(bean_crop.get("days_in_stage", -1)) == int(bean_expected.get("days_in_stage", -2))
+			and int(bean_crop.get("total_days", -1)) == int(bean_expected.get("total_days", -2)),
+		"Next ridge holds one watered green bean one day before mature"
+	)
+	assert_true(planted == 2, "Debug crops plant tomato and green bean only")
+	assert_true(Inventory.get_item_count("tomato_seed") == tomato_seeds_before, "Debug crops do not spend tomato seeds")
+	assert_true(Inventory.get_item_count("green_bean_seed") == bean_seeds_before, "Debug crops do not spend green bean seeds")
+	assert_true(FarmState.get_watering_can_water() == can_before, "Debug crops do not spend watering-can water")
+
+	FarmState.advance_day()
+	var grown_tomato: Dictionary = FarmState.get_cell(FarmState.DEBUG_FIRST_RIDGE).get("crop", {})
+	var grown_bean: Dictionary = FarmState.get_cell(FarmState.DEBUG_SECOND_RIDGE).get("crop", {})
+	assert_true(
+		bool(grown_tomato.get("mature", false)) and not bool(grown_tomato.get("watered", true))
+			and bool(grown_bean.get("mature", false)) and not bool(grown_bean.get("watered", true)),
+		"One watered night matures both debug crops"
+	)
+	var before_unknown := FarmState.get_cell(FarmState.DEBUG_FIRST_RIDGE)
+	assert_true(not FarmState.place_debug_crop_before_mature("not_a_real_crop"), "Unknown crop id is rejected")
+	assert_true(
+		FarmState.get_cell(FarmState.DEBUG_FIRST_RIDGE) == before_unknown,
+		"Rejecting an unknown crop leaves the cell unchanged"
+	)
+
+	FarmState.load_save_state(farm_baseline)
+	TimeManager.current_day = saved_day
+	TimeManager.current_season = saved_season
+	TimeManager.current_time = saved_time
+	if saved_game_season >= 0 and GameSession != null and GameSession.season != null:
+		GameSession.season.current_season = saved_game_season
+	var restored_tomato := FarmState.get_cell(FarmState.DEBUG_FIRST_RIDGE)
+	var restored_bean := FarmState.get_cell(FarmState.DEBUG_SECOND_RIDGE)
+	var baseline_tomato := {}
+	var baseline_bean := {}
+	for raw in farm_baseline.get("cells", []):
+		if int(raw.get("x", -1)) == FarmState.DEBUG_FIRST_RIDGE.x and int(raw.get("y", -1)) == FarmState.DEBUG_FIRST_RIDGE.y:
+			baseline_tomato = raw
+		if int(raw.get("x", -1)) == FarmState.DEBUG_SECOND_RIDGE.x and int(raw.get("y", -1)) == FarmState.DEBUG_SECOND_RIDGE.y:
+			baseline_bean = raw
+	assert_true(
+		str(restored_tomato.get("debris", "")) == str(baseline_tomato.get("debris", ""))
+			and str(Dictionary(restored_tomato.get("crop", {})).get("crop_id", "")) == str(Dictionary(baseline_tomato.get("crop", {})).get("crop_id", ""))
+			and str(restored_bean.get("debris", "")) == str(baseline_bean.get("debris", ""))
+			and str(Dictionary(restored_bean.get("crop", {})).get("crop_id", "")) == str(Dictionary(baseline_bean.get("crop", {})).get("crop_id", "")),
+		"Debug crop test restores both ridge cells"
+	)
+	assert_true(TimeManager.current_day == saved_day and TimeManager.current_season == saved_season, "Debug crop test restores the calendar")
+
+	print("  Debug launch parse: All tests completed")
 
 func assert_true(condition: bool, message: String):
 	total_tests += 1

@@ -68,9 +68,27 @@ normalize_log() {
 run_godot() {
     local log_path="$1"
     shift
+    # Each Godot invocation is one scene or script. Hang = failure, and say which one.
+    # Game-flow loads every map and walks NPCs home; 10 minutes was not enough here.
+    local timeout_secs="${GODOT_SCENE_TIMEOUT:-1800}"
+    local scene_label="project-startup"
+    local prev=""
+    local argument
+    for argument in "$@"; do
+        if [ "$prev" = "--scene" ] || [ "$prev" = "--script" ]; then
+            scene_label="$argument"
+        elif [ "$argument" = "--map-editor-smoke-test" ]; then
+            scene_label="map-editor-smoke-test"
+        fi
+        prev="$argument"
+    done
+    if ! command -v timeout >/dev/null 2>&1; then
+        err "timeout(1) missing; cannot limit Godot scene ${scene_label}"
+        exit 1
+    fi
+    local status=0
     if [[ "$GODOT" == *.exe ]]; then
         local converted_args=()
-        local argument
         for argument in "$@"; do
             if [ "$argument" = "$PROJECT_DIR" ] && command -v wslpath >/dev/null 2>&1; then
                 converted_args+=("$(wslpath -w "$argument")")
@@ -78,10 +96,17 @@ run_godot() {
                 converted_args+=("$argument")
             fi
         done
-        "$GODOT" "${converted_args[@]}" 2>&1 | tr -d '\000' | sed 's/\r$//' > "$log_path" || true
+        timeout "$timeout_secs" "$GODOT" "${converted_args[@]}" > "$log_path.raw" 2>&1 || status=$?
+        tr -d '\000' < "$log_path.raw" | sed 's/\r$//' > "$log_path" || true
+        rm -f "$log_path.raw"
     else
-        "$GODOT" "$@" > "$log_path" 2>&1 || true
+        timeout --foreground "$timeout_secs" "$GODOT" "$@" > "$log_path" 2>&1 || status=$?
         normalize_log "$log_path"
+    fi
+    if [ "$status" -eq 124 ]; then
+        echo "GODOT TIMEOUT: ${scene_label} stuck after ${timeout_secs}s" >> "$log_path"
+        err "Godot timed out after ${timeout_secs}s: ${scene_label}"
+        exit 1
     fi
 }
 
