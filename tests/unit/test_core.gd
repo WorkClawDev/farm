@@ -616,9 +616,142 @@ func run_season_regrow_shop_tests():
 	assert_true(FarmState.load_save_state(_season_with_crop(farm_baseline, plot, young_turnip, FarmState.WATERED)), "Wilt fixture should load")
 	FarmState.advance_day()
 	var wilted := FarmState.get_cell(plot)
-	assert_true(Dictionary(wilted.get("crop", {})).is_empty(), "Season change clears an out-of-season crop")
+	var wilted_crop := Dictionary(wilted.get("crop", {}))
+	assert_true(
+		str(wilted_crop.get("crop_id", "")) == "turnip"
+			and bool(wilted_crop.get("dead", false))
+			and not bool(wilted_crop.get("mature", true)),
+		"Season change keeps an out-of-season crop and marks it dead"
+	)
 	assert_true(int(wilted.get("state", -1)) == FarmState.TILLED, "Wilted soil stays tilled")
+	assert_true(not FarmState.can_harvest(plot) and FarmState.harvest(plot).is_empty(), "A dead crop cannot be harvested")
+	var dead_round := FarmState.get_save_state()
+	assert_true(FarmState.load_save_state(dead_round), "Dead crop save should load")
+	var reloaded_dead := Dictionary(FarmState.get_cell(plot).get("crop", {}))
+	assert_true(
+		str(reloaded_dead.get("crop_id", "")) == "turnip" and bool(reloaded_dead.get("dead", false)) and reloaded_dead.has("dead"),
+		"Save and load keep the dead flag"
+	)
+	assert_true(
+		FarmState.dead_crop_sprite_path("turnip") == "res://assets/sprites/crops/turnip_stagedead.png"
+			and FarmState.dead_crop_sprite_path("green_bean") == "res://assets/sprites/crops/green_bean_stagedead.png"
+			and ResourceLoader.exists(FarmState.dead_crop_sprite_path("turnip")),
+		"Known crops resolve their stagedead sprite"
+	)
+	assert_true(
+		FarmState.dead_crop_sprite_path("missing_crop_id") == "res://assets/sprites/crops/crop_dead.png"
+			and ResourceLoader.exists(FarmState.dead_crop_sprite_path("missing_crop_id")),
+		"A crop without stagedead art falls back to crop_dead.png"
+	)
+	var visual := FarmPlot.new()
+	add_child(visual)
+	visual.setup(plot)
+	var shown := ""
+	if visual._crop_sprite != null and visual._crop_sprite.texture != null:
+		shown = str(visual._crop_sprite.texture.resource_path)
+	assert_true(shown == FarmState.dead_crop_sprite_path("turnip"), "FarmPlot draws the stagedead sprite for a dead crop")
+	assert_true(
+		visual._crop_sprite != null
+			and visual._crop_sprite.texture != null
+			and visual._crop_sprite.scale.x > 0.0
+			and is_equal_approx(visual._crop_sprite.scale.x, visual._crop_sprite.scale.y)
+			and is_equal_approx(visual._crop_sprite.offset.y, -visual._crop_sprite.texture.get_height() / 2.0),
+		"Dead crop sprite uses the same uniform scale and ground alignment as a living crop"
+	)
+	visual.free()
+	var crop_node := Crop.new()
+	var crop_sprite := Sprite2D.new()
+	crop_sprite.name = "Sprite2D"
+	crop_node.add_child(crop_sprite)
+	add_child(crop_node)
+	crop_node.crop_id = "green_bean"
+	crop_node.crop_data = bean_data
+	crop_node.current_state = Crop.State.DEAD
+	crop_node._update_sprite()
+	var crop_shown := ""
+	if crop_node.sprite != null and crop_node.sprite.texture != null:
+		crop_shown = str(crop_node.sprite.texture.resource_path)
+	assert_true(crop_shown == FarmState.dead_crop_sprite_path("green_bean"), "Crop.gd dead state prefers the crop stagedead sprite")
+	crop_node.crop_id = "missing_crop_id"
+	crop_node._update_sprite()
+	var fallback_shown := ""
+	if crop_node.sprite != null and crop_node.sprite.texture != null:
+		fallback_shown = str(crop_node.sprite.texture.resource_path)
+	assert_true(fallback_shown == "res://assets/sprites/crops/crop_dead.png", "Crop.gd dead state falls back to crop_dead.png")
+	crop_node.free()
+	var young_bean := {
+		"crop_id": "green_bean",
+		"stage": 1,
+		"days_in_stage": 0,
+		"total_days": 2,
+		"watered": false,
+		"quality": 0,
+		"mature": true,
+	}
+	TimeManager.current_season = 0
+	TimeManager.current_day = TimeManager.DAYS_PER_SEASON
+	assert_true(FarmState.load_save_state(_season_with_crop(farm_baseline, plot, young_bean, FarmState.WATERED)), "Green bean season fixture should load")
+	FarmState.advance_day()
+	var bean_wilted := Dictionary(FarmState.get_cell(plot).get("crop", {}))
+	assert_true(
+		str(bean_wilted.get("crop_id", "")) == "green_bean"
+			and bool(bean_wilted.get("dead", false))
+			and not bool(bean_wilted.get("mature", true))
+			and not FarmState.can_harvest(plot),
+		"Spring green beans die on summer day 1 and stay on the plot"
+	)
+	TimeManager.current_day = 2
+	TimeManager.current_season = 1
+	var bean_stage := int(bean_wilted.get("stage", -1))
+	FarmState.water(plot)
+	FarmState.advance_day()
+	var bean_still := Dictionary(FarmState.get_cell(plot).get("crop", {}))
+	assert_true(
+		bool(bean_still.get("dead", false))
+			and str(bean_still.get("crop_id", "")) == "green_bean"
+			and int(bean_still.get("stage", -2)) == bean_stage
+			and not bool(bean_still.get("mature", true)),
+		"A dead crop does not grow on a later day"
+	)
+	var turnips_before := Inventory.get_item_count("turnip")
+	var stamina_before := StaminaManager.current_stamina
+	if stamina_before < 6.0:
+		StaminaManager.set_stamina(StaminaManager.max_stamina)
+		stamina_before = StaminaManager.current_stamina
+	var farm_tools := Farm.new()
+	farm_tools.perform_farm_action(plot, ToolManager.ToolType.SICKLE)
+	assert_true(
+		Dictionary(FarmState.get_cell(plot).get("crop", {})).is_empty()
+			and int(FarmState.get_cell(plot).get("state", -1)) == FarmState.TILLED
+			and Inventory.get_item_count("turnip") == turnips_before
+			and is_equal_approx(StaminaManager.current_stamina, stamina_before - 2.0),
+		"Sickle clears a dead crop without harvesting it"
+	)
+	assert_true(FarmState.load_save_state(dead_round), "Dead turnip fixture reloads for the hoe")
+	farm_tools.perform_farm_action(plot, ToolManager.ToolType.HOE)
+	assert_true(
+		Dictionary(FarmState.get_cell(plot).get("crop", {})).is_empty()
+			and int(FarmState.get_cell(plot).get("state", -1)) == FarmState.TILLED,
+		"Hoe clears a dead crop and leaves tilled soil"
+	)
+	TimeManager.current_season = 0
+	TimeManager.current_day = 2
+	if Inventory.get_item_count("turnip_seed") < 1:
+		Inventory.add_item("turnip_seed", 1)
+	assert_true(FarmState.plant(plot, "turnip_seed"), "Tilled soil can be planted after the dead crop is cleared")
+	var replanted := Dictionary(FarmState.get_cell(plot).get("crop", {}))
+	assert_true(str(replanted.get("crop_id", "")) == "turnip" and not bool(replanted.get("dead", true)), "A new planting is alive")
+	farm_tools.perform_farm_action(plot, ToolManager.ToolType.HOE)
+	farm_tools.perform_farm_action(plot, ToolManager.ToolType.SICKLE)
+	var still_alive := Dictionary(FarmState.get_cell(plot).get("crop", {}))
+	assert_true(
+		str(still_alive.get("crop_id", "")) == "turnip" and not bool(still_alive.get("dead", true)),
+		"Hoe and sickle leave a living crop in place"
+	)
+	farm_tools.free()
+	StaminaManager.set_stamina(stamina_before)
 
+	TimeManager.current_season = 0
 	TimeManager.current_day = 10
 	assert_true(FarmState.load_save_state(_season_with_crop(farm_baseline, plot, young_turnip, FarmState.WATERED)), "Mid-season fixture should load")
 	FarmState.advance_day()
@@ -640,7 +773,11 @@ func run_season_regrow_shop_tests():
 	assert_true(FarmState.load_save_state(_season_with_crop(farm_baseline, plot, young_corn, FarmState.WATERED)), "Corn fixture should load")
 	FarmState.advance_day()
 	var corn_cell := FarmState.get_cell(plot)
-	assert_true(str(Dictionary(corn_cell.get("crop", {})).get("crop_id", "")) == "corn", "Summer to fall keeps corn because fall is in its seasons")
+	assert_true(
+		str(Dictionary(corn_cell.get("crop", {})).get("crop_id", "")) == "corn"
+			and not bool(Dictionary(corn_cell.get("crop", {})).get("dead", false)),
+		"Summer to fall keeps corn because fall is in its seasons"
+	)
 
 	if turnip_data != null:
 		turnip_data.dies_out_of_season = false

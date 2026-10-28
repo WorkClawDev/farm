@@ -238,8 +238,8 @@ func _update_sprite() -> void:
 	var sprite_path: String = ""
 
 	if current_state == State.DEAD:
-		# 枯萎的作物显示特殊精灵
-		sprite_path = "res://assets/sprites/crops/crop_dead.png"
+		# 优先本作物的 stagedead，没有再兜底通用枯死图。
+		sprite_path = FarmState.dead_crop_sprite_path(crop_id)
 	elif current_state == State.MATURE:
 		# 成熟作物
 		if crop_data.stage_sprites.size() > 0:

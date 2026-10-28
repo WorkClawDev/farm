@@ -811,3 +811,13 @@
 - 材料扣除：PASS。铁锭 5→0，金币 500→0。
 - 40 次：升级前文案「水量: 20次 -> 40次」PASS；升后因铁/金同为 40 次，效果行不再显示水量差（只显示金级效率/范围/体力）。未回农场实浇核对 x/40。
 - 小问题：铁匠汤姆与医生玛丽站位很近，先容易点到医生对话。
+
+## 2026-10-28 18:10 打磨：收获 toast 只弹一次 + 中文名（--new-game --debug-crops）
+- PASS。F 睡到第 2 天，镰刀收青豆/番茄各只弹一行：「收获 1 个 青豆」「收获 1 个 番茄」。无 ×2，无 tomato/green_bean。
+- 截图 toast_harvest1.png、toast_harvest2.png。改动待 commit：仅 Farm.gd。
+
+## 2026-10-28 19:17 过季枯死精灵（--new-game --start-day=24 --season=spring --debug-crops）
+- 青豆夏1枯死精灵：PASS。留在地里，贴图为 green_bean_stagedead（褐枯株），非空土、非通用 crop_dead 小块。截图 wilt_summer1.png
+- 不能收：PASS。镰刀 Space 无收获 toast、不进背包；直接走清除。
+- 清除：PASS。toast「清除了枯死的作物」，格变空耕地。截图 wilt_cleared.png
+- 番茄夏1仍活：PASS（红果+星标）。玉米跨季未实机（需买种+睡整季）；同逻辑番茄春→夏未枯。

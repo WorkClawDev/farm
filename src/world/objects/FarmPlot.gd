@@ -127,13 +127,17 @@ func refresh() -> void:
 	_label.text = ""
 	if debris != "" or crop.is_empty():
 		return
-	var crop_data = GrowthSystem.get_crop_data(str(crop.get("crop_id", "")))
-	if crop_data == null:
+	var dead := bool(crop.get("dead", false))
+	var crop_id := str(crop.get("crop_id", ""))
+	var crop_data = GrowthSystem.get_crop_data(crop_id)
+	if crop_data == null and not dead:
 		return
-	var stage := int(crop.get("stage", 0))
 	var sprite_path := ""
-	if not crop_data.stage_sprites.is_empty():
-		sprite_path = crop_data.stage_sprites[mini(stage, crop_data.stage_sprites.size() - 1)]
+	if dead:
+		sprite_path = FarmState.dead_crop_sprite_path(crop_id)
+	elif crop_data != null and not crop_data.stage_sprites.is_empty():
+		var stage := int(crop.get("stage", 0))
+		sprite_path = str(crop_data.stage_sprites[mini(stage, crop_data.stage_sprites.size() - 1)])
 	if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
 		_crop_sprite.texture = load(sprite_path)
 		if _crop_sprite.texture != null:
@@ -145,9 +149,9 @@ func refresh() -> void:
 				_crop_sprite.scale = Vector2(fitted, fitted)
 				# Bottom-align the texture on the sprite origin (offset is in texture px).
 				_crop_sprite.offset = Vector2(0, -tex_size.y / 2.0)
-	else:
+	elif not dead and crop_data != null:
 		_label.text = str(crop_data.crop_name).substr(0, 1)
-	if bool(crop.get("mature", false)):
+	if not dead and bool(crop.get("mature", false)):
 		_label.text = "★" if _label.text.is_empty() else _label.text + "★"
 
 

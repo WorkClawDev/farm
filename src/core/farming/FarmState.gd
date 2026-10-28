@@ -36,6 +36,7 @@ const STUMP_HITS_TO_CLEAR := 3
 const TOOL_SICKLE := "sickle"
 const TOOL_PICKAXE := "pickaxe"
 const TOOL_AXE := "axe"
+const DEAD_CROP_SPRITE := "res://assets/sprites/crops/crop_dead.png"
 
 const DEBRIS_DROP := {
 	"weed": "fiber",
@@ -233,6 +234,7 @@ func plant(coord: Vector2i, seed_id: String) -> bool:
 		"watered": false,
 		"quality": CropData.Quality.NORMAL,
 		"mature": false,
+		"dead": false,
 	}
 	if not Inventory.remove_item(seed_id, 1):
 		cell.crop = {}
@@ -283,6 +285,7 @@ func place_debug_crop_before_mature(crop_id: String, coord: Vector2i = DEBUG_FIR
 		"watered": true,
 		"quality": CropData.Quality.NORMAL,
 		"mature": false,
+		"dead": false,
 	}
 	_emit_changed(coord)
 	return true
@@ -378,7 +381,32 @@ func apply_watering_can_upgrade(tier: int) -> void:
 
 func can_harvest(coord: Vector2i) -> bool:
 	var cell := _cell_ref(coord)
-	return not cell.is_empty() and not cell.crop.is_empty() and bool(cell.crop.get("mature", false))
+	if cell.is_empty() or cell.crop.is_empty() or bool(cell.crop.get("dead", false)):
+		return false
+	return bool(cell.crop.get("mature", false))
+
+
+func is_crop_dead(coord: Vector2i) -> bool:
+	var cell := _cell_ref(coord)
+	return not cell.is_empty() and not cell.crop.is_empty() and bool(cell.crop.get("dead", false))
+
+
+## 镰刀或锄头清掉枯死株。活着的作物不动。清完可以再翻、再种。
+func clear_dead_crop(coord: Vector2i) -> bool:
+	if not is_crop_dead(coord):
+		return false
+	var cell := _cell_ref(coord)
+	cell.crop = {}
+	_emit_changed(coord)
+	return true
+
+
+## 优先 res://assets/sprites/crops/{crop_id}_stagedead.png，没有则用通用枯死图。
+static func dead_crop_sprite_path(crop_id: String) -> String:
+	var specific := "res://assets/sprites/crops/%s_stagedead.png" % crop_id
+	if crop_id != "" and ResourceLoader.exists(specific):
+		return specific
+	return DEAD_CROP_SPRITE
 
 
 func harvest(coord: Vector2i) -> Dictionary:
@@ -446,7 +474,7 @@ func advance_day() -> void:
 		if not cell.crop.is_empty():
 			_advance_crop(cell.crop)
 			if season_changes and _should_wilt(cell.crop, next_season):
-				cell.crop = {}
+				_mark_crop_dead(cell.crop)
 		if int(cell.state) != UNTILLED:
 			cell.state = TILLED
 			cell.moisture = 0
@@ -490,6 +518,10 @@ func load_save_state(data: Dictionary) -> bool:
 
 
 func _advance_crop(crop: Dictionary) -> void:
+	if bool(crop.get("dead", false)):
+		crop.watered = false
+		crop.mature = false
+		return
 	if bool(crop.get("mature", false)):
 		crop.watered = false
 		return
@@ -531,7 +563,7 @@ func _next_season_name() -> String:
 	return str(seasons[index])
 
 
-## dies_out_of_season 且下一季不在作物季节里才清掉。跨季作物（玉米夏秋）留着。土地仍是已翻。
+## dies_out_of_season 且下一季不在作物季节里才标枯死。跨季作物（玉米夏秋）留着。土地仍是已翻。
 func _should_wilt(crop: Dictionary, next_season: String) -> bool:
 	if crop.is_empty() or next_season == "":
 		return false
@@ -539,6 +571,13 @@ func _should_wilt(crop: Dictionary, next_season: String) -> bool:
 	if crop_data == null or not crop_data.dies_out_of_season:
 		return false
 	return not crop_data.can_grow_in_season(next_season)
+
+
+## 换季枯死留着 crop_id，只是不能再长、不能收。清掉之后格子才变回空作物。
+func _mark_crop_dead(crop: Dictionary) -> void:
+	crop.dead = true
+	crop.mature = false
+	crop.watered = false
 
 
 ## 已收过的再生作物走倒计时。旧存档没有 regrow_days_left：第一次长成后 total_days 已经走完。
@@ -619,6 +658,10 @@ func _sanitize_cell(raw: Dictionary, coord: Vector2i) -> Dictionary:
 	cell.fertilizer = maxi(0, int(raw.get("fertilizer", 0)))
 	var crop = raw.get("crop", {})
 	cell.crop = crop.duplicate(true) if crop is Dictionary else {}
+	if not cell.crop.is_empty():
+		cell.crop["dead"] = bool(cell.crop.get("dead", false))
+		if bool(cell.crop["dead"]):
+			cell.crop["mature"] = false
 	# 旧存档没有 debris 字段：视为这格没有杂物。
 	var debris := str(raw.get("debris", ""))
 	if not _is_debris_kind(debris):

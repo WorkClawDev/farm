@@ -365,6 +365,8 @@ func perform_farm_action(coord: Vector2i, tool_type: ToolManager.ToolType) -> vo
 		if selected_data and selected_data.type == ItemDatabase.ItemType.SEED:
 			if int(cell.get("state", FarmState.UNTILLED)) == FarmState.UNTILLED:
 				message = "先用锄头翻地再播种"
+			elif bool(Dictionary(cell.get("crop", {})).get("dead", false)):
+				message = "用锄头或镰刀清除枯死的作物"
 			elif not Dictionary(cell.get("crop", {})).is_empty():
 				message = "这里已经种了作物"
 			else:
@@ -375,12 +377,16 @@ func perform_farm_action(coord: Vector2i, tool_type: ToolManager.ToolType) -> vo
 	else:
 		match tool_type:
 			ToolManager.ToolType.HOE:
-				success = FarmState.till(coord)
-				message = "土地已翻好" if success else (
-					"这里已经翻过了（按数字键选种子播种）"
-					if Dictionary(cell.get("crop", {})).is_empty() and not cell.is_empty()
-					else "这里已经翻过了"
-				)
+				if FarmState.is_crop_dead(coord):
+					success = FarmState.clear_dead_crop(coord)
+					message = "清除了枯死的作物" if success else "这里清不掉"
+				else:
+					success = FarmState.till(coord)
+					message = "土地已翻好" if success else (
+						"这里已经翻过了（按数字键选种子播种）"
+						if Dictionary(cell.get("crop", {})).is_empty() and not cell.is_empty()
+						else "这里已经翻过了"
+					)
 			ToolManager.ToolType.WATERING_CAN:
 				# 水量只在 FarmState 里记；只有真正浇上水才扣水、扣体力。
 				match FarmState.water_with_can(coord):
@@ -397,19 +403,23 @@ func perform_farm_action(coord: Vector2i, tool_type: ToolManager.ToolType) -> vo
 					_:
 						message = "这里不能浇水，先用锄头翻地"
 			ToolManager.ToolType.SICKLE:
-				var result := FarmState.harvest(coord)
-				success = not result.is_empty()
-				if success:
-					# 文案只由 _on_crop_harvested 弹一次。这里再写同样的 message 会合成 ×2。
-					# emit 保留：任务和成就听这个信号。
-					EventBus.farm.crop_harvested.emit(
-						str(result.get("crop_id", "")),
-						int(result.get("quality", 0)),
-						int(result.get("quantity", 0))
-					)
-					message = ""
+				if FarmState.is_crop_dead(coord):
+					success = FarmState.clear_dead_crop(coord)
+					message = "清除了枯死的作物" if success else "这里清不掉"
 				else:
-					message = "作物尚未成熟"
+					var result := FarmState.harvest(coord)
+					success = not result.is_empty()
+					if success:
+						# 文案只由 _on_crop_harvested 弹一次。这里再写同样的 message 会合成 ×2。
+						# emit 保留：任务和成就听这个信号。
+						EventBus.farm.crop_harvested.emit(
+							str(result.get("crop_id", "")),
+							int(result.get("quality", 0)),
+							int(result.get("quantity", 0))
+						)
+						message = ""
+					else:
+						message = "作物尚未成熟"
 			ToolManager.ToolType.AXE:
 				message = "这里没有树枝或树桩"
 			ToolManager.ToolType.PICKAXE:
