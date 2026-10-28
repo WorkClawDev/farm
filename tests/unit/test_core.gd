@@ -1668,13 +1668,116 @@ func run_debug_time_skip_tests() -> void:
 	key.keycode = KEY_F7
 	key.physical_keycode = KEY_F7
 	assert_true(not GameManager.wants_debug_time_skip(key, false), "发行版不响应 F7 跳时")
+	var mouse := InputEventMouseButton.new()
+	mouse.pressed = true
+	assert_true(not GameManager.wants_debug_time_skip(mouse, false), "发行版对任意事件都不跳时")
 	var target := GameManager.debug_time_skip_target()
 	var minute := int((target - float(int(target))) * 60.0)
 	assert_true(
 		is_equal_approx(target, 25.0 + 55.0 / 60.0) and target < 26.0 and int(target) % 24 == 1 and minute == 55,
 		"跳时目标是 1:55（25 + 55/60），且小于 2:00"
 	)
+
+	var saved_state = GameManager.current_state
+	var saved_active = GameManager.is_game_active
+	var saved_paused := get_tree().paused
+	var saved_time := TimeManager.current_time
+	var saved_accum := TimeManager._time_accumulator
+	var saved_toasts := _debug_skip_toast_signature()
+
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	get_tree().paused = false
+	assert_true(GameManager._debug_time_skip_allowed(), "PLAYING 且未暂停、无模态时可以跳时")
+
+	get_tree().paused = true
+	assert_true(not GameManager._debug_time_skip_allowed(), "场景树暂停时不能跳时")
+	_assert_f7_does_not_skip(key, saved_time, saved_accum, saved_toasts, "暂停时 F7 不改时间也不弹 toast")
+	get_tree().paused = false
+
+	GameManager.current_state = GameManager.GameState.PAUSED
+	assert_true(not GameManager._debug_time_skip_allowed(), "暂停菜单状态不能跳时")
+	_assert_f7_does_not_skip(key, saved_time, saved_accum, saved_toasts, "暂停状态时 F7 不改时间也不弹 toast")
+	GameManager.current_state = GameManager.GameState.PLAYING
+	assert_true(GameManager._debug_time_skip_allowed(), "回到 PLAYING 且未暂停后可以跳时")
+
+	var modal := Control.new()
+	modal.name = "F7ModalProbe"
+	add_child(modal)
+	var stack_before := UIManager._stack.size()
+	UIManager._stack.append({
+		"id": "f7_probe",
+		"node": modal,
+		"focus": null,
+		"pause": false,
+	})
+	assert_true(UIManager.has_open_modal() and not get_tree().paused, "模态夹具打开且场景树未暂停")
+	assert_true(not GameManager._debug_time_skip_allowed(), "有中心模态时不能跳时")
+	_assert_f7_does_not_skip(key, saved_time, saved_accum, saved_toasts, "有模态时 F7 不改时间也不弹 toast")
+	while UIManager._stack.size() > stack_before:
+		UIManager._stack.pop_back()
+	modal.free()
+	assert_true(not UIManager.has_open_modal(), "模态夹具已清掉")
+	assert_true(GameManager._debug_time_skip_allowed(), "关掉模态后可以跳时")
+
+	var upgrade := Control.new()
+	upgrade.name = "ToolUpgradeUI"
+	upgrade.visible = true
+	add_child(upgrade)
+	assert_true(
+		upgrade.visible and not get_tree().paused and not UIManager.has_open_modal(),
+		"升级界面可见且未进暂停或模态栈"
+	)
+	assert_true(not GameManager._debug_time_skip_allowed(), "可见工具升级界面时不能跳时")
+	_assert_f7_does_not_skip(key, saved_time, saved_accum, saved_toasts, "升级界面开着时 F7 不改时间也不弹 toast")
+	upgrade.visible = false
+	assert_true(GameManager._debug_time_skip_allowed(), "隐藏的升级界面不拦截跳时")
+	upgrade.free()
+
+	var blocker := Control.new()
+	blocker.name = "F7CenterBlocker"
+	blocker.visible = true
+	blocker.add_to_group(QuestTracker.BLOCKER_GROUP)
+	add_child(blocker)
+	assert_true(not GameManager._debug_time_skip_allowed(), "可见 quest_bar_blockers 时不能跳时")
+	_assert_f7_does_not_skip(key, saved_time, saved_accum, saved_toasts, "中心遮挡开着时 F7 不改时间也不弹 toast")
+	blocker.visible = false
+	assert_true(GameManager._debug_time_skip_allowed(), "隐藏的中心遮挡不拦截跳时")
+	blocker.free()
+
+	assert_true(is_equal_approx(TimeManager.current_time, saved_time), "门闩测试没有改时间")
+	assert_true(is_equal_approx(TimeManager._time_accumulator, saved_accum), "门闩测试没有改时间累计")
+	GameManager.current_state = saved_state
+	GameManager.is_game_active = saved_active
+	get_tree().paused = saved_paused
 	print("  Debug time skip: All tests completed")
+
+
+func _debug_skip_toast_signature() -> String:
+	if UIManager == null or UIManager._toast_root == null:
+		return ""
+	var parts: PackedStringArray = []
+	for child in UIManager._toast_root.get_children():
+		if child.is_queued_for_deletion():
+			continue
+		parts.append("%s#%s" % [str(child.get_meta("toast_text", "")), str(child.get_meta("toast_count", 1))])
+	return "|".join(parts)
+
+
+func _assert_f7_does_not_skip(event: InputEvent, time_before: float, accum_before: float, toast_before: String, message: String) -> void:
+	if GameManager._debug_time_skip_allowed():
+		assert_true(false, message)
+		return
+	GameManager._unhandled_input(event)
+	var time_same := is_equal_approx(TimeManager.current_time, time_before)
+	var accum_same := is_equal_approx(TimeManager._time_accumulator, accum_before)
+	var toast_same := _debug_skip_toast_signature() == toast_before
+	if not time_same:
+		TimeManager.current_time = time_before
+	if not accum_same:
+		TimeManager._time_accumulator = accum_before
+	assert_true(time_same and accum_same and toast_same, message)
+
 
 func run_tool_upgrade_material_name_tests() -> void:
 	print("\n[Tool Upgrade Material Names]")

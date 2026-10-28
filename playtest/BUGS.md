@@ -846,3 +846,9 @@
 ## 2026-10-28 23:34 打磨：任务条挡升级标题（--new-game）
 - PASS。开「工具升级」时左上任务条隐藏，标题左缘不被挡；Esc 关闭后教程任务条（农场入门/收获1个防风草）恢复。
 - 截图 questbar_before.png、questbar_upgrade_open.png、questbar_after_close.png。
+
+## 2026-10-29 00:00 打磨：F7 暂停/模态门控（--new-game）
+- PASS。暂停菜单（农场小憩）按 F7：时钟不变、无 toast/无 debug 日志。
+- 工具升级开着按 F7：同上，不跳时。
+- 正常 PLAYING 按 F7：仍 toast「调试：时间 → 1:55」、HUD 1:55。
+- 截图 f7gate_pause.png、f7gate_upgrade.png、f7gate_playing.png。发行版未实机。

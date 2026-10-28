@@ -309,7 +309,9 @@ func _unhandled_input(event: InputEvent) -> void:
 			_grant_debug_iron()
 		return
 	# Same arrival rule as F8 (this node stays process-always in debug builds) but
-	# the skip itself only runs while PLAYING. A pause menu or modal is ignored.
+	# the skip itself only runs while PLAYING, unpaused, and with no modal.
+	# A visible tool upgrade or other quest-bar blocker also refuses F7.
+	# F8 still grants iron on that screen; F7 must not.
 	if wants_debug_time_skip(event, OS.is_debug_build()):
 		if _debug_time_skip_allowed():
 			get_viewport().set_input_as_handled()
@@ -377,7 +379,23 @@ func _debug_time_skip_allowed() -> bool:
 		return false
 	if UIManager != null and UIManager.has_open_modal():
 		return false
+	# Tool upgrade is not a UIManager screen. open() pauses, but if that pause
+	# does not stick the visible panel must still block the skip.
+	if _debug_time_skip_center_blocked(tree):
+		return false
 	return true
+
+
+## Visible ToolUpgradeUI, or any visible quest_bar_blockers member.
+func _debug_time_skip_center_blocked(tree: SceneTree) -> bool:
+	if _tool_upgrade_ui_open():
+		return true
+	for node in tree.get_nodes_in_group(QuestTracker.BLOCKER_GROUP):
+		if not is_instance_valid(node):
+			continue
+		if "visible" in node and bool(node.visible):
+			return true
+	return false
 
 
 func _skip_debug_time() -> void:
