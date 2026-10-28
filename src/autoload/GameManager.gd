@@ -157,14 +157,15 @@ static func forced_overnight_fee(gold: int) -> int:
 	return maxi(percent, floor_fee)
 
 
-## Empty bin keeps the plain line. A payout appends the amount that was credited.
+## Empty bin keeps the plain line. A payout stays on that line.
+## A collapse fee is the next line, so "N 金" cannot wrap off by itself.
 static func day_start_notice(shipment: Dictionary, collapse_fee_paid: int = 0) -> String:
 	var paid := maxi(0, int(shipment.get("total_money", 0)))
 	var text := "新的一天开始了"
 	if paid > 0:
 		text += "，出货到账 %d 金" % paid
 	if collapse_fee_paid > 0:
-		text += "。凌晨倒地，扣除 %d 金" % collapse_fee_paid
+		text += "。\n凌晨倒地，扣除 %d 金" % collapse_fee_paid
 	return text
 
 

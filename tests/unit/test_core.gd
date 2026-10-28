@@ -1262,7 +1262,7 @@ func run_day_start_and_collapse_tests() -> void:
 		"A payout names the credited amount"
 	)
 	assert_true(
-		GameManager.day_start_notice({"total_money": 80}, 50) == "新的一天开始了，出货到账 80 金。凌晨倒地，扣除 50 金",
+		GameManager.day_start_notice({"total_money": 80}, 50) == "新的一天开始了，出货到账 80 金。\n凌晨倒地，扣除 50 金",
 		"Collapse notice keeps the payout and the fee"
 	)
 
@@ -1335,7 +1335,7 @@ func run_day_start_and_collapse_tests() -> void:
 		"A test runner is not swapped for the farmhouse"
 	)
 	assert_true(
-		_day_notices.size() == 1 and _day_notices[0] == "新的一天开始了。凌晨倒地，扣除 50 金",
+		_day_notices.size() == 1 and _day_notices[0] == "新的一天开始了。\n凌晨倒地，扣除 50 金",
 		"Empty bin at 2am names the fee and omits a payout"
 	)
 
@@ -1345,7 +1345,7 @@ func run_day_start_and_collapse_tests() -> void:
 	GameManager.advance_day("forced_2am")
 	assert_true(MoneySystem.get_money() == 0, "Less than 50 gold is taken entirely and not driven negative")
 	assert_true(
-		_day_notices.size() == 1 and _day_notices[0] == "新的一天开始了。凌晨倒地，扣除 30 金",
+		_day_notices.size() == 1 and _day_notices[0] == "新的一天开始了。\n凌晨倒地，扣除 30 金",
 		"The smaller fee is the amount actually taken"
 	)
 
@@ -1361,7 +1361,7 @@ func run_day_start_and_collapse_tests() -> void:
 	)
 	assert_true(
 		_day_notices.size() == 1
-			and _day_notices[0] == "新的一天开始了，出货到账 %d 金。凌晨倒地，扣除 100 金" % collapse_sale,
+			and _day_notices[0] == "新的一天开始了，出货到账 %d 金。\n凌晨倒地，扣除 100 金" % collapse_sale,
 		"2am notice names both the payout and the 10% fee"
 	)
 	assert_true(not GameManager._advancing_day, "Day advance releases its guard")
