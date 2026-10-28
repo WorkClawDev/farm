@@ -289,8 +289,12 @@ func _on_player_interacted(target: Node) -> void:
 	# 其他交互由各自的系统处理
 
 
-func _on_crop_harvested(crop_type: String, quality: int, quantity: int) -> void:
-	_show_notification("收获 %d 个 %s" % [quantity, crop_type])
+func _on_crop_harvested(crop_type: String, _quality: int, quantity: int) -> void:
+	var display_name := crop_type
+	var item = ItemDatabase.get_item(crop_type)
+	if item != null and not str(item.name).is_empty():
+		display_name = str(item.name)
+	_show_notification("收获 %d 个 %s" % [quantity, display_name])
 
 
 func _get_crop_base_price(crop_id: String) -> int:
@@ -396,12 +400,16 @@ func perform_farm_action(coord: Vector2i, tool_type: ToolManager.ToolType) -> vo
 				var result := FarmState.harvest(coord)
 				success = not result.is_empty()
 				if success:
+					# 文案只由 _on_crop_harvested 弹一次。这里再写同样的 message 会合成 ×2。
+					# emit 保留：任务和成就听这个信号。
 					EventBus.farm.crop_harvested.emit(
 						str(result.get("crop_id", "")),
 						int(result.get("quality", 0)),
 						int(result.get("quantity", 0))
 					)
-				message = "收获 %d 个 %s" % [result.get("quantity", 0), result.get("crop_id", "")] if success else "作物尚未成熟"
+					message = ""
+				else:
+					message = "作物尚未成熟"
 			ToolManager.ToolType.AXE:
 				message = "这里没有树枝或树桩"
 			ToolManager.ToolType.PICKAXE:
