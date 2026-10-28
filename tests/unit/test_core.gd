@@ -30,6 +30,7 @@ func _ready() -> void:
 	run_eat_food_stamina_tests()
 	run_watering_can_upgrade_and_rain_tests()
 	run_debug_time_skip_tests()
+	run_tool_upgrade_material_name_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -1671,6 +1672,17 @@ func run_debug_time_skip_tests() -> void:
 		"跳时目标是 1:55（25 + 55/60），且小于 2:00"
 	)
 	print("  Debug time skip: All tests completed")
+
+func run_tool_upgrade_material_name_tests() -> void:
+	print("\n[Tool Upgrade Material Names]")
+	var ui := ToolUpgradeUI.new()
+	assert_true(ui._material_display_name("iron_ingot") == "铁锭", "iron_ingot 显示为铁锭")
+	assert_true(ui._material_display_name("gold_coins") == "金币", "gold_coins 显示为金币")
+	assert_true(ui._material_display_name("gold_ingot") == "金锭", "gold_ingot 显示为金锭")
+	assert_true(ui._material_display_name("diamond") == "钻石", "diamond 显示为钻石")
+	assert_true(ui._material_display_name("missing_upgrade_material") == "missing_upgrade_material", "没有中文名时回退材料 id")
+	ui.free()
+	print("  Tool upgrade material names: All tests completed")
 
 func assert_true(condition: bool, message: String):
 	total_tests += 1

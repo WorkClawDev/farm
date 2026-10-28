@@ -248,7 +248,7 @@ func _update_materials_list() -> void:
 		var hbox := HBoxContainer.new()
 
 		var name_label := Label.new()
-		name_label.text = req.material_id
+		name_label.text = _material_display_name(req.material_id)
 		name_label.custom_minimum_size.x = 150
 
 		var have := _get_material_count(req.material_id)
@@ -264,6 +264,14 @@ func _update_materials_list() -> void:
 		hbox.add_child(name_label)
 		hbox.add_child(count_label)
 		materials_list.add_child(hbox)
+
+## 材料显示名：物品表里的非空名称，否则回退 id
+func _material_display_name(material_id: String) -> String:
+	var display_name := material_id
+	var item = ItemDatabase.get_item(material_id)
+	if item != null and not str(item.name).is_empty():
+		display_name = str(item.name)
+	return display_name
 
 ## 获取材料数量
 func _get_material_count(material_id: String) -> int:
