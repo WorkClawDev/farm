@@ -33,6 +33,7 @@ func _ready() -> void:
 	run_tool_upgrade_material_name_tests()
 	run_tool_upgrade_focus_select_tests()
 	run_seed_sprite_tests()
+	run_quest_tracker_visibility_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -1913,6 +1914,74 @@ func run_seed_sprite_tests() -> void:
 	Inventory.load_state(inv_snapshot)
 	FarmState.load_save_state(farm_snapshot)
 	print("  Seed sprites: All tests completed")
+
+func run_quest_tracker_visibility_tests() -> void:
+	print("\n[Quest Tracker Visibility]")
+	assert_true(not QuestTracker.should_show(false, false), "没有活跃任务时任务条隐藏")
+	assert_true(QuestTracker.should_show(true, false), "有任务且没有遮挡时任务条显示")
+	assert_true(not QuestTracker.should_show(true, true), "被遮挡时任务条隐藏")
+	assert_true(not QuestTracker.should_show(false, true), "没有任务时遮挡也不把任务条打开")
+	assert_true(QuestTracker.blocks_bar(true, false, false, false), "场景树暂停遮挡任务条")
+	assert_true(QuestTracker.blocks_bar(false, true, false, false), "游戏暂停遮挡任务条")
+	assert_true(QuestTracker.blocks_bar(false, false, true, false), "模态打开遮挡任务条")
+	assert_true(QuestTracker.blocks_bar(false, false, false, true), "中心界面打开遮挡任务条")
+	assert_true(not QuestTracker.blocks_bar(false, false, false, false), "平时不遮挡任务条")
+
+	var saved_state = GameManager.current_state
+	var saved_active = GameManager.is_game_active
+	var saved_paused := get_tree().paused
+	var quest_snapshot: Dictionary = QuestSystem.save_state()
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	if get_tree().paused:
+		get_tree().paused = false
+	if QuestSystem.get_active_quests().is_empty() and QuestSystem.can_accept_quest("village_introduction"):
+		QuestSystem.accept_quest("village_introduction")
+	var has_quest := not QuestSystem.get_active_quests().is_empty()
+	assert_true(has_quest, "任务条夹具有一条活跃任务")
+
+	var tracker := load("res://src/ui/hud/QuestTracker.tscn").instantiate() as QuestTracker
+	add_child(tracker)
+	assert_true(tracker != null and tracker.visible == has_quest, "有活跃任务时任务条出现")
+
+	var blocker := Control.new()
+	blocker.visible = false
+	blocker.add_to_group(QuestTracker.BLOCKER_GROUP)
+	add_child(blocker)
+	blocker.visible = true
+	tracker.visible = true
+	EventBus.ui_opened.emit("center_modal")
+	assert_true(not tracker.visible, "中心界面打开的事件让任务条隐藏")
+	blocker.visible = false
+	EventBus.ui_closed.emit("center_modal")
+	assert_true(tracker.visible == has_quest, "中心界面关掉后按活跃任务恢复")
+
+	var packed := load("res://src/ui/menus/ToolUpgradeUI.tscn") as PackedScene
+	assert_true(packed != null, "工具升级界面可以加载")
+	if packed != null and tracker != null:
+		var ui := packed.instantiate() as ToolUpgradeUI
+		add_child(ui)
+		ui.open()
+		assert_true(ui.visible and not tracker.visible, "工具升级打开时任务条隐藏")
+		ui.close()
+		assert_true(not ui.visible and tracker.visible == has_quest, "工具升级关闭后任务条按活跃任务恢复")
+		ui.queue_free()
+
+	GameManager.current_state = GameManager.GameState.PLAYING
+	if get_tree().paused:
+		get_tree().paused = false
+	GameManager.pause_game()
+	assert_true(get_tree().paused and not tracker.visible, "暂停时任务条隐藏")
+	GameManager.resume_game()
+	assert_true(not get_tree().paused and tracker.visible == has_quest, "恢复游戏后任务条按活跃任务回来")
+
+	blocker.queue_free()
+	tracker.queue_free()
+	QuestSystem.load_state(quest_snapshot)
+	GameManager.current_state = saved_state
+	GameManager.is_game_active = saved_active
+	get_tree().paused = saved_paused
+	print("  Quest tracker visibility: All tests completed")
 
 func assert_true(condition: bool, message: String):
 	total_tests += 1

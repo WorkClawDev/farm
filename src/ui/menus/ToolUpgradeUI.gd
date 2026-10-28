@@ -40,6 +40,7 @@ func _ready() -> void:
 		tool_upgrade_system = TOOL_UPGRADE_SCRIPT.new()
 		tool_upgrade_system.name = "ToolUpgradeSystem"
 		add_child(tool_upgrade_system)
+	add_to_group(QuestTracker.BLOCKER_GROUP)
 	hide()
 	_connect_signals()
 	set_tool_upgrade_system(tool_upgrade_system)
@@ -136,6 +137,7 @@ func open() -> void:
 	# 暂停游戏
 	if GameManager:
 		GameManager.pause_game()
+	_emit_overlay_bus(true)
 	_focus_first_tool()
 	# UIThemeBridge restyles next frame and clears focus_mode on a disabled upgrade button.
 	call_deferred("_wire_tool_focus")
@@ -149,6 +151,15 @@ func close() -> void:
 		GameManager.resume_game()
 
 	ui_closed.emit()
+	_emit_overlay_bus(false)
+
+func _emit_overlay_bus(opened: bool) -> void:
+	if EventBus == null or EventBus.ui == null:
+		return
+	if opened:
+		EventBus.ui.ui_opened.emit("tool_upgrade")
+	else:
+		EventBus.ui.ui_closed.emit("tool_upgrade")
 
 ## 刷新工具列表
 func _refresh_tools_list() -> void:

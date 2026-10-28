@@ -842,3 +842,7 @@
 - PASS。↓/Tab 移工具行无需 Enter/Space，右侧名称/等级/效果/材料立刻跟着变（锄头→水壶→斧头→镐）。
 - 焦点到关闭 X 时资料仍留在最后工具（镐），不空白。升级按钮因「材料不足」禁用未进焦点链，用关闭代替验保留。
 - 截图 toolui_arrow_hoe.png、toolui_arrow_can.png、toolui_arrow_keep.png。
+
+## 2026-10-28 23:34 打磨：任务条挡升级标题（--new-game）
+- PASS。开「工具升级」时左上任务条隐藏，标题左缘不被挡；Esc 关闭后教程任务条（农场入门/收获1个防风草）恢复。
+- 截图 questbar_before.png、questbar_upgrade_open.png、questbar_after_close.png。
