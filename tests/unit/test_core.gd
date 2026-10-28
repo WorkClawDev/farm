@@ -31,6 +31,7 @@ func _ready() -> void:
 	run_watering_can_upgrade_and_rain_tests()
 	run_debug_time_skip_tests()
 	run_tool_upgrade_material_name_tests()
+	run_tool_upgrade_focus_select_tests()
 	run_seed_sprite_tests()
 	
 	print("==================================================")
@@ -1684,6 +1685,126 @@ func run_tool_upgrade_material_name_tests() -> void:
 	assert_true(ui._material_display_name("missing_upgrade_material") == "missing_upgrade_material", "没有中文名时回退材料 id")
 	ui.free()
 	print("  Tool upgrade material names: All tests completed")
+
+
+func run_tool_upgrade_focus_select_tests() -> void:
+	print("\n[Tool Upgrade Focus Select]")
+	var hoe_button := Button.new()
+	hoe_button.set_meta("tool_type", ToolUpgrade.ToolType.HOE)
+	var plain_button := Button.new()
+	assert_true(ToolUpgradeUI.selection_for_focus_target(hoe_button) == ToolUpgrade.ToolType.HOE, "工具按钮焦点解析为该工具")
+	assert_true(ToolUpgradeUI.selection_for_focus_target(plain_button) == -1, "没有工具标记的按钮不改变选中")
+	hoe_button.free()
+	plain_button.free()
+
+	var saved_state = GameManager.current_state
+	var saved_active = GameManager.is_game_active
+	var saved_paused := get_tree().paused
+	var inv_snapshot: Dictionary = Inventory.save_state()
+	var money_before := MoneySystem.get_money()
+	var packed := load("res://src/ui/menus/ToolUpgradeUI.tscn") as PackedScene
+	assert_true(packed != null, "工具升级界面可以加载")
+	var ui: ToolUpgradeUI = null
+	if packed != null:
+		ui = packed.instantiate() as ToolUpgradeUI
+		add_child(ui)
+		ui.open()
+		assert_true(ui._tool_buttons.size() >= 2, "升级界面至少有两行工具")
+		if ui._tool_buttons.size() >= 2:
+			var first: Button = ui._tool_buttons[0]
+			var second: Button = ui._tool_buttons[1]
+			var first_type := int(first.get_meta("tool_type"))
+			var second_type := int(second.get_meta("tool_type"))
+			var first_name := str(ui.tool_upgrade_system.get_tool_data(first_type).get_type_name())
+			var second_name := str(ui.tool_upgrade_system.get_tool_data(second_type).get_type_name())
+			assert_true(ui.selected_tool_type == first_type, "打开界面时第一行已经被选中")
+			assert_true(ui.tool_name_label.text == first_name, "打开界面时右侧名称是第一行工具")
+			assert_true(str(ui.tool_tier_label.text).begins_with("当前等级:"), "打开界面时右侧有等级")
+			assert_true(str(ui.upgrade_effects_label.text) != "", "打开界面时右侧有效果")
+			assert_true(str(ui.upgrade_button.text) != "选择工具", "打开界面时升级按钮已按该工具刷新")
+			var material_text := ""
+			for child in ui.materials_list.get_children():
+				if child.is_queued_for_deletion() or not (child is HBoxContainer):
+					continue
+				for sub in child.get_children():
+					if sub is Label and not sub.is_queued_for_deletion():
+						material_text += str(sub.text)
+			assert_true("铁锭" in material_text and "金币" in material_text, "打开界面时右侧材料是第一行的需求")
+			assert_true(ui._focus_owner() == first, "打开界面时绿框在第一行")
+
+			ui._select_tool_type(second_type)
+			assert_true(ui.selected_tool_type == second_type and ui.tool_name_label.text == second_name, "选中函数会刷新右侧名称")
+			ui._select_tool_type(second_type)
+			ui._select_tool_type(-1)
+			assert_true(ui.selected_tool_type == second_type and ui.tool_name_label.text == second_name, "重复选中或空类型不会清空资料")
+
+			ui._grab(first)
+			assert_true(ui.selected_tool_type == first_type and ui.tool_name_label.text == first_name, "焦点落到工具行时立刻选中")
+			var down := InputEventAction.new()
+			down.action = "ui_down"
+			down.pressed = true
+			ui._input(down)
+			assert_true(ui.selected_tool_type == second_type and ui.tool_name_label.text == second_name, "下键移到下一行时右侧资料跟着变")
+			assert_true(ui._focus_owner() == second, "下键后绿框在下一行")
+			var up := InputEventAction.new()
+			up.action = "ui_up"
+			up.pressed = true
+			ui._input(up)
+			assert_true(ui.selected_tool_type == first_type and ui._focus_owner() == first, "上键回到上一行时也选中该工具")
+
+			var tab := InputEventAction.new()
+			tab.action = "ui_focus_next"
+			tab.pressed = true
+			ui._input(tab)
+			assert_true(ui.selected_tool_type == second_type and ui.tool_name_label.text == second_name, "Tab 链移到工具行时刷新资料")
+
+			var last: Button = ui._tool_buttons[ui._tool_buttons.size() - 1]
+			ui._grab(last)
+			var last_type := ui.selected_tool_type
+			var last_name := str(ui.tool_name_label.text)
+			var last_tier := str(ui.tool_tier_label.text)
+			var last_effect := str(ui.upgrade_effects_label.text)
+			var last_button := str(ui.upgrade_button.text)
+			var next_tab := InputEventAction.new()
+			next_tab.action = "ui_focus_next"
+			next_tab.pressed = true
+			ui._input(next_tab)
+			var parked := ui._focus_owner()
+			assert_true(parked == ui.upgrade_button or parked == ui.close_button, "工具列表末尾再 Tab 会落到升级或关闭")
+			assert_true(
+				ui.selected_tool_type == last_type
+				and ui.tool_name_label.text == last_name
+				and ui.tool_tier_label.text == last_tier
+				and ui.upgrade_effects_label.text == last_effect
+				and ui.upgrade_button.text == last_button,
+				"焦点移到升级或关闭时保留上次选中的工具资料"
+			)
+
+			ui._grab(second)
+			var tier_before := int(ui.tool_upgrade_system.get_tool_data(second_type).current_tier)
+			assert_true(ui._is_tool_button(ui._focus_owner()), "确定键测试前焦点在工具行")
+			if ui._is_tool_button(ui._focus_owner()):
+				var accept := InputEventAction.new()
+				accept.action = "ui_accept"
+				accept.pressed = true
+				ui._input(accept)
+				var tier_after := int(ui.tool_upgrade_system.get_tool_data(second_type).current_tier)
+				assert_true(
+					ui.selected_tool_type == second_type
+					and ui.tool_name_label.text == second_name
+					and tier_before == tier_after
+					and ui.visible,
+					"工具行上再按确定不升级、不关闭、资料不变"
+				)
+		if ui.has_method("close"):
+			ui.close()
+		ui.queue_free()
+	GameManager.current_state = saved_state
+	GameManager.is_game_active = saved_active
+	get_tree().paused = saved_paused
+	Inventory.load_state(inv_snapshot)
+	MoneySystem.set_money(money_before)
+	print("  Tool upgrade focus select: All tests completed")
 
 
 func run_seed_sprite_tests() -> void:

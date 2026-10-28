@@ -194,10 +194,7 @@ func _create_tool_button(tool_type: int) -> void:
 
 ## 工具按钮点击
 func _on_tool_button_pressed(tool_type: int) -> void:
-	selected_tool_type = tool_type
-	_update_tool_info()
-	_update_materials_list()
-	_update_upgrade_button()
+	_select_tool_type(tool_type)
 
 ## 更新工具信息
 func _update_tool_info() -> void:
@@ -477,6 +474,31 @@ func _wire_tool_focus() -> void:
 			close_button.focus_neighbor_bottom = close_button.get_path_to(tools[0])
 
 
+
+## 点击或焦点落到某一工具时刷新右侧资料。已经是该工具则不再重建。
+func _select_tool_type(tool_type: int) -> void:
+	if tool_type < 0 or tool_type == selected_tool_type:
+		return
+	selected_tool_type = tool_type
+	_update_tool_info()
+	_update_materials_list()
+	_update_upgrade_button()
+
+
+## 工具按钮返回 tool_type。升级、关闭和空焦点返回 -1，资料保持上次选中的工具。
+static func selection_for_focus_target(target: Node) -> int:
+	if not is_instance_valid(target) or not target.has_meta("tool_type"):
+		return -1
+	return int(target.get_meta("tool_type", -1))
+
+
+func _sync_selection_from_focus(target: Node) -> void:
+	var tool_type := selection_for_focus_target(target)
+	if tool_type < 0:
+		return
+	_select_tool_type(tool_type)
+
+
 func _grab(target: Control) -> void:
 	if target == null or not is_instance_valid(target) or not visible:
 		return
@@ -489,6 +511,7 @@ func _grab(target: Control) -> void:
 		var scroll := tools_list.get_parent() as ScrollContainer
 		if scroll:
 			scroll.ensure_control_visible(target)
+	_sync_selection_from_focus(target)
 
 
 func _focus_first_tool() -> void:

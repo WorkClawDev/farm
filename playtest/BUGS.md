@@ -837,3 +837,8 @@
 ## 2026-10-28 21:54 观感：已播种田格 stage0 可见（--new-game）
 - PASS。翻地后种防风草，toast「已播种」，种子 15→14。格上清晰可见 turnip_stage0（绿叶+粉红球），明显区别于空翻土。
 - 截图 seedvis_before_plant.png、seedvis_planted.png、seedvis_overview.png。
+
+## 2026-10-28 22:35 打磨：升级 UI 箭头选中即刷新资料（--new-game）
+- PASS。↓/Tab 移工具行无需 Enter/Space，右侧名称/等级/效果/材料立刻跟着变（锄头→水壶→斧头→镐）。
+- 焦点到关闭 X 时资料仍留在最后工具（镐），不空白。升级按钮因「材料不足」禁用未进焦点链，用关闭代替验保留。
+- 截图 toolui_arrow_hoe.png、toolui_arrow_can.png、toolui_arrow_keep.png。
