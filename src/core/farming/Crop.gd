@@ -245,9 +245,8 @@ func _update_sprite() -> void:
 		if crop_data.stage_sprites.size() > 0:
 			sprite_path = crop_data.stage_sprites[-1]
 	else:
-		# 生长中
-		if current_stage < crop_data.stage_sprites.size():
-			sprite_path = crop_data.stage_sprites[current_stage]
+		# 生长中。stage 0 缺省时回退到 {crop_id}_stage0.png。
+		sprite_path = FarmState.crop_stage_sprite_path(crop_id, current_stage, crop_data.stage_sprites)
 
 	# 加载精灵（如果路径有效）
 	if sprite_path != "" and ResourceLoader.exists(sprite_path):

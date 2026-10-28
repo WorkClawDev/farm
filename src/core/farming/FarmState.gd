@@ -409,6 +409,43 @@ static func dead_crop_sprite_path(crop_id: String) -> String:
 	return DEAD_CROP_SPRITE
 
 
+## stage 0 优先用 {crop_id}_stage0.png（文件在才用）。
+## 数据表若从 stage1 起跳，后面的阶段仍按原列表对齐，不跳过下一张。
+## 没有 stage0 时再试种子/物品图标，否则保持列表里的那张。
+static func crop_stage_sprite_path(crop_id: String, stage: int, stage_sprites: Array) -> String:
+	var stage0 := "res://assets/sprites/crops/%s_stage0.png" % crop_id
+	var has_stage0 := crop_id != "" and ResourceLoader.exists(stage0)
+	var starts_with_stage0 := false
+	if not stage_sprites.is_empty():
+		starts_with_stage0 = str(stage_sprites[0]) == stage0
+	if stage <= 0:
+		if has_stage0:
+			return stage0
+		var icon := _planted_seed_icon_path(crop_id)
+		if icon != "":
+			return icon
+		if not stage_sprites.is_empty():
+			return str(stage_sprites[0])
+		return ""
+	if stage_sprites.is_empty():
+		return ""
+	var index := stage
+	if has_stage0 and not starts_with_stage0:
+		index = stage - 1
+	index = clampi(index, 0, stage_sprites.size() - 1)
+	return str(stage_sprites[index])
+
+
+static func _planted_seed_icon_path(crop_id: String) -> String:
+	if crop_id == "":
+		return ""
+	for item_id in [crop_id + "_seed", crop_id]:
+		var icon := str(ItemDatabase.get_icon_path(item_id))
+		if icon != "" and ResourceLoader.exists(icon):
+			return icon
+	return ""
+
+
 func harvest(coord: Vector2i) -> Dictionary:
 	var cell := _cell_ref(coord)
 	if cell.is_empty() or not can_harvest(coord):

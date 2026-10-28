@@ -31,6 +31,7 @@ func _ready() -> void:
 	run_watering_can_upgrade_and_rain_tests()
 	run_debug_time_skip_tests()
 	run_tool_upgrade_material_name_tests()
+	run_seed_sprite_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -1683,6 +1684,114 @@ func run_tool_upgrade_material_name_tests() -> void:
 	assert_true(ui._material_display_name("missing_upgrade_material") == "missing_upgrade_material", "没有中文名时回退材料 id")
 	ui.free()
 	print("  Tool upgrade material names: All tests completed")
+
+
+func run_seed_sprite_tests() -> void:
+	print("\n[Seed Sprite Tests]")
+	var stage0 := "res://assets/sprites/crops/turnip_stage0.png"
+	assert_true(ResourceLoader.exists(stage0), "turnip stage0 贴图在磁盘上")
+	var turnip = GrowthSystem.get_crop_data("turnip")
+	assert_true(turnip != null and turnip.stage_sprites.size() > 0, "turnip 作物数据有阶段贴图")
+	assert_true(str(turnip.stage_sprites[0]) == stage0, "turnip 阶段表从 stage0 开始")
+	assert_true(
+		FarmState.crop_stage_sprite_path("turnip", 0, turnip.stage_sprites) == stage0,
+		"stage 0 解析到 turnip_stage0.png"
+	)
+	assert_true(
+		str(FarmState.crop_stage_sprite_path("turnip", 1, turnip.stage_sprites)).ends_with("turnip_stage1.png"),
+		"stage 1 仍是 turnip_stage1.png"
+	)
+	var omitted: Array = [
+		"res://assets/sprites/crops/turnip_stage1.png",
+		"res://assets/sprites/crops/turnip_stage2.png",
+		"res://assets/sprites/crops/turnip_stage3.png",
+		"res://assets/sprites/crops/turnip_stage4.png",
+	]
+	assert_true(FarmState.crop_stage_sprite_path("turnip", 0, omitted) == stage0, "缺 stage0 的列表回退到 stage0 文件")
+	assert_true(
+		str(FarmState.crop_stage_sprite_path("turnip", 1, omitted)).ends_with("turnip_stage1.png"),
+		"回退时 stage 1 不跳过下一张"
+	)
+	var kept := FarmState.crop_stage_sprite_path("missing_crop_zz", 0, ["res://assets/sprites/crops/turnip_stage1.png"])
+	assert_true(kept == "res://assets/sprites/crops/turnip_stage1.png", "没有 stage0 也没有图标时保持原列表")
+	var iconed := FarmState.crop_stage_sprite_path("wood", 0, [])
+	assert_true(iconed.ends_with("wood.png") and ResourceLoader.exists(iconed), "没有 stage0 时用现有物品图标")
+
+	var farm_snapshot: Dictionary = FarmState.get_save_state()
+	var inv_snapshot: Dictionary = Inventory.save_state()
+	var saved_season: int = TimeManager.current_season
+	FarmState.reset()
+	TimeManager.current_season = 0
+	var open: Array[Vector2i] = []
+	for y in range(FarmState.GRID_HEIGHT):
+		for x in range(FarmState.GRID_WIDTH):
+			var coord := Vector2i(x, y)
+			if FarmState.get_debris(coord) != "":
+				continue
+			if int(FarmState.get_cell(coord).get("state", -1)) != FarmState.UNTILLED:
+				continue
+			open.append(coord)
+			if open.size() >= 2:
+				break
+		if open.size() >= 2:
+			break
+	assert_true(open.size() >= 2, "有两格空地可以种和对照")
+	if open.size() >= 2:
+		var planted := open[0]
+		var empty := open[1]
+		assert_true(Inventory.add_item("turnip_seed", 1), "测试有一包防风草种子")
+		assert_true(FarmState.till(planted) and FarmState.plant(planted, "turnip_seed"), "翻地后播下防风草")
+		assert_true(int(Dictionary(FarmState.get_cell(planted).get("crop", {})).get("stage", -1)) == 0, "刚播下的阶段是 0")
+		assert_true(FarmState.till(empty), "对照格只翻土不播种")
+		var visual := FarmPlot.new()
+		add_child(visual)
+		visual.setup(planted)
+		var shown := ""
+		if visual._crop_sprite != null and visual._crop_sprite.texture != null:
+			shown = str(visual._crop_sprite.texture.resource_path)
+		assert_true(shown != "" and shown == stage0, "播种后格子拿到非空的 stage0 精灵")
+		if visual._crop_sprite != null and visual._crop_sprite.texture != null:
+			var tex_size: Vector2 = visual._crop_sprite.texture.get_size()
+			var max_dim := maxf(tex_size.x, tex_size.y)
+			assert_true(
+				visual._crop_sprite.scale.x > 0.0 and is_equal_approx(visual._crop_sprite.scale.x, visual._crop_sprite.scale.y),
+				"种子精灵等比缩放"
+			)
+			if max_dim > FarmPlot.SIZE:
+				var base := (FarmPlot.SIZE * 0.85) / max_dim
+				var cap := (FarmPlot.SIZE * FarmPlot.EARLY_SPRITE_CAP) / max_dim
+				assert_true(
+					visual._crop_sprite.scale.x > base and visual._crop_sprite.scale.x <= cap + 0.0001
+						and is_equal_approx(visual._crop_sprite.position.y, FarmPlot.SIZE * 0.48),
+					"大画布的 stage0 略放大并贴地，且不超出格子"
+				)
+		visual.free()
+		var bare := FarmPlot.new()
+		add_child(bare)
+		bare.setup(empty)
+		assert_true(bare._crop_sprite != null and bare._crop_sprite.texture == null, "空土没有作物精灵")
+		bare.free()
+
+	var crop_node := Crop.new()
+	var crop_sprite := Sprite2D.new()
+	crop_sprite.name = "Sprite2D"
+	crop_node.add_child(crop_sprite)
+	add_child(crop_node)
+	crop_node.crop_id = "turnip"
+	crop_node.crop_data = turnip
+	crop_node.current_stage = 0
+	crop_node.current_state = Crop.State.SEED
+	crop_node._update_sprite()
+	var crop_shown := ""
+	if crop_node.sprite != null and crop_node.sprite.texture != null:
+		crop_shown = str(crop_node.sprite.texture.resource_path)
+	assert_true(crop_shown == stage0, "Crop.gd 的种子阶段也用 stage0")
+	crop_node.free()
+
+	TimeManager.current_season = saved_season
+	Inventory.load_state(inv_snapshot)
+	FarmState.load_save_state(farm_snapshot)
+	print("  Seed sprites: All tests completed")
 
 func assert_true(condition: bool, message: String):
 	total_tests += 1

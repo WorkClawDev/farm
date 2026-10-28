@@ -833,3 +833,7 @@
 ## 2026-10-28 21:13 打磨：升级 UI 材料中文名（--new-game）
 - PASS。水壶[铜] 材料行：铁锭 0/5（红）、金币 500/500（绿）；F8 后铁锭 5/5 绿。无 iron_ingot / gold_coins 英文 id。
 - 截图 toolui_zh_materials.png、toolui_zh_after_f8.png。
+
+## 2026-10-28 21:54 观感：已播种田格 stage0 可见（--new-game）
+- PASS。翻地后种防风草，toast「已播种」，种子 15→14。格上清晰可见 turnip_stage0（绿叶+粉红球），明显区别于空翻土。
+- 截图 seedvis_before_plant.png、seedvis_planted.png、seedvis_overview.png。

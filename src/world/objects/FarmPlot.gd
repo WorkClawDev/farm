@@ -3,6 +3,10 @@ class_name FarmPlot
 
 const SIZE := 60.0
 const STUMP_BLOCK_OFFSET := Vector2(0, 6)
+## Stage 0 on a canvas larger than the cell is mostly padding. Nudge it so the
+## seed reads on tilled soil, and keep the sprite inside the cell.
+const EARLY_SPRITE_BOOST := 1.12
+const EARLY_SPRITE_CAP := 0.95
 const PRIVATE_ROOT := "res://assets/private/topdown_farm/"
 const FALLBACK_ITEM := {
 	"weed": "res://assets/sprites/items/fiber.png",
@@ -124,6 +128,7 @@ func refresh() -> void:
 	_crop_sprite.texture = null
 	_crop_sprite.scale = Vector2.ONE
 	_crop_sprite.offset = Vector2.ZERO
+	_crop_sprite.position = Vector2(0, SIZE * 0.42)
 	_label.text = ""
 	if debris != "" or crop.is_empty():
 		return
@@ -133,11 +138,11 @@ func refresh() -> void:
 	if crop_data == null and not dead:
 		return
 	var sprite_path := ""
+	var stage := int(crop.get("stage", 0))
 	if dead:
 		sprite_path = FarmState.dead_crop_sprite_path(crop_id)
-	elif crop_data != null and not crop_data.stage_sprites.is_empty():
-		var stage := int(crop.get("stage", 0))
-		sprite_path = str(crop_data.stage_sprites[mini(stage, crop_data.stage_sprites.size() - 1)])
+	elif crop_data != null:
+		sprite_path = FarmState.crop_stage_sprite_path(crop_id, stage, crop_data.stage_sprites)
 	if not sprite_path.is_empty() and ResourceLoader.exists(sprite_path):
 		_crop_sprite.texture = load(sprite_path)
 		if _crop_sprite.texture != null:
@@ -146,6 +151,9 @@ func refresh() -> void:
 			if max_dim > 0.0:
 				# Fit inside the plot: 1024px -> ~0.05, 32px -> ~1.59.
 				var fitted := (SIZE * 0.85) / max_dim
+				if not dead and stage <= 0 and max_dim > SIZE:
+					fitted = minf(fitted * EARLY_SPRITE_BOOST, (SIZE * EARLY_SPRITE_CAP) / max_dim)
+					_crop_sprite.position = Vector2(0, SIZE * 0.48)
 				_crop_sprite.scale = Vector2(fitted, fitted)
 				# Bottom-align the texture on the sprite origin (offset is in texture px).
 				_crop_sprite.offset = Vector2(0, -tex_size.y / 2.0)
