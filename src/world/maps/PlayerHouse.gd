@@ -24,6 +24,9 @@ const TABLE_REGION := Rect2(528, 232, 104, 128) # I7
 const CHAIR_FACE_RIGHT_REGION := Rect2(548, 636, 44, 100) # I14, faces right
 const CHAIR_FACE_LEFT_REGION := Rect2(756, 636, 44, 100) # I16, faces left
 const FOOD_SHELF_REGION := Rect2(88, 404, 204, 220) # I10 full food shelf
+## Southeast floor, west edge x=516. The door (x≈400) to the bed stays outside the sprite.
+## Feet are the Y-sort origin, so a player standing in front (larger Y) draws on top.
+const FOOD_SHELF_FEET := Vector2(618, 428)
 
 var tile_map: TileMap = null # Legacy builder compatibility; no longer part of the runtime scene.
 @onready var map_root: EditableMap2D = $PlayerHouseMap
@@ -308,7 +311,7 @@ func _setup_bed_sprite() -> void:
 	_spawn_interior_sprite("BedSprite", BED_REGION, feet, atlas)
 	_setup_extra_furniture(atlas)
 
-## Wardrobe, square table, and two chairs. Sprites only; BedZone and other zones stay put.
+## Wardrobe, table, and chairs are sprites only. The food shelf is solid and stays off the bed.
 func _setup_extra_furniture(atlas: Texture2D) -> void:
 	var table_feet := _furniture_feet("TablePosition", Vector2(400, 200))
 	_spawn_interior_sprite("TableSprite", TABLE_REGION, table_feet, atlas)
@@ -316,9 +319,7 @@ func _setup_extra_furniture(atlas: Texture2D) -> void:
 	_spawn_interior_sprite("ChairWestSprite", CHAIR_FACE_RIGHT_REGION, table_feet + Vector2(-82, 0), atlas)
 	_spawn_interior_sprite("ChairEastSprite", CHAIR_FACE_LEFT_REGION, table_feet + Vector2(82, 0), atlas)
 	_spawn_interior_sprite("WardrobeSprite", WARDROBE_REGION, _furniture_feet("ChestPosition", Vector2(600, 200)), atlas)
-	# I10 food shelf, east of the kitchen marker. Sprite only; Kitchen at (200, 435) stays clear.
-	var kitchen_feet := _furniture_feet("KitchenPosition", Vector2(200, 350))
-	_spawn_interior_sprite("FoodShelfSprite", FOOD_SHELF_REGION, kitchen_feet + Vector2(80, 20), atlas)
+	_spawn_food_shelf(atlas)
 
 func _furniture_feet(marker_name: String, fallback: Vector2) -> Vector2:
 	var marker := furniture_container.get_node_or_null(marker_name) as Node2D
@@ -343,3 +344,24 @@ func _spawn_interior_sprite(node_name: String, region: Rect2, feet_local: Vector
 	var display_h := region.size.y * BED_DISPLAY_SCALE
 	sprite.position = Vector2(0.0, -display_h * 0.5)
 	root.add_child(sprite)
+
+func _spawn_food_shelf(atlas: Texture2D) -> void:
+	# Southeast floor. The door-to-bed lane stays west of the sprite.
+	# Feet are the Y-sort origin, so a player standing in front draws on top.
+	_spawn_interior_sprite("FoodShelfSprite", FOOD_SHELF_REGION, FOOD_SHELF_FEET, atlas)
+	var root := furniture_container.get_node_or_null("FoodShelfSprite") as Node2D
+	if root == null:
+		return
+	var size := FOOD_SHELF_REGION.size * BED_DISPLAY_SCALE
+	var body := StaticBody2D.new()
+	body.name = "ShelfCollision"
+	body.collision_layer = 1
+	body.collision_mask = 0
+	var shape_node := CollisionShape2D.new()
+	shape_node.name = "CollisionShape2D"
+	var shape := RectangleShape2D.new()
+	shape.size = size
+	shape_node.shape = shape
+	shape_node.position = Vector2(0.0, -size.y * 0.5)
+	body.add_child(shape_node)
+	root.add_child(body)

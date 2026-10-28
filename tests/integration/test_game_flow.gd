@@ -34,6 +34,7 @@ const DebugLaunchScript = preload("res://src/core/debug/DebugLaunch.gd")
 var _total := 0
 var _passed := 0
 var _failures: Array[String] = []
+var _debug_sleep_reasons: Array[String] = []
 
 
 func _ready() -> void:
@@ -70,6 +71,7 @@ func _ready() -> void:
 	await _exercise_hoe_facing_and_swing_lock()
 	await _exercise_npc_crowd_squeeze()
 	await _exercise_opening_debris()
+	await _exercise_house_bed_path()
 	_finish()
 
 
@@ -208,7 +210,7 @@ func _exercise_scene(scene_name: String, scene_path: String) -> void:
 				var shelf_has_fiber := shopkeeper.shop_ui.find_child("ShopItem_fiber_seeds", true, false) != null
 				_record(
 					"种子商店当季货架可显示，且没有纤维种子",
-					shopkeeper.shop_ui.item_list.item_count == 7 and not shelf_has_fiber
+					shopkeeper.shop_ui.item_list.item_count == 5 and not shelf_has_fiber
 				)
 				shopkeeper.shop_ui._on_close_button_pressed()
 			_record("关闭商店后恢复玩家控制", GameManager.current_state == GameManager.GameState.PLAYING)
@@ -2214,6 +2216,254 @@ func _wipe_debris_test_saves(dir_path: String) -> void:
 		for file_name in listing.get_files():
 			listing.remove(file_name)
 	DirAccess.remove_absolute(absolute)
+
+
+## BUG-D1: the food shelf must leave a walk from the door to the bed, and must
+## not cover the player. Debug F sleeps into the next day; F is not an InputMap action.
+func _exercise_house_bed_path() -> void:
+	print("------------------------------------------------------------")
+	print("BUG-D1 门口到床、食物架 Y 排序、调试 F 睡觉")
+	var house := (load("res://src/world/maps/PlayerHouse.tscn") as PackedScene).instantiate() as PlayerHouse
+	add_child(house)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	var player := house.find_child("Player", true, false) as Player
+	_record("农舍有玩家", player != null)
+	if player == null:
+		house.queue_free()
+		return
+	player.set_physics_process(false)
+	player.velocity = Vector2.ZERO
+	var door: Vector2 = house.exit_area.global_position
+	var bed_zone := house.interaction_zones.get_node("BedZone") as Area2D
+	var bed: Vector2 = bed_zone.global_position
+	var atlas_ok := ResourceLoader.exists("res://assets/private/topdown_farm/interior/x4/hero_home/Interior_x4.png")
+	var shelf := house.furniture_container.get_node_or_null("FoodShelfSprite") as Node2D
+	if not atlas_ok:
+		_record("没有室内图集时不摆食物架", shelf == null)
+	else:
+		var shelf_sprite: Sprite2D = null
+		if shelf != null:
+			shelf_sprite = shelf.get_node_or_null("Sprite2D") as Sprite2D
+		_record("食物架已摆上", shelf != null and shelf_sprite != null and shelf_sprite.texture != null)
+		if shelf_sprite != null and shelf_sprite.texture != null:
+			var shelf_rect := _sprite_frame_rect(shelf_sprite)
+			var player_sprite := player.get_node("Sprite2D") as Sprite2D
+			var frame := _sprite_frame_rect(player_sprite).size
+			_record(
+				"食物架在门和床的东边",
+				shelf_rect.position.x > door.x + 40.0 and shelf_rect.position.x > bed.x + 80.0
+			)
+			_record(
+				"架子按脚底做 Y 排序",
+				house.y_sort_enabled
+					and house.furniture_container.y_sort_enabled
+					and not shelf.y_sort_enabled
+					and is_equal_approx(shelf.global_position.y, shelf_rect.end.y)
+			)
+			var zone_shape := (bed_zone.get_node("CollisionShape2D") as CollisionShape2D).shape as RectangleShape2D
+			var zone_rect := Rect2(bed - zone_shape.size * 0.5, zone_shape.size)
+			_record("睡觉判定区不和食物架重叠", not zone_rect.intersects(shelf_rect))
+			var kitchen := house.get_node("InteractionZones/Kitchen") as Node2D
+			var upgrade := house.get_node("InteractionZones/UpgradeStation") as Node2D
+			_record(
+				"灶台、门口、升级点都不在架子里",
+				not shelf_rect.has_point(kitchen.global_position)
+					and not shelf_rect.has_point(door)
+					and not shelf_rect.has_point(upgrade.global_position)
+			)
+			var start := Vector2(door.x, door.y - 10.0)
+			var mid_y := bed.y + 55.0
+			# The bed solid covers the north of the zone. Stand on the south edge, where the body fits.
+			var sleep_spot := Vector2(bed.x, zone_rect.end.y - 14.0)
+			var lane: Array[Vector2] = [start, Vector2(door.x, mid_y), Vector2(bed.x, mid_y), sleep_spot]
+			var lane_blocked := not _lane_clears_rect(lane, shelf_rect, 14.0)
+			var lane_covered := false
+			for i in range(lane.size() - 1):
+				var span := lane[i].distance_to(lane[i + 1])
+				var steps := maxi(ceili(span / 8.0), 1)
+				for s in range(steps + 1):
+					var point := lane[i].lerp(lane[i + 1], float(s) / float(steps))
+					var body_rect := Rect2(point - frame * 0.5, frame)
+					if body_rect.intersects(shelf_rect):
+						lane_covered = true
+			_record("门口到床的碰撞圆不撞上架子", not lane_blocked)
+			_record("门口到床的路上人不会和架子重叠", not lane_covered)
+			var shelf_body := shelf.get_node_or_null("ShelfCollision") as StaticBody2D
+			_record("食物架有实心碰撞且玩家会撞到世界层", shelf_body != null and (player.collision_mask & 1) != 0)
+			player.global_position = Vector2(shelf_rect.position.x - 30.0, shelf_rect.get_center().y)
+			await get_tree().physics_frame
+			var into := player.move_and_collide(Vector2(80, 0))
+			_record(
+				"不能走进食物架",
+				into != null and into.get_collider() == shelf_body
+			)
+			var front := Vector2(shelf_rect.position.x + 24.0, shelf_rect.end.y + 16.0)
+			player.global_position = front
+			await get_tree().physics_frame
+			var front_rect := _sprite_frame_rect(player_sprite)
+			var front_area := front_rect.size.x * front_rect.size.y
+			_record(
+				"站在架前时人的 Y 更大，画在架子前面",
+				player.global_position.y > shelf.global_position.y + 8.0
+			)
+			_record(
+				"站在架前不会被整个人盖住",
+				_overlap_area(front_rect, shelf_rect) < front_area * 0.5
+			)
+			# The doorway trigger loads the farm. Drop it so the walk can start on the threshold.
+			if house.exit_area.body_entered.is_connected(house._on_exit_area_entered):
+				house.exit_area.body_entered.disconnect(house._on_exit_area_entered)
+			player.global_position = start
+			player.velocity = Vector2.ZERO
+			await get_tree().physics_frame
+			var blocked_by := ""
+			for point in lane:
+				if point.distance_to(player.global_position) <= 3.0:
+					continue
+				blocked_by = _slide_clear(player, point)
+				if blocked_by != "":
+					break
+			_record("从门口走到床没有撞上（%s）" % blocked_by, blocked_by == "")
+			for i in 4:
+				await get_tree().physics_frame
+			var in_zone := house._in_bed_zone
+			if not in_zone:
+				for body in bed_zone.get_overlapping_bodies():
+					if body == player:
+						in_zone = true
+			var at_bed := _sprite_frame_rect(player_sprite)
+			_record("走到床边能触发睡觉区", in_zone and player.global_position.distance_to(bed) < 8.0)
+			_record("床边的人没有被食物架盖住", not at_bed.intersects(shelf_rect))
+	var f_mapped := false
+	for action in InputMap.get_actions():
+		for event in InputMap.action_get_events(action):
+			if event is InputEventKey:
+				var key := event as InputEventKey
+				var code := key.physical_keycode if key.physical_keycode != 0 else key.keycode
+				# Ctrl+F is the engine file-dialog find shortcut, not a bare F binding.
+				if code == KEY_F and not key.ctrl_pressed and not key.alt_pressed and not key.meta_pressed and not key.shift_pressed:
+					f_mapped = true
+	_record("裸按 F 没有绑到任何输入动作", not f_mapped)
+	_record("调试睡觉键用空闲的 F，不是 F9", GameManager.DEBUG_SLEEP_KEY == KEY_F and Farm.DEBUG_SPAWN_ANIMALS_KEY == KEY_F9)
+	var f_down := InputEventKey.new()
+	f_down.keycode = KEY_F
+	f_down.physical_keycode = KEY_F
+	f_down.pressed = true
+	_record("发行版不把 F 当睡觉键", not GameManager.wants_debug_sleep(f_down, false))
+	_record("调试版把 F 当睡觉键", GameManager.wants_debug_sleep(f_down, true))
+	var echoed := f_down.duplicate() as InputEventKey
+	echoed.echo = true
+	_record("按住 F 不重复睡觉", not GameManager.wants_debug_sleep(echoed, true))
+	var shifted := f_down.duplicate() as InputEventKey
+	shifted.shift_pressed = true
+	_record("Shift+F 不是调试睡觉键", not GameManager.wants_debug_sleep(shifted, true))
+	UIManager.close_all()
+	var slot := SaveManager.get_current_slot()
+	if slot >= 0:
+		SaveManager.reset_session(-1)
+	var saved_day := TimeManager.current_day
+	var saved_season := TimeManager.current_season
+	var saved_year := TimeManager.current_year
+	var saved_time := TimeManager.current_time
+	var saved_pause := TimeManager._pause_count
+	var saved_money := MoneySystem.get_money()
+	var saved_stamina := StaminaManager.current_stamina
+	var saved_active := GameManager.is_game_active
+	var saved_state := GameManager.current_state
+	var farm_snapshot := FarmState.get_save_state()
+	_debug_sleep_reasons.clear()
+	if not GameManager.day_advanced.is_connected(_on_debug_sleep_day):
+		GameManager.day_advanced.connect(_on_debug_sleep_day)
+	GameManager.is_game_active = false
+	GameManager.current_state = GameManager.GameState.PLAYING
+	await _tap_key(KEY_F, 1)
+	_record("未开局时 F 不睡觉", _debug_sleep_reasons.is_empty() and TimeManager.current_day == saved_day)
+	GameManager.is_game_active = true
+	await _tap_key(KEY_F, 1)
+	var moved_day := (
+		TimeManager.current_day != saved_day
+		or TimeManager.current_season != saved_season
+		or TimeManager.current_year != saved_year
+	)
+	_record(
+		"调试版按 F 等同睡觉并进入下一天",
+		_debug_sleep_reasons.size() == 1
+			and _debug_sleep_reasons[0] == "sleep"
+			and moved_day
+			and is_equal_approx(TimeManager.current_time, 6.0)
+			and is_equal_approx(StaminaManager.current_stamina, StaminaManager.max_stamina)
+	)
+	if GameManager.day_advanced.is_connected(_on_debug_sleep_day):
+		GameManager.day_advanced.disconnect(_on_debug_sleep_day)
+	TimeManager.current_day = saved_day
+	TimeManager.current_season = saved_season
+	TimeManager.current_year = saved_year
+	TimeManager.current_time = saved_time
+	TimeManager._pause_count = saved_pause
+	TimeManager.is_paused = saved_pause > 0
+	FarmState.load_save_state(farm_snapshot)
+	StaminaManager.set_stamina(saved_stamina)
+	MoneySystem.set_money(saved_money)
+	GameManager.is_game_active = saved_active
+	GameManager.current_state = saved_state
+	if slot >= 0:
+		SaveManager.reset_session(slot)
+	house.queue_free()
+	await get_tree().process_frame
+
+
+func _on_debug_sleep_day(reason: String, _shipment: Dictionary) -> void:
+	_debug_sleep_reasons.append(reason)
+
+
+func _sprite_frame_rect(sprite: Sprite2D) -> Rect2:
+	var tex_size := sprite.texture.get_size()
+	var size := Vector2(
+		tex_size.x * absf(sprite.scale.x) / float(maxi(sprite.hframes, 1)),
+		tex_size.y * absf(sprite.scale.y) / float(maxi(sprite.vframes, 1))
+	)
+	return Rect2(sprite.global_position - size * 0.5, size)
+
+
+func _overlap_area(a: Rect2, b: Rect2) -> float:
+	if not a.intersects(b):
+		return 0.0
+	var inter := a.intersection(b)
+	return inter.size.x * inter.size.y
+
+
+func _point_rect_distance(point: Vector2, rect: Rect2) -> float:
+	var closest := Vector2(
+		clampf(point.x, rect.position.x, rect.end.x),
+		clampf(point.y, rect.position.y, rect.end.y)
+	)
+	return point.distance_to(closest)
+
+
+func _lane_clears_rect(points: Array[Vector2], rect: Rect2, gap: float) -> bool:
+	for i in range(points.size() - 1):
+		var span := points[i].distance_to(points[i + 1])
+		var steps := maxi(ceili(span / 8.0), 1)
+		for s in range(steps + 1):
+			var point := points[i].lerp(points[i + 1], float(s) / float(steps))
+			if _point_rect_distance(point, rect) <= gap:
+				return false
+	return true
+
+
+func _slide_clear(player: Player, target: Vector2) -> String:
+	var guard := 0
+	while player.global_position.distance_to(target) > 3.0 and guard < 250:
+		guard += 1
+		var motion := (target - player.global_position).limit_length(6.0)
+		var hit := player.move_and_collide(motion)
+		if hit != null:
+			var collider := hit.get_collider()
+			return str(collider.name) if collider != null else "unknown"
+	if player.global_position.distance_to(target) > 3.0:
+		return "stuck"
+	return ""
 
 
 func _record(name: String, condition: bool) -> void:

@@ -22,6 +22,10 @@ const PLAYABLE_SCENES := [
 	"res://src/world/maps/Mine.tscn",
 ]
 
+## Debug sleep. Bare F is not a game binding (interact is Space/E).
+## Ctrl+F is Godot's built-in ui_filedialog_find; this ignores modifiers. F9 spawns farm animals.
+const DEBUG_SLEEP_KEY := KEY_F
+
 var current_state: GameState = GameState.MENU
 var is_game_active := false
 var current_spawn_point := "farm_start"
@@ -216,6 +220,29 @@ func _apply_player_snapshot(data: Dictionary) -> void:
 	)
 	if "current_direction" in loaded_player:
 		loaded_player.current_direction = int(data.get("direction", 0))
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not wants_debug_sleep(event, OS.is_debug_build()):
+		return
+	if not is_game_active or current_state != GameState.PLAYING:
+		return
+	if UIManager != null and UIManager.has_open_modal():
+		return
+	get_viewport().set_input_as_handled()
+	advance_day("sleep")
+
+
+## True when this key should sleep in a debug build. Release builds pass false.
+func wants_debug_sleep(event: InputEvent, debug_build: bool) -> bool:
+	if not debug_build or not (event is InputEventKey):
+		return false
+	var key := event as InputEventKey
+	if not key.pressed or key.echo:
+		return false
+	if key.ctrl_pressed or key.alt_pressed or key.meta_pressed or key.shift_pressed:
+		return false
+	return key.keycode == DEBUG_SLEEP_KEY or key.physical_keycode == DEBUG_SLEEP_KEY
 
 
 func _on_day_end_requested(reason: String) -> void:

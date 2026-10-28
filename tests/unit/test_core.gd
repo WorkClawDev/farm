@@ -734,7 +734,7 @@ func run_season_regrow_shop_tests():
 
 	var spring_ids: Array = _season_shop_ids(shop, "seed_shop")
 	assert_true(spring_ids.has("green_bean_seed") and spring_ids.has("turnip_seed") and spring_ids.has("potato_seed"), "Spring seed shop lists spring seeds including green beans")
-	assert_true(not spring_ids.has("fiber_seeds") and spring_ids.has("basic_fertilizer") and spring_ids.has("sunflower") and spring_ids.has("daffodil"), "Spring seed shop keeps fertilizer and decorations, and does not sell fiber seeds")
+	assert_true(not spring_ids.has("fiber_seeds") and spring_ids.has("basic_fertilizer") and not spring_ids.has("sunflower") and not spring_ids.has("daffodil"), "Spring seed shop keeps fertilizer, does not sell fiber seeds, and does not sell foraged flowers")
 	assert_true(not spring_ids.has("tomato_seed") and not spring_ids.has("corn_seed") and not spring_ids.has("pumpkin_seed"), "Spring seed shop hides summer and fall seeds")
 
 	caught["reason"] = ""
