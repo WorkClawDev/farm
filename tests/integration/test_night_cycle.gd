@@ -1,7 +1,8 @@
 extends SceneTree
-## Village night: villagers walk to their doors, rest overnight (time runs on past
-## midnight to 2:00 without script errors, BUG-48), and reappear at their doors at 6:00
-## (BUG-47). Runs through the real SceneTransition and TimeManager.
+## Village night: villagers walk to their doors and rest overnight (time runs past
+## midnight to 2:00 without script errors, BUG-48). 2:00 sends the player home.
+## Re-entering the village at 6:00 finds them awake; the 9:00 errand walks at
+## normal speed (BUG-47). Runs through the real SceneTransition and TimeManager.
 
 const VILLAGE := "res://src/world/maps/Village.tscn"
 const DOOR_TOLERANCE := 8.0
@@ -55,6 +56,8 @@ func _run() -> void:
 	tm.set_time_scale(60.0)
 	var tint := current_scene.get_node_or_null("DayNightTint") as CanvasModulate
 	var midnight_tint := Color.WHITE
+	var noon_from_curve := Color.BLACK
+	var saw_tint := false
 	var all_rest_after_midnight := true
 	var saw_after_midnight := false
 	var t0 := Time.get_ticks_msec()
@@ -62,33 +65,63 @@ func _run() -> void:
 		await physics_frame
 		if tm.current_time >= 24.2 and tm.current_time < 26.0:
 			saw_after_midnight = true
-			if tint:
+			if tint != null and is_instance_valid(tint):
+				saw_tint = true
 				midnight_tint = tint.color
+				noon_from_curve = tint.call("color_for_time", 12.0)
 			for id in npcs:
-				all_rest_after_midnight = all_rest_after_midnight and npcs[id].is_resting and not npcs[id].visible
+				if is_instance_valid(npcs[id]):
+					all_rest_after_midnight = all_rest_after_midnight and npcs[id].is_resting and not npcs[id].visible
+				else:
+					all_rest_after_midnight = false
+	# Real speed before another 2:00 can stack while the house loads.
+	tm.set_time_scale(1.0)
 	var night_errors := _errors.messages.slice(errors_before)
 	_record("时间跑过午夜到 2:00 无脚本错误（BUG-48）%s" % ("" if night_errors.is_empty() else "：" + "; ".join(night_errors.slice(0, 3))), night_errors.is_empty())
 	_record("0:00–2:00 期间所有村民都在家休息", saw_after_midnight and all_rest_after_midnight)
 	_record("2:00 结束当天并到第二天 6:00", int(tm.current_day) == day + 1 and is_equal_approx(tm.current_time, 6.0))
-	_record("村庄半夜有夜晚色调（%s），白天恢复（%s）" % [midnight_tint, tint.get_class() + " " + str(tint.color) if tint else "无 DayNightTint"],
-		tint != null and midnight_tint.v < 0.8 and tint.call("color_for_time", 12.0) == Color.WHITE)
+	_record("村庄半夜有夜晚色调（%s），白天恢复（%s）" % [midnight_tint, noon_from_curve],
+		saw_tint and midnight_tint.v < 0.8 and noon_from_curve == Color.WHITE)
 
-	# 6:00: everybody comes back out at their own door.
+	var player := current_scene.find_child("Player", true, false) if current_scene else null
+	var at_spawn := false
+	if player != null and current_scene != null and current_scene.has_method("get_spawn_position"):
+		at_spawn = player.global_position.distance_to(current_scene.get_spawn_position()) < 1.0
+	_record(
+		"凌晨2点被送回农舍出生点",
+		current_scene != null and current_scene.name == "PlayerHouse" and at_spawn
+	)
+
+	# The village unloaded with the collapse. Come back at 6:00 and the villagers are up.
+	st.transition_to(VILLAGE, "from_beach")
+	await process_frame
+	while st.is_transitioning:
+		await process_frame
 	await _frames(3, true)
+	npcs = {}
+	var npc_root := current_scene.get_node_or_null("NPCs") if current_scene else null
+	if npc_root:
+		for n in npc_root.get_children():
+			if "npc_id" in n and is_instance_valid(n):
+				npcs[n.npc_id] = n
 	var bad: Array[String] = []
-	for id in npcs:
+	for id in ["farmer_joe", "blacksmith_tom", "doctor_mary", "mayor", "shopkeeper_lily"]:
+		if not npcs.has(id) or not is_instance_valid(npcs[id]):
+			bad.append("%s missing" % id)
+			continue
 		var n: Node2D = npcs[id]
-		var door: Dictionary = n._door_here()
-		if door.is_empty() or n.is_resting or not n.visible or n.global_position.distance_to(door["position"]) > DOOR_TOLERANCE + 3.0:
-			bad.append("%s@%s door %s resting=%s visible=%s" % [id, n.global_position.round(), door.get("position"), n.is_resting, n.visible])
-	_record("6:00 五位村民都在自家门口重新出现%s" % ("" if bad.is_empty() else "：" + ", ".join(bad)), bad.is_empty())
-	tm.set_time_scale(1.0)
-	# Morning errands are back at normal walking speed (only the walk home is slow).
+		if n.is_resting or not n.visible:
+			bad.append("%s resting=%s visible=%s" % [id, n.is_resting, n.visible])
+	_record("6:00 回到村庄时五位村民都已起床%s" % ("" if bad.is_empty() else "：" + ", ".join(bad)), bad.is_empty())
+	# 9:00 errands use normal walking speed (only the walk home is slow).
+	tm.current_time = 9.0
 	var top_speed := 0.0
 	var any_home := false
 	for i in 60:
 		await physics_frame
 		for id in npcs:
+			if not is_instance_valid(npcs[id]):
+				continue
 			any_home = any_home or npcs[id].is_going_home
 			if npcs[id].is_walking:
 				top_speed = maxf(top_speed, npcs[id].velocity.length())

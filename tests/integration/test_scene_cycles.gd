@@ -78,6 +78,7 @@ func _run() -> void:
 	for scene_name in _instance_checks.keys():
 		_record("BUG-44 %s：%d 次进入后每个 NPC id 都正好 1 个实例" % [scene_name, _instance_checks[scene_name]], not _instance_bad.has(scene_name))
 	_record("BUG-44 村庄被检查过（含 SceneTransition 进入）", _instance_checks.get("Village", 0) >= CYCLES)
+	await _exercise_forced_overnight()
 	_wipe_user_dir(tmp_save_dir)
 	_record("场景往返没有改写真实存档的内容或修改时间", _real_save_stamps() == real_saves_before)
 	print("RESULTS: %d/%d passed" % [_passed, _passed + _failed])
@@ -243,6 +244,72 @@ func _settle(frames: int) -> void:
 
 func _scene_name(path: String) -> String:
 	return path.get_file().get_basename()
+
+
+## Real map hop: 2am on the farm charges 10%, pays the bin, refills stamina, and loads the house spawn.
+func _exercise_forced_overnight() -> void:
+	var gm := root.get_node("GameManager")
+	var time := root.get_node("TimeManager")
+	var money := root.get_node("MoneySystem")
+	var stamina := root.get_node("StaminaManager")
+	var shipping := root.get_node("ShippingSystem")
+	if current_scene == null or current_scene.name != "Farm":
+		_record("强制过夜从农场开始", false)
+		return
+	_record("强制过夜从农场开始", true)
+	shipping.clear_bin()
+	money.set_money(800)
+	stamina.set_stamina(5.0)
+	var day_before: int = time.current_day
+	await gm.advance_day("sleep")
+	_record(
+		"睡觉留在农场、不扣钱、体力回满",
+		current_scene != null
+			and current_scene.name == "Farm"
+			and money.get_money() == 800
+			and is_equal_approx(stamina.current_stamina, stamina.max_stamina)
+	)
+	shipping.clear_bin()
+	var added: bool = shipping.add_item("turnip", 2, 0)
+	var sale := int(shipping.calculate_total_value().get("total_value", 0))
+	money.set_money(800)
+	stamina.set_stamina(4.0)
+	await gm.advance_day("forced_2am")
+	await _settle(4)
+	var player := current_scene.find_child("Player", true, false) if current_scene else null
+	var at_spawn := false
+	if player != null and current_scene.has_method("get_spawn_position"):
+		at_spawn = player.global_position.distance_to(current_scene.get_spawn_position()) < 1.0
+	_record("出货箱里的作物有售价", added and sale > 0)
+	_record(
+		"凌晨2点扣10%后仍把出货全额入账",
+		money.get_money() == 800 - gm.forced_overnight_fee(800) + sale
+	)
+	_record("凌晨2点体力回满", is_equal_approx(stamina.current_stamina, stamina.max_stamina))
+	# Time resumes at 6:00 and a few frames pass during the house load.
+	_record(
+		"凌晨2点日期前进且回到早晨",
+		time.current_day != day_before and time.current_time >= 6.0 and time.current_time < 7.0
+	)
+	_record("凌晨2点场景是农舍", current_scene != null and current_scene.name == "PlayerHouse")
+	_record("玩家站在农舍出生点", at_spawn)
+	_record("次日提示带出货到账金额", _toast_contains("出货到账 %d 金" % sale))
+	_record("次日提示带凌晨扣除", _toast_contains("扣除 %d 金" % gm.forced_overnight_fee(800)))
+
+
+func _toast_contains(fragment: String) -> bool:
+	var root_ui := root.get_node_or_null("UIManager")
+	if root_ui == null:
+		return false
+	var toast_root := root_ui.get_node_or_null("UIOverlay/ToastRoot")
+	if toast_root == null:
+		return false
+	for child in toast_root.get_children():
+		if child.is_queued_for_deletion():
+			continue
+		if str(child.get_meta("toast_text", "")).find(fragment) >= 0:
+			return true
+	return false
 
 
 func _record(name: String, condition: bool) -> void:

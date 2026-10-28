@@ -72,6 +72,7 @@ func _ready() -> void:
 	await _exercise_npc_crowd_squeeze()
 	await _exercise_opening_debris()
 	await _exercise_house_bed_path()
+	await _exercise_overnight_settlement()
 	_finish()
 
 
@@ -2411,6 +2412,121 @@ func _exercise_house_bed_path() -> void:
 		SaveManager.reset_session(slot)
 	house.queue_free()
 	await get_tree().process_frame
+
+
+func _exercise_overnight_settlement() -> void:
+	var slot := SaveManager.get_current_slot()
+	if slot >= 0:
+		SaveManager.reset_session(-1)
+	var saved_day := TimeManager.current_day
+	var saved_season := TimeManager.current_season
+	var saved_year := TimeManager.current_year
+	var saved_time := TimeManager.current_time
+	var saved_pause := TimeManager._pause_count
+	var saved_paused := TimeManager.is_paused
+	var saved_money := MoneySystem.get_money()
+	var saved_stamina := StaminaManager.current_stamina
+	var saved_active := GameManager.is_game_active
+	var saved_state := GameManager.current_state
+	var saved_spawn := GameManager.current_spawn_point
+	var farm_snapshot := FarmState.get_save_state()
+	var shipping_snapshot := ShippingSystem.save_state()
+	var scene_before := get_tree().current_scene
+	TimeManager.current_day = 4
+	TimeManager.current_time = 12.0
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	GameManager.current_spawn_point = "farm_start"
+
+	_clear_toasts()
+	MoneySystem.set_money(1000)
+	ShippingSystem.clear_bin()
+	var filled := ShippingSystem.add_item("turnip", 4, 0)
+	var sleep_sale := int(ShippingSystem.calculate_total_value().get("total_value", 0))
+	StaminaManager.set_stamina(11.0)
+	await GameManager.advance_day("sleep")
+	_record("睡觉出货箱能装上作物", filled and sleep_sale > 0)
+	_record("睡觉结算出货且不扣持有金", MoneySystem.get_money() == 1000 + sleep_sale)
+	_record("睡觉回满体力", is_equal_approx(StaminaManager.current_stamina, StaminaManager.max_stamina))
+	_record("睡觉不改农舍出生点", GameManager.current_spawn_point == "farm_start")
+	_record("睡觉不切走测试场景", get_tree().current_scene == scene_before)
+	_record(
+		"次日提示写出货到账金额",
+		_toast_contains("出货到账 %d 金" % sleep_sale) and not _toast_contains("扣除")
+	)
+
+	_clear_toasts()
+	MoneySystem.set_money(200)
+	ShippingSystem.clear_bin()
+	StaminaManager.set_stamina(6.0)
+	await GameManager.advance_day("forced_2am")
+	_record("凌晨2点空箱扣下限50且不为负", MoneySystem.get_money() == 150)
+	_record("凌晨2点仍回满体力", is_equal_approx(StaminaManager.current_stamina, StaminaManager.max_stamina))
+	_record("凌晨2点记下农舍出生点", GameManager.current_spawn_point == GameManager.PLAYER_HOUSE_SPAWN)
+	_record("测试场景里强制过夜不卸载自己", get_tree().current_scene == scene_before)
+	_record("空箱提示写扣除金额", _toast_contains("凌晨倒地，扣除 50 金") and not _toast_contains("出货到账"))
+
+	_clear_toasts()
+	MoneySystem.set_money(1000)
+	ShippingSystem.clear_bin()
+	ShippingSystem.add_item("turnip", 4, 0)
+	var collapse_sale := int(ShippingSystem.calculate_total_value().get("total_value", 0))
+	await GameManager.advance_day("forced_2am")
+	_record(
+		"凌晨2点先扣10%再全额入账",
+		collapse_sale > 0 and MoneySystem.get_money() == 1000 - 100 + collapse_sale
+	)
+	_record(
+		"凌晨提示同时带出货与扣除",
+		_toast_contains("出货到账 %d 金" % collapse_sale) and _toast_contains("扣除 100 金")
+	)
+
+	_clear_toasts()
+	MoneySystem.set_money(30)
+	ShippingSystem.clear_bin()
+	await GameManager.advance_day("forced_2am")
+	_record("持有金不足50时扣光且不为负", MoneySystem.get_money() == 0)
+	_record("不足50的提示写实际扣除", _toast_contains("扣除 30 金"))
+
+	TimeManager.current_day = saved_day
+	TimeManager.current_season = saved_season
+	TimeManager.current_year = saved_year
+	TimeManager.current_time = saved_time
+	TimeManager._pause_count = saved_pause
+	TimeManager.is_paused = saved_paused
+	FarmState.load_save_state(farm_snapshot)
+	ShippingSystem.load_state(shipping_snapshot)
+	StaminaManager.set_stamina(saved_stamina)
+	MoneySystem.set_money(saved_money)
+	GameManager.is_game_active = saved_active
+	GameManager.current_state = saved_state
+	GameManager.current_spawn_point = saved_spawn
+	GameManager._advancing_day = false
+	if slot >= 0:
+		SaveManager.reset_session(slot)
+	else:
+		SaveManager.reset_session(-1)
+	_clear_toasts()
+
+
+func _clear_toasts() -> void:
+	var root := UIManager.get_node_or_null("UIOverlay/ToastRoot")
+	if root == null:
+		return
+	for child in root.get_children():
+		child.free()
+
+
+func _toast_contains(fragment: String) -> bool:
+	var root := UIManager.get_node_or_null("UIOverlay/ToastRoot")
+	if root == null:
+		return false
+	for child in root.get_children():
+		if child.is_queued_for_deletion():
+			continue
+		if str(child.get_meta("toast_text", "")).find(fragment) >= 0:
+			return true
+	return false
 
 
 func _on_debug_sleep_day(reason: String, _shipment: Dictionary) -> void:

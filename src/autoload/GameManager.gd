@@ -13,9 +13,15 @@ enum GameState { MENU, PLAYING, PAUSED, DIALOGUE, CUTSCENE }
 const DebugLaunchScript = preload("res://src/core/debug/DebugLaunch.gd")
 const FARM_SCENE := "res://src/world/maps/Farm.tscn"
 const MENU_SCENE := "res://src/ui/menus/MainMenu.tscn"
+const PLAYER_HOUSE_SCENE := "res://src/world/maps/PlayerHouse.tscn"
+## Collapse wakes the player on the farmhouse birth marker (not the village door).
+const PLAYER_HOUSE_SPAWN := "house_entrance"
+## Pass-out fee is about 10% of gold in hand, and at least this much.
+const COLLAPSE_FEE_PERCENT := 10
+const COLLAPSE_FEE_FLOOR := 50
 const PLAYABLE_SCENES := [
 	FARM_SCENE,
-	"res://src/world/maps/PlayerHouse.tscn",
+	PLAYER_HOUSE_SCENE,
 	"res://src/world/maps/Village.tscn",
 	"res://src/world/maps/Beach.tscn",
 	"res://src/world/maps/Forest.tscn",
@@ -113,6 +119,10 @@ func advance_day(reason: String = "sleep") -> void:
 		return
 	_advancing_day = true
 	TimeManager.pause_time()
+	# Fee is gold in hand at collapse. The bin still pays in full afterwards.
+	var collapse_paid := 0
+	if reason == "forced_2am":
+		collapse_paid = _charge_collapse_fee()
 	var shipment := ShippingSystem.process_shipment()
 	FarmState.advance_day()
 	TimeManager.advance_to_next_day()
@@ -123,9 +133,66 @@ func advance_day(reason: String = "sleep") -> void:
 	if SaveManager.get_current_slot() >= 0:
 		SaveManager.save_game()
 	TimeManager.resume_time()
-	_advancing_day = false
 	day_advanced.emit(reason, shipment)
-	notification_requested.emit("新的一天开始了")
+	_request_notification(day_start_notice(shipment, collapse_paid))
+	if reason == "forced_2am":
+		await _return_player_home()
+	_advancing_day = false
+
+
+## 10% of held gold, but at least COLLAPSE_FEE_FLOOR. Never more than gold, and 0 when broke.
+static func forced_overnight_fee(gold: int) -> int:
+	if gold <= 0:
+		return 0
+	var percent := gold * COLLAPSE_FEE_PERCENT / 100
+	var floor_fee := mini(COLLAPSE_FEE_FLOOR, gold)
+	return maxi(percent, floor_fee)
+
+
+## Empty bin keeps the plain line. A payout appends the amount that was credited.
+static func day_start_notice(shipment: Dictionary, collapse_fee_paid: int = 0) -> String:
+	var paid := maxi(0, int(shipment.get("total_money", 0)))
+	var text := "新的一天开始了"
+	if paid > 0:
+		text += "，出货到账 %d 金" % paid
+	if collapse_fee_paid > 0:
+		text += "。凌晨倒地，扣除 %d 金" % collapse_fee_paid
+	return text
+
+
+func _charge_collapse_fee() -> int:
+	var fee := forced_overnight_fee(MoneySystem.get_money())
+	if fee <= 0:
+		return 0
+	if MoneySystem.spend_money(fee, MoneySystem.ExpenseType.OTHER, "凌晨强制过夜"):
+		return fee
+	return 0
+
+
+func _request_notification(message: String) -> void:
+	# Farm already shows this signal. Elsewhere the autoload toast is the only listener.
+	var heard := not notification_requested.get_connections().is_empty()
+	if not heard and UIManager != null:
+		UIManager.show_toast(message, {}, "info")
+	notification_requested.emit(message)
+
+
+func _return_player_home() -> void:
+	current_spawn_point = PLAYER_HOUSE_SPAWN
+	var tree := get_tree()
+	if tree == null:
+		return
+	var current := tree.current_scene
+	var path := current.scene_file_path if current != null else ""
+	if path == PLAYER_HOUSE_SCENE:
+		var player_node := tree.get_first_node_in_group("player") as Node2D
+		if player_node != null and current.has_method("get_spawn_position"):
+			player_node.global_position = current.call("get_spawn_position")
+		return
+	# Unit and integration runners are not playable maps. Record the spawn and leave them up.
+	if path not in PLAYABLE_SCENES:
+		return
+	await _change_scene(PLAYER_HOUSE_SCENE)
 
 
 func pause_game() -> void:

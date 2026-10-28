@@ -26,6 +26,7 @@ func _ready() -> void:
 	run_map_editor_resource_tests()
 	run_season_regrow_shop_tests()
 	run_debug_launch_parse_tests()
+	run_day_start_and_collapse_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -1094,6 +1095,162 @@ func run_debug_launch_parse_tests() -> void:
 	assert_true(TimeManager.current_day == saved_day and TimeManager.current_season == saved_season, "Debug crop test restores the calendar")
 
 	print("  Debug launch parse: All tests completed")
+
+var _day_notices: Array[String] = []
+
+func _on_day_notice(message: String) -> void:
+	_day_notices.append(message)
+
+func run_day_start_and_collapse_tests() -> void:
+	print("\n[Day Start And Collapse Tests]")
+
+	assert_true(GameManager.forced_overnight_fee(0) == 0, "Broke players pay no collapse fee")
+	assert_true(GameManager.forced_overnight_fee(-5) == 0, "Negative gold does not create a fee")
+	assert_true(GameManager.forced_overnight_fee(1) == 1, "A fee below 50 takes the smaller held amount")
+	assert_true(GameManager.forced_overnight_fee(30) == 30, "30 gold collapses for the whole 30")
+	assert_true(GameManager.forced_overnight_fee(200) == 50, "10% under 50 still charges the 50 floor")
+	assert_true(GameManager.forced_overnight_fee(499) == 50, "499 gold still uses the 50 floor")
+	assert_true(GameManager.forced_overnight_fee(500) == 50, "500 gold is exactly the 10% floor")
+	assert_true(GameManager.forced_overnight_fee(1000) == 100, "1000 gold charges 10%")
+	assert_true(GameManager.forced_overnight_fee(2500) == 250, "2500 gold charges 10% with no extra cap")
+	assert_true(GameManager.day_start_notice({}) == "新的一天开始了", "Empty shipment omits the amount")
+	assert_true(
+		GameManager.day_start_notice({"success": false, "reason": "empty"}) == "新的一天开始了",
+		"An empty bin reason omits the amount"
+	)
+	assert_true(
+		GameManager.day_start_notice({"total_money": 120}) == "新的一天开始了，出货到账 120 金",
+		"A payout names the credited amount"
+	)
+	assert_true(
+		GameManager.day_start_notice({"total_money": 80}, 50) == "新的一天开始了，出货到账 80 金。凌晨倒地，扣除 50 金",
+		"Collapse notice keeps the payout and the fee"
+	)
+
+	var saved_day: int = TimeManager.current_day
+	var saved_season: int = TimeManager.current_season
+	var saved_year: int = TimeManager.current_year
+	var saved_time: float = TimeManager.current_time
+	var saved_paused: bool = TimeManager.is_paused
+	var saved_pause_count: int = TimeManager._pause_count
+	var saved_money: int = MoneySystem.get_money()
+	var saved_stamina: float = StaminaManager.current_stamina
+	var saved_active: bool = GameManager.is_game_active
+	var saved_spawn: String = GameManager.current_spawn_point
+	var saved_slot: int = SaveManager.get_current_slot()
+	var farm_snapshot: Dictionary = FarmState.get_save_state()
+	var shipping_snapshot: Dictionary = ShippingSystem.save_state()
+	var scene_path := get_tree().current_scene.scene_file_path if get_tree().current_scene else ""
+	if saved_slot >= 0:
+		SaveManager.reset_session(-1)
+	TimeManager.current_day = 3
+	TimeManager.current_time = 10.0
+	GameManager.is_game_active = false
+	GameManager.current_spawn_point = "farm_start"
+	MoneySystem.set_money(1000)
+	var idle_day := TimeManager.current_day
+	GameManager.advance_day("forced_2am")
+	assert_true(
+		TimeManager.current_day == idle_day and MoneySystem.get_money() == 1000,
+		"Inactive game does not collapse or charge"
+	)
+
+	if not GameManager.notification_requested.is_connected(_on_day_notice):
+		GameManager.notification_requested.connect(_on_day_notice)
+	GameManager.is_game_active = true
+	ShippingSystem.clear_bin()
+	assert_true(ShippingSystem.add_item("turnip", 4, 0), "Sleep fixture can fill the shipping bin")
+	var sleep_sale := int(ShippingSystem.calculate_total_value().get("total_value", 0))
+	StaminaManager.set_stamina(11.0)
+	_day_notices.clear()
+	GameManager.advance_day("sleep")
+	assert_true(sleep_sale > 0, "Sleep fixture shipment is worth something")
+	assert_true(MoneySystem.get_money() == 1000 + sleep_sale, "Sleep pays the bin and does not charge a fee")
+	assert_true(
+		is_equal_approx(StaminaManager.current_stamina, StaminaManager.max_stamina),
+		"Sleep refills stamina"
+	)
+	assert_true(GameManager.current_spawn_point == "farm_start", "Sleep leaves the spawn point alone")
+	assert_true(
+		get_tree().current_scene != null and get_tree().current_scene.scene_file_path == scene_path,
+		"Sleep does not change the current scene"
+	)
+	assert_true(
+		_day_notices.size() == 1 and _day_notices[0] == "新的一天开始了，出货到账 %d 金" % sleep_sale,
+		"Sleep notice names the shipment payout"
+	)
+
+	MoneySystem.set_money(200)
+	ShippingSystem.clear_bin()
+	StaminaManager.set_stamina(6.0)
+	_day_notices.clear()
+	GameManager.advance_day("forced_2am")
+	assert_true(MoneySystem.get_money() == 150, "200 gold at 2am pays the 50 floor and stays non-negative")
+	assert_true(
+		is_equal_approx(StaminaManager.current_stamina, StaminaManager.max_stamina),
+		"Passing out still refills stamina"
+	)
+	assert_true(GameManager.current_spawn_point == GameManager.PLAYER_HOUSE_SPAWN, "2am records the farmhouse spawn")
+	assert_true(
+		get_tree().current_scene != null and get_tree().current_scene.scene_file_path == scene_path,
+		"A test runner is not swapped for the farmhouse"
+	)
+	assert_true(
+		_day_notices.size() == 1 and _day_notices[0] == "新的一天开始了。凌晨倒地，扣除 50 金",
+		"Empty bin at 2am names the fee and omits a payout"
+	)
+
+	MoneySystem.set_money(30)
+	ShippingSystem.clear_bin()
+	_day_notices.clear()
+	GameManager.advance_day("forced_2am")
+	assert_true(MoneySystem.get_money() == 0, "Less than 50 gold is taken entirely and not driven negative")
+	assert_true(
+		_day_notices.size() == 1 and _day_notices[0] == "新的一天开始了。凌晨倒地，扣除 30 金",
+		"The smaller fee is the amount actually taken"
+	)
+
+	MoneySystem.set_money(1000)
+	ShippingSystem.clear_bin()
+	assert_true(ShippingSystem.add_item("turnip", 4, 0), "Collapse fixture can fill the shipping bin")
+	var collapse_sale := int(ShippingSystem.calculate_total_value().get("total_value", 0))
+	_day_notices.clear()
+	GameManager.advance_day("forced_2am")
+	assert_true(
+		MoneySystem.get_money() == 1000 - 100 + collapse_sale,
+		"2am takes 10% first and then credits the whole shipment"
+	)
+	assert_true(
+		_day_notices.size() == 1
+			and _day_notices[0] == "新的一天开始了，出货到账 %d 金。凌晨倒地，扣除 100 金" % collapse_sale,
+		"2am notice names both the payout and the 10% fee"
+	)
+	assert_true(not GameManager._advancing_day, "Day advance releases its guard")
+
+	if GameManager.notification_requested.is_connected(_on_day_notice):
+		GameManager.notification_requested.disconnect(_on_day_notice)
+	_day_notices.clear()
+	TimeManager.current_day = saved_day
+	TimeManager.current_season = saved_season
+	TimeManager.current_year = saved_year
+	TimeManager.current_time = saved_time
+	TimeManager._pause_count = saved_pause_count
+	TimeManager.is_paused = saved_paused
+	FarmState.load_save_state(farm_snapshot)
+	ShippingSystem.load_state(shipping_snapshot)
+	StaminaManager.set_stamina(saved_stamina)
+	MoneySystem.set_money(saved_money)
+	GameManager.is_game_active = saved_active
+	GameManager.current_spawn_point = saved_spawn
+	GameManager._advancing_day = false
+	if saved_slot >= 0:
+		SaveManager.reset_session(saved_slot)
+	else:
+		SaveManager.reset_session(-1)
+
+	print("  Day start and collapse: All tests completed")
+
+
 
 func assert_true(condition: bool, message: String):
 	total_tests += 1
