@@ -29,6 +29,7 @@ func _ready() -> void:
 	run_day_start_and_collapse_tests()
 	run_eat_food_stamina_tests()
 	run_watering_can_upgrade_and_rain_tests()
+	run_debug_time_skip_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -1654,6 +1655,22 @@ func run_watering_can_upgrade_and_rain_tests() -> void:
 	get_tree().paused = tree_paused
 	print("  Watering can upgrade and rain: All tests completed")
 
+
+func run_debug_time_skip_tests() -> void:
+	print("\n[Debug Time Skip Tests]")
+	var key := InputEventKey.new()
+	key.pressed = true
+	key.echo = false
+	key.keycode = KEY_F7
+	key.physical_keycode = KEY_F7
+	assert_true(not GameManager.wants_debug_time_skip(key, false), "发行版不响应 F7 跳时")
+	var target := GameManager.debug_time_skip_target()
+	var minute := int((target - float(int(target))) * 60.0)
+	assert_true(
+		is_equal_approx(target, 25.0 + 55.0 / 60.0) and target < 26.0 and int(target) % 24 == 1 and minute == 55,
+		"跳时目标是 1:55（25 + 55/60），且小于 2:00"
+	)
+	print("  Debug time skip: All tests completed")
 
 func assert_true(condition: bool, message: String):
 	total_tests += 1

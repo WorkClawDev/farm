@@ -35,6 +35,10 @@ const DEBUG_SLEEP_KEY := KEY_F
 const DEBUG_IRON_KEY := KEY_F8
 const DEBUG_IRON_ITEM := "iron_ingot"
 const DEBUG_IRON_COUNT := 5
+## Debug clock jump to 1:55. Bare F7, no modifiers. Stays under 26.0 so 2:00 still arrives on its own.
+const DEBUG_TIME_SKIP_KEY := KEY_F7
+const DEBUG_TIME_SKIP_HOUR := 25
+const DEBUG_TIME_SKIP_MINUTE := 55
 
 var current_state: GameState = GameState.MENU
 var is_game_active := false
@@ -304,6 +308,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 			_grant_debug_iron()
 		return
+	# Same arrival rule as F8 (this node stays process-always in debug builds) but
+	# the skip itself only runs while PLAYING. A pause menu or modal is ignored.
+	if wants_debug_time_skip(event, OS.is_debug_build()):
+		if _debug_time_skip_allowed():
+			get_viewport().set_input_as_handled()
+			_skip_debug_time()
+		return
 	# This autoload used to be pausable, so sleep never saw keys while the tree was paused.
 	if get_tree().paused:
 		return
@@ -339,6 +350,50 @@ func wants_debug_iron(event: InputEvent, debug_build: bool) -> bool:
 	if key.ctrl_pressed or key.alt_pressed or key.meta_pressed or key.shift_pressed:
 		return false
 	return key.keycode == DEBUG_IRON_KEY or key.physical_keycode == DEBUG_IRON_KEY
+
+
+## True when this key should jump the clock to 1:55. Release builds pass false.
+func wants_debug_time_skip(event: InputEvent, debug_build: bool) -> bool:
+	if not debug_build or not (event is InputEventKey):
+		return false
+	var key := event as InputEventKey
+	if not key.pressed or key.echo:
+		return false
+	if key.ctrl_pressed or key.alt_pressed or key.meta_pressed or key.shift_pressed:
+		return false
+	return key.keycode == DEBUG_TIME_SKIP_KEY or key.physical_keycode == DEBUG_TIME_SKIP_KEY
+
+
+## 1:55 on the 6:00–26:00 clock (25 + 55/60). Kept under 26.0 so forced_2am is not immediate.
+static func debug_time_skip_target() -> float:
+	return float(DEBUG_TIME_SKIP_HOUR) + float(DEBUG_TIME_SKIP_MINUTE) / 60.0
+
+
+func _debug_time_skip_allowed() -> bool:
+	if not is_game_active or current_state != GameState.PLAYING:
+		return false
+	var tree := get_tree()
+	if tree == null or tree.paused:
+		return false
+	if UIManager != null and UIManager.has_open_modal():
+		return false
+	return true
+
+
+func _skip_debug_time() -> void:
+	var target := debug_time_skip_target()
+	if target >= 26.0:
+		return
+	var previous_hour := int(TimeManager.current_time)
+	TimeManager.current_time = target
+	TimeManager._time_accumulator = 0.0
+	var current_hour := int(TimeManager.current_time)
+	if current_hour != previous_hour:
+		TimeManager.hour_changed.emit(current_hour)
+	TimeManager.time_changed.emit(TimeManager.current_time)
+	print("[GameManager] debug F7: time -> 1:55 (%.4f)" % target)
+	if UIManager != null and UIManager.has_method("show_toast"):
+		UIManager.show_toast("调试：时间 → 1:55", {}, "info")
 
 
 func _debug_iron_allowed() -> bool:
