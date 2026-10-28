@@ -59,6 +59,7 @@ func _ready() -> void:
 	await _exercise_golden_path()
 	await _exercise_watering_can()
 	await _exercise_tool_vs_hotbar_dispatch()
+	await _exercise_eat_food()
 	await _exercise_tool_selection_across_scenes()
 	await _exercise_json_save_compatibility()
 	await _exercise_npc_dialogue_reentrancy()
@@ -888,6 +889,70 @@ func _exercise_tool_vs_hotbar_dispatch() -> void:
 	FarmState.reset()
 	Inventory.reset_with_starter_items()
 	StaminaManager.set_stamina(StaminaManager.max_stamina)
+
+
+func _exercise_eat_food() -> void:
+	print("------------------------------------------------------------")
+	print("吃东西：收起工具后空格吃掉带 energy 的食物并回体力")
+	# 体力已满时不吃（EAT_FULL），数量不变。没满才扣 1 个并 restore_stamina。
+	var inv_snapshot := Inventory.save_state()
+	var farm_snapshot := FarmState.get_save_state()
+	var saved_stamina := StaminaManager.current_stamina
+	Inventory.clear_inventory()
+	Inventory.set_slot(0, "wild_berry", 2)
+	Inventory.set_slot(1, "turnip_seed", 4)
+	Inventory.set_slot(2, "stone", 5)
+	Inventory.set_selected_hotbar_index(0)
+	Inventory.set_equipped_tool(ToolManager.ToolType.HOE, ToolManager.ToolType.HOE)
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	_record("吃东西用例有玩家", player != null)
+	if player == null:
+		farm.queue_free()
+		Inventory.load_state(inv_snapshot)
+		FarmState.load_save_state(farm_snapshot)
+		StaminaManager.set_stamina(saved_stamina)
+		return
+	var tm: ToolManager = player.tool_manager
+	StaminaManager.set_stamina(40.0)
+	_record("拿着锄头时选中野莓按吃不会扣物品",
+		tm.get_current_tool_type() == ToolManager.ToolType.HOE
+			and player.try_eat_held_item() == Inventory.EAT_NOT_EDIBLE
+			and Inventory.get_item_count("wild_berry") == 2
+			and is_equal_approx(StaminaManager.current_stamina, 40.0))
+
+	tm.put_away_tool()
+	_record("收起工具后手里是野莓",
+		tm.is_using_hotbar_item() and Inventory.get_selected_item_id() == "wild_berry")
+	player._use_tool_on_target()
+	_record("空格吃野莓：体力 40→48，数量 2→1",
+		is_equal_approx(StaminaManager.current_stamina, 48.0)
+			and Inventory.get_item_count("wild_berry") == 1)
+
+	Inventory.set_selected_hotbar_index(1)
+	var seed_stamina := StaminaManager.current_stamina
+	_record("手持种子不是食物",
+		player.try_eat_held_item() == Inventory.EAT_NOT_EDIBLE
+			and Inventory.get_item_count("turnip_seed") == 4
+			and is_equal_approx(StaminaManager.current_stamina, seed_stamina))
+	Inventory.set_selected_hotbar_index(2)
+	_record("手持石头不是食物",
+		player.try_eat_held_item() == Inventory.EAT_NOT_EDIBLE
+			and Inventory.get_item_count("stone") == 5
+			and is_equal_approx(StaminaManager.current_stamina, seed_stamina))
+
+	Inventory.set_selected_hotbar_index(0)
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	player._use_tool_on_target()
+	_record("体力已满时按空格不吃野莓",
+		Inventory.get_item_count("wild_berry") == 1
+			and is_equal_approx(StaminaManager.current_stamina, StaminaManager.max_stamina))
+
+	farm.queue_free()
+	await get_tree().process_frame
+	Inventory.load_state(inv_snapshot)
+	FarmState.load_save_state(farm_snapshot)
+	StaminaManager.set_stamina(saved_stamina)
 
 
 func _exercise_tool_selection_across_scenes() -> void:

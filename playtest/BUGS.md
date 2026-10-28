@@ -785,3 +785,9 @@
 - 主动睡觉不扣：PASS。裸 F，toast「新的一天开始了」无「扣除」，金币仍 450。截图 step3a_sleep_nofee.png。
 - 出货到账：PASS。出货箱放 1 防风草种子（预计 10 金），F 睡后 toast「新的一天开始了，出货到账 10 金」，金币 450→460。截图 step3a_ship_toast.png、step3a_ship_gold.png。
 - 小问题（观感）：倒地 toast 换行，「50 金」掉到下一行。不挡本单。
+
+## 2026-10-28 14:36 第3步 3b：吃东西回体力（--new-game --start-day=24 --debug-crops）
+- 吃回体力：PASS。体力 84→96，toast「恢复了 12 体力」，番茄 3→2；再吃补到 100（只回 4）。截图 step3b_low_stam / hold_food / eat。
+- 满体力不吃：PASS。toast「体力已经满了」，不扣食物。截图 step3b_full_nofood.png。
+- 拿工具仍挥工具：PASS。重新拿锄头 Space，提示已翻过，不吃番茄。截图 step3b_tool_swing.png。
+- 已知：收获 toast 仍 ×2（打磨队列）；toast 用英文 id `tomato`。

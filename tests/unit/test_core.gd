@@ -27,6 +27,7 @@ func _ready() -> void:
 	run_season_regrow_shop_tests()
 	run_debug_launch_parse_tests()
 	run_day_start_and_collapse_tests()
+	run_eat_food_stamina_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -1251,6 +1252,75 @@ func run_day_start_and_collapse_tests() -> void:
 	print("  Day start and collapse: All tests completed")
 
 
+func run_eat_food_stamina_tests() -> void:
+	print("\n[Eat Food Stamina Tests]")
+	# 体力已满时不吃：不扣物品，体力保持上限，避免浪费食物。
+	# 没满时允许吃，溢出的部分被 restore_stamina 钳在上限，物品仍然消耗。
+	var inv_snapshot: Dictionary = Inventory.save_state()
+	var saved_stamina := StaminaManager.current_stamina
+	var saved_max := StaminaManager.max_stamina
+
+	var berry: ItemDatabase.ItemData = ItemDatabase.get_item("wild_berry")
+	var bread: ItemDatabase.ItemData = ItemDatabase.get_item("bread")
+	var seed: ItemDatabase.ItemData = ItemDatabase.get_item("turnip_seed")
+	var stone: ItemDatabase.ItemData = ItemDatabase.get_item("stone")
+	assert_true(berry != null and bread != null and seed != null and stone != null, "Eat fixtures resolve berry, bread, seed, and stone")
+	assert_true(berry.use_effect.has("energy") and int(berry.use_effect["energy"]) == 8, "wild_berry restores 8 energy")
+	assert_true(bread.use_effect.has("energy") and int(bread.use_effect["energy"]) == 30, "bread restores 30 energy")
+	assert_true(not seed.use_effect.has("energy"), "Seeds have no energy and must not be eaten")
+	assert_true(not stone.use_effect.has("energy"), "Stone has no energy and must not be eaten")
+
+	Inventory.clear_inventory()
+	Inventory.set_slot(0, "wild_berry", 2)
+	Inventory.set_selected_hotbar_index(0)
+	StaminaManager.set_stamina(40.0)
+	assert_true(Inventory.use_selected_item() == Inventory.EAT_ATE, "Eating wild_berry succeeds")
+	assert_true(is_equal_approx(StaminaManager.current_stamina, 48.0), "wild_berry restores 8 stamina (40 -> 48)")
+	assert_true(Inventory.get_item_count("wild_berry") == 1, "Eating removes one wild_berry")
+	assert_true(Inventory.get_slot(0).quantity == 1, "The selected stack drops by one")
+
+	assert_true(Inventory.use_selected_item() == Inventory.EAT_ATE, "A second berry can be eaten")
+	assert_true(is_equal_approx(StaminaManager.current_stamina, 56.0), "Second berry restores another 8 (48 -> 56)")
+	assert_true(Inventory.get_item_count("wild_berry") == 0, "Both berries are consumed")
+	assert_true(Inventory.use_selected_item() == Inventory.EAT_NOT_EDIBLE, "An empty slot is not edible")
+	assert_true(is_equal_approx(StaminaManager.current_stamina, 56.0), "Empty use does not change stamina")
+
+	Inventory.set_slot(0, "bread", 1)
+	Inventory.set_selected_hotbar_index(0)
+	StaminaManager.set_stamina(50.0)
+	assert_true(Inventory.use_selected_item() == Inventory.EAT_ATE, "Eating bread succeeds")
+	assert_true(is_equal_approx(StaminaManager.current_stamina, 80.0), "bread restores 30 stamina (50 -> 80)")
+	assert_true(Inventory.get_item_count("bread") == 0, "Eating removes the bread")
+
+	Inventory.set_slot(0, "bread", 1)
+	StaminaManager.set_stamina(95.0)
+	assert_true(Inventory.use_selected_item() == Inventory.EAT_ATE, "Eating below the cap still consumes the food")
+	assert_true(is_equal_approx(StaminaManager.current_stamina, StaminaManager.max_stamina), "Overflow is clamped to max stamina")
+	assert_true(Inventory.get_item_count("bread") == 0, "Clamped eat still removes one bread")
+
+	Inventory.set_slot(0, "wild_berry", 3)
+	Inventory.set_selected_hotbar_index(0)
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	assert_true(Inventory.use_selected_item() == Inventory.EAT_FULL, "Full stamina refuses to eat")
+	assert_true(is_equal_approx(StaminaManager.current_stamina, StaminaManager.max_stamina), "Full stamina stays at the cap")
+	assert_true(Inventory.get_item_count("wild_berry") == 3, "Refusing at full stamina does not remove the berry")
+
+	Inventory.set_slot(0, "turnip_seed", 4)
+	Inventory.set_selected_hotbar_index(0)
+	StaminaManager.set_stamina(30.0)
+	assert_true(Inventory.use_selected_item() == Inventory.EAT_NOT_EDIBLE, "Seeds are not eaten")
+	assert_true(Inventory.get_item_count("turnip_seed") == 4, "Seed count stays put")
+	assert_true(is_equal_approx(StaminaManager.current_stamina, 30.0), "Seeds do not restore stamina")
+
+	Inventory.set_slot(0, "stone", 6)
+	assert_true(Inventory.use_selected_item() == Inventory.EAT_NOT_EDIBLE, "Stone is not eaten")
+	assert_true(Inventory.get_item_count("stone") == 6, "Stone count stays put")
+	assert_true(is_equal_approx(StaminaManager.current_stamina, 30.0), "Stone does not restore stamina")
+
+	Inventory.load_state(inv_snapshot)
+	StaminaManager.set_max_stamina(saved_max)
+	StaminaManager.set_stamina(saved_stamina)
+	print("  Eat food stamina: All tests completed")
 
 func assert_true(condition: bool, message: String):
 	total_tests += 1

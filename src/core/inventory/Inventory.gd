@@ -337,6 +337,51 @@ func get_selected_item_id() -> String:
 		return _slots[_selected_hotbar_index].item_id
 	return ""
 
+# 吃东西的结果。体力已满时不吃（EAT_FULL），避免浪费食物。
+const EAT_NOT_EDIBLE := 0
+const EAT_ATE := 1
+const EAT_FULL := 2
+
+## 使用快捷栏选中的消耗品。use_effect 含 energy 才吃：先 remove_item 1 个，再 restore_stamina。
+## 种子、矿石等没有 energy 的物品返回 EAT_NOT_EDIBLE，背包和体力都不变。
+## 体力已经到达上限时返回 EAT_FULL，不扣物品。
+func use_selected_item() -> int:
+	var item_id := get_selected_item_id()
+	var energy := _food_energy(item_id)
+	if energy <= 0.0 or not has_item(item_id, 1):
+		return EAT_NOT_EDIBLE
+	if StaminaManager.current_stamina >= StaminaManager.max_stamina:
+		_toast_eat("体力已经满了", "info")
+		return EAT_FULL
+	var before := StaminaManager.current_stamina
+	if not remove_item(item_id, 1):
+		return EAT_NOT_EDIBLE
+	StaminaManager.restore_stamina(energy)
+	var gained := int(round(StaminaManager.current_stamina - before))
+	_toast_eat("恢复了 %d 体力" % gained, "success")
+	return EAT_ATE
+
+func _food_energy(item_id: String) -> float:
+	if item_id.is_empty():
+		return 0.0
+	var db: ItemDatabase = _item_database
+	if db == null:
+		db = get_node_or_null("/root/ItemDatabase") as ItemDatabase
+	if db == null:
+		return 0.0
+	var item := db.get_item(item_id)
+	if item == null:
+		return 0.0
+	var effect: Dictionary = item.use_effect
+	if not effect.has("energy"):
+		return 0.0
+	return float(effect.get("energy", 0))
+
+func _toast_eat(text: String, variant: String) -> void:
+	var ui := get_node_or_null("/root/UIManager")
+	if ui and ui.has_method("show_toast"):
+		ui.show_toast(text, {}, variant)
+
 ## 获取背包数据（用于存档）
 func get_save_data() -> Array:
 	var data := []

@@ -203,9 +203,20 @@ func _interact_key_active() -> bool:
 			return true
 	return false
 
+## 收起工具时，手里的食物用交互键吃掉。拿着工具时不吃。
+## 返回 Inventory.EAT_* 。不是食物时返回 EAT_NOT_EDIBLE，调用方继续挥工具。
+func try_eat_held_item() -> int:
+	if tool_manager == null or not tool_manager.is_using_hotbar_item():
+		return Inventory.EAT_NOT_EDIBLE
+	return Inventory.use_selected_item()
+
 ## 使用工具与目标交互
 func _use_tool_on_target() -> void:
 	if tool_manager == null:
+		return
+
+	# 空手拿着食物：空格/交互回体力，不挥工具、不播种。
+	if try_eat_held_item() != Inventory.EAT_NOT_EDIBLE:
 		return
 
 	_play_use_feedback()
