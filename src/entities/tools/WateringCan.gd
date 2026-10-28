@@ -48,11 +48,17 @@ func _ready() -> void:
 	var state = _farm_state()
 	if state:
 		# 容量和单次用水以 FarmState 为准，不在新场景里把水壶重新灌满。
-		max_water = state.WATERING_CAN_MAX_WATER
+		max_water = state.get_watering_can_max_water()
 		water_per_use = state.WATERING_CAN_WATER_PER_USE
+		if not state.watering_can_changed.is_connected(_on_farm_can_changed):
+			state.watering_can_changed.connect(_on_farm_can_changed)
 	else:
 		_local_water = max_water
 	print("[WateringCan] Initialized: ", current_water, "/", max_water, " water")
+
+
+func _on_farm_can_changed(_current: int, maximum: int) -> void:
+	max_water = maximum
 
 
 func _farm_state() -> Node:

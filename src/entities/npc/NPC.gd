@@ -1,6 +1,7 @@
 extends CharacterBody2D
 class_name NPC
 const InteractPromptScript = preload("res://src/ui/components/InteractPrompt.gd")  # preload: works before the class cache knows the class_name
+const ToolUpgradeUIScript = preload("res://src/ui/menus/ToolUpgradeUI.gd")
 
 ## NPC - 非玩家角色基类
 ## 处理移动、动画、碰撞检测、玩家交互和日程AI
@@ -743,7 +744,22 @@ func interact() -> void:
 	start_interaction()
 	interacted.emit(self)
 
+	if npc_id == "blacksmith_tom":
+		_open_tool_upgrade_ui()
+		return
+
 	# 发射对话开始事件
 	var event_bus = get_node_or_null("/root/EventBus")
 	if event_bus and event_bus.social:
 		event_bus.social.dialogue_started.emit(npc_id)
+
+func _open_tool_upgrade_ui() -> void:
+	var ui = ToolUpgradeUIScript.present()
+	if ui != null and ui.has_signal("ui_closed"):
+		var callback := Callable(self, "_on_tool_upgrade_closed")
+		if not ui.ui_closed.is_connected(callback):
+			ui.ui_closed.connect(callback, CONNECT_ONE_SHOT)
+
+
+func _on_tool_upgrade_closed() -> void:
+	end_interaction()

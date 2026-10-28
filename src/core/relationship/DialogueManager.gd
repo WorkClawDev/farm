@@ -406,6 +406,9 @@ func _trigger_single_effect(effect: Dictionary) -> void:
 			# ShopSystem 未实现，记录日志
 			print("[DialogueManager] Unlock shop (no system): ", shop_id)
 
+		"open_tool_upgrade":
+			ToolUpgradeUI.present()
+
 		"trigger_dialogue":
 			var npc = effect.get("npc", "")
 			var dialogue = effect.get("dialogue", "")

@@ -791,3 +791,23 @@
 - 满体力不吃：PASS。toast「体力已经满了」，不扣食物。截图 step3b_full_nofood.png。
 - 拿工具仍挥工具：PASS。重新拿锄头 Space，提示已翻过，不吃番茄。截图 step3b_tool_swing.png。
 - 已知：收获 toast 仍 ×2（打磨队列）；toast 用英文 id `tomato`。
+
+## 2026-10-28 15:35 第3步 3c：水壶升级 + 雨天自动浇（--new-game）
+- 铁匠开升级 UI：PASS。Space 找铁匠·汤姆直接弹出「工具升级」，不开对话。截图 step3c_upgrade_ui.png。
+- 水壶 20→40：未完成（阻塞）。升级 UI 只能鼠标点选工具；Tab/方向键/Enter 都选不中，看不到水壶效果和升级按钮。列表显示英文枚举 HOE/WATERING_CAN 等。材料路径（5铁锭+500金）因此也没测到。
+- 雨天自动浇：PASS。先翻 3 格干土（雨天中午翻的也不会当场浇）；F 睡到雨天早晨，三格变湿。截图 step3c_tilled_dry.png、step3c_rain_watered.png。
+
+## 2026-10-28 16:24 复测 toolui：键盘焦点 + 中文名（--new-game）
+- 空格开升级 UI：PASS。对铁匠·汤姆 Space，无对话，直接「工具升级」。
+- 中文名：PASS。列表「锄头/水壶/斧头/镐/镰刀/锤子 [铜]」，无英文枚举。截图 toolui_open.png
+- 键盘选水壶：PASS。↓ 移绿框；对准行按 Enter/Space 才刷新资料。水壶资料含「水量: 20次 -> 40次」。截图 toolui_can_focus.png
+- 缺材料：PASS。`iron_ingot 0/5` 红、`gold_coins 500/500` 绿；按钮文案「材料不足」禁用，不在焦点链。无 toast。截图 toolui_upgrade_attempt.png
+- 20→40 实机：未做成（开局无铁锭；店卖 5000 且要 mines_level_40）。雨天自动浇此前已 PASS。
+- 小问题：材料仍英文 id；任务条挡标题左缘；箭头只动绿框不改资料，易错位。
+
+## 2026-10-28 17:14 补测水壶铜→铁 20→40（--new-game，F8 发铁）
+- F8 发铁：PASS。升级 UI 开着按 F8，日志 `+5 iron_ingot (ok=true, now=5)`，快捷栏出现铁锭×5。
+- 升级成功：PASS。日志 `Upgraded 水壶 from 铜 to 铁`，`- $500 (UPGRADE)`；界面「升级成功!」。列表变「水壶 [铁]」，效率 1.5x。截图 can40_before/after/cost.png
+- 材料扣除：PASS。铁锭 5→0，金币 500→0。
+- 40 次：升级前文案「水量: 20次 -> 40次」PASS；升后因铁/金同为 40 次，效果行不再显示水量差（只显示金级效率/范围/体力）。未回农场实浇核对 x/40。
+- 小问题：铁匠汤姆与医生玛丽站位很近，先容易点到医生对话。

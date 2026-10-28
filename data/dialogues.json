@@ -368,7 +368,8 @@
               {"speaker": "铁匠·汤姆", "text": "升级后可以一次浇水三格。"}
             ],
             "effects": [
-              {"type": "set_flag", "key": "upgrade_can_available", "value": true}
+              {"type": "set_flag", "key": "upgrade_can_available", "value": true},
+              {"type": "open_tool_upgrade"}
             ]
           },
           "decline": {

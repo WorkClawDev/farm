@@ -17,6 +17,8 @@ const WATERED := 2
 ## 水壶水量也存在这里（唯一来源）：玩家/工具节点每个场景都会重建，
 ## 如果水量只放在 WateringCan 节点上，切场景就会被重置成满水。
 const WATERING_CAN_MAX_WATER := 100
+## 铁壶及以上。每次仍扣 5，所以是 40 次。旧档没有这个字段时保持铜壶 20 次。
+const WATERING_CAN_IRON_MAX_WATER := 200
 const WATERING_CAN_WATER_PER_USE := 5
 
 ## --debug-crops plants tomato here and green bean on the next cell.
@@ -51,6 +53,7 @@ const DEBRIS_TOOL := {
 enum WaterResult { WATERED_OK, NOT_TILLED, ALREADY_WATERED, CAN_EMPTY }
 
 var _cells: Dictionary = {}
+var _watering_can_max_water: int = WATERING_CAN_MAX_WATER
 var _watering_can_water: int = WATERING_CAN_MAX_WATER
 
 
@@ -67,6 +70,8 @@ func reset() -> void:
 			var coord := Vector2i(x, y)
 			_cells[_key(coord)] = _new_cell(coord)
 	_seed_opening_debris()
+	_watering_can_max_water = WATERING_CAN_MAX_WATER
+	_watering_can_water = -1
 	set_watering_can_water(WATERING_CAN_MAX_WATER)
 	farm_reset.emit()
 
@@ -316,7 +321,7 @@ func get_watering_can_water() -> int:
 
 
 func get_watering_can_max_water() -> int:
-	return WATERING_CAN_MAX_WATER
+	return _watering_can_max_water
 
 
 func get_watering_can_uses_left() -> int:
@@ -324,27 +329,51 @@ func get_watering_can_uses_left() -> int:
 
 
 func get_watering_can_max_uses() -> int:
-	return WATERING_CAN_MAX_WATER / WATERING_CAN_WATER_PER_USE
+	return _watering_can_max_water / WATERING_CAN_WATER_PER_USE
 
 
 func has_watering_charge() -> bool:
 	return _watering_can_water >= WATERING_CAN_WATER_PER_USE
 
 
+func set_watering_can_max_water(maximum: int) -> void:
+	var next := maxi(WATERING_CAN_WATER_PER_USE, maximum)
+	if next == _watering_can_max_water:
+		return
+	_watering_can_max_water = next
+	if _watering_can_water > _watering_can_max_water:
+		_watering_can_water = _watering_can_max_water
+	watering_can_changed.emit(_watering_can_water, _watering_can_max_water)
+
+
 func set_watering_can_water(value: int) -> void:
-	var clamped := clampi(value, 0, WATERING_CAN_MAX_WATER)
+	var clamped := clampi(value, 0, _watering_can_max_water)
 	if clamped == _watering_can_water:
 		return
 	_watering_can_water = clamped
-	watering_can_changed.emit(_watering_can_water, WATERING_CAN_MAX_WATER)
+	watering_can_changed.emit(_watering_can_water, _watering_can_max_water)
 
 
 ## 装满水壶；返回 false 表示本来就是满的。
 func refill_watering_can() -> bool:
-	if _watering_can_water >= WATERING_CAN_MAX_WATER:
+	if _watering_can_water >= _watering_can_max_water:
 		return false
-	set_watering_can_water(WATERING_CAN_MAX_WATER)
+	set_watering_can_water(_watering_can_max_water)
 	return true
+
+
+## 铜是 0。铁及以上用铁壶容量。
+func watering_can_max_water_for_tier(tier: int) -> int:
+	if tier <= 0:
+		return WATERING_CAN_MAX_WATER
+	return WATERING_CAN_IRON_MAX_WATER
+
+
+## 升级成功后立刻提高上限并灌满。
+func apply_watering_can_upgrade(tier: int) -> void:
+	var maximum := watering_can_max_water_for_tier(tier)
+	set_watering_can_max_water(maximum)
+	set_watering_can_water(maximum)
 
 
 func can_harvest(coord: Vector2i) -> bool:
@@ -384,6 +413,29 @@ func harvest(coord: Vector2i) -> Dictionary:
 	return result
 
 
+## 雨天和暴风雨：已翻地，以及还种着作物的格子，都变成浇过水。空的未翻地不动。
+func water_from_rain() -> int:
+	var changed := 0
+	for key in _cells.keys():
+		var cell: Dictionary = _cells[key]
+		var has_crop: bool = not bool(cell.crop.is_empty())
+		var state := int(cell.state)
+		if state == UNTILLED and not has_crop:
+			continue
+		var already := state == WATERED and int(cell.get("moisture", 0)) >= 100
+		if has_crop:
+			already = already and bool(cell.crop.get("watered", false))
+		if already:
+			continue
+		cell.state = WATERED
+		cell.moisture = 100
+		if has_crop:
+			cell.crop.watered = true
+		changed += 1
+		_emit_changed(Vector2i(int(cell.x), int(cell.y)))
+	return changed
+
+
 func advance_day() -> void:
 	# GameManager 先长田，再让 TimeManager 进入下一天。今天已是季末时，这一夜会换季。
 	var season_changes := _season_changes_tonight()
@@ -412,6 +464,7 @@ func get_save_state() -> Dictionary:
 		"height": GRID_HEIGHT,
 		"cells": cells,
 		"watering_can_water": _watering_can_water,
+		"watering_can_max_water": _watering_can_max_water,
 	}
 
 
@@ -428,7 +481,10 @@ func load_save_state(data: Dictionary) -> bool:
 			return false
 		restored[_key(coord)] = _sanitize_cell(raw_cell, coord)
 	_cells = restored
-	set_watering_can_water(int(data.get("watering_can_water", WATERING_CAN_MAX_WATER)))
+	var saved_max := int(data.get("watering_can_max_water", WATERING_CAN_MAX_WATER))
+	_watering_can_max_water = maxi(WATERING_CAN_WATER_PER_USE, saved_max)
+	_watering_can_water = -1
+	set_watering_can_water(int(data.get("watering_can_water", _watering_can_max_water)))
 	farm_reset.emit()
 	return true
 

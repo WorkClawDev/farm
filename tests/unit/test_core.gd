@@ -28,6 +28,7 @@ func _ready() -> void:
 	run_debug_launch_parse_tests()
 	run_day_start_and_collapse_tests()
 	run_eat_food_stamina_tests()
+	run_watering_can_upgrade_and_rain_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -1321,6 +1322,201 @@ func run_eat_food_stamina_tests() -> void:
 	StaminaManager.set_max_stamina(saved_max)
 	StaminaManager.set_stamina(saved_stamina)
 	print("  Eat food stamina: All tests completed")
+
+func run_watering_can_upgrade_and_rain_tests() -> void:
+	print("\n[Watering Can Upgrade And Rain Tests]")
+
+	var farm_snapshot: Dictionary = FarmState.get_save_state()
+	var inv_snapshot: Dictionary = Inventory.save_state()
+	var money_before: int = MoneySystem.get_money()
+	var saved_time: float = TimeManager.current_time
+	var saved_day: int = TimeManager.current_day
+	var saved_season: int = TimeManager.current_season
+	var saved_year: int = TimeManager.current_year
+	var saved_paused: bool = TimeManager.is_paused
+	var saved_pause_count: int = TimeManager._pause_count
+	var saved_weather: String = GameSession.weather.get_current_weather()
+	var saved_state: int = GameManager.current_state
+	var saved_active: bool = GameManager.is_game_active
+	var tree_paused: bool = get_tree().paused
+
+	FarmState.reset()
+	assert_true(FarmState.get_watering_can_max_uses() == 20, "未升级水壶是 20 次")
+	assert_true(FarmState.get_watering_can_uses_left() == 20, "新水壶是满的 20 次")
+	assert_true(FarmState.get_watering_can_max_water() == 100, "铜壶水量上限是 100")
+
+	var iron_before: int = Inventory.get_item_count("iron_ingot")
+	if iron_before > 0:
+		Inventory.remove_item("iron_ingot", iron_before)
+	var coins_before: int = Inventory.get_item_count("gold_coins")
+	if coins_before > 0:
+		Inventory.remove_item("gold_coins", coins_before)
+	MoneySystem.set_money(0)
+
+	var system: ToolUpgrade = ToolUpgrade.new()
+	add_child(system)
+	system.set_inventory(Inventory)
+	assert_true(not system.upgrade_tool(ToolUpgrade.ToolType.WATERING_CAN), "没有材料和金币时不能升级水壶")
+	assert_true(FarmState.get_watering_can_max_uses() == 20, "升级失败时水壶仍是 20 次")
+
+	FarmState.set_watering_can_water(15)
+	var requirements: Array = system.get_upgrade_requirements(ToolUpgrade.ToolTier.COPPER)
+	var gold_cost: int = 0
+	for req in requirements:
+		if str(req.material_id) == "gold_coins":
+			gold_cost = int(req.quantity)
+			MoneySystem.set_money(gold_cost)
+		else:
+			Inventory.add_item(str(req.material_id), int(req.quantity))
+	assert_true(gold_cost == 500, "铜升铁花费 500 金币")
+	assert_true(system.upgrade_tool(ToolUpgrade.ToolType.WATERING_CAN), "材料加金币可以升级水壶")
+	var upgraded = system.get_tool_data(ToolUpgrade.ToolType.WATERING_CAN)
+	assert_true(upgraded != null and int(upgraded.current_tier) == ToolUpgrade.ToolTier.IRON, "水壶升到铁")
+	assert_true(FarmState.get_watering_can_max_uses() == 40, "升级后水壶是 40 次")
+	assert_true(FarmState.get_watering_can_max_water() == 200, "铁壶水量上限是 200")
+	assert_true(FarmState.get_watering_can_uses_left() == 40, "升级后立刻灌满")
+	assert_true(MoneySystem.get_money() == 0, "升级扣掉金币")
+	assert_true(Inventory.get_item_count("iron_ingot") == 0, "升级消耗铁锭")
+	assert_true(not system.upgrade_tool(ToolUpgrade.ToolType.WATERING_CAN), "没有下一级材料时不再升级")
+	assert_true(FarmState.get_watering_can_max_uses() == 40, "下一级失败后仍是 40 次")
+	system.free()
+
+	var again: ToolUpgrade = ToolUpgrade.new()
+	add_child(again)
+	again.sync_watering_can_from_farm()
+	var synced = again.get_tool_data(ToolUpgrade.ToolType.WATERING_CAN)
+	assert_true(synced != null and int(synced.current_tier) == ToolUpgrade.ToolTier.IRON, "再次打开升级界面时铁壶不会退回铜")
+	again.free()
+
+	FarmState.set_watering_can_water(50)
+	var upgraded_save: Dictionary = FarmState.get_save_state()
+	FarmState.reset()
+	assert_true(FarmState.get_watering_can_max_uses() == 20, "重置后回到 20 次")
+	assert_true(FarmState.load_save_state(upgraded_save), "铁壶存档可以读回")
+	assert_true(FarmState.get_watering_can_max_uses() == 40, "存档记住 40 次上限")
+	assert_true(FarmState.get_watering_can_uses_left() == 10, "存档记住剩余水量")
+
+	var legacy: Dictionary = upgraded_save.duplicate(true)
+	legacy.erase("watering_can_max_water")
+	legacy.erase("watering_can_water")
+	assert_true(FarmState.load_save_state(legacy), "旧档可以读")
+	assert_true(FarmState.get_watering_can_max_uses() == 20, "旧档没有上限字段时仍是 20 次")
+	assert_true(FarmState.get_watering_can_uses_left() == 20, "旧档没有水量字段时按满水")
+
+	FarmState.reset()
+	TimeManager.current_season = 0
+	TimeManager.current_day = 10
+	var bare: Dictionary = FarmState.get_save_state()
+	for raw in bare["cells"]:
+		if int(raw.get("x", -1)) == 5 and int(raw.get("y", -1)) == 1:
+			raw["state"] = FarmState.UNTILLED
+			raw["debris"] = ""
+			raw["moisture"] = 0
+			raw["crop"] = {
+				"crop_id": "turnip",
+				"stage": 0,
+				"days_in_stage": 0,
+				"total_days": 0,
+				"watered": false,
+				"quality": 0,
+				"mature": false,
+			}
+		elif int(raw.get("x", -1)) == 6 and int(raw.get("y", -1)) == 1:
+			raw["state"] = FarmState.UNTILLED
+			raw["debris"] = ""
+			raw["moisture"] = 0
+			raw["crop"] = {}
+	assert_true(FarmState.load_save_state(bare), "雨天夹具可以读")
+	GameSession.weather.set_current_weather("rainy")
+	GameSession.weather.apply_day_start_watering()
+	var cropped := FarmState.get_cell(Vector2i(5, 1))
+	var empty := FarmState.get_cell(Vector2i(6, 1))
+	assert_true(int(cropped.get("state", -1)) == FarmState.WATERED and bool(Dictionary(cropped.get("crop", {})).get("watered", false)), "雨天把有作物的格子浇湿")
+	assert_true(int(empty.get("state", -1)) == FarmState.UNTILLED, "雨天不浇空的未翻地")
+
+	FarmState.reset()
+	TimeManager.current_season = 0
+	TimeManager.current_day = 10
+	var plot := Vector2i(1, 1)
+	var open_soil := Vector2i(2, 1)
+	var untouched := Vector2i(3, 1)
+	var guarded := Vector2i(4, 1)
+	assert_true(Inventory.add_item("turnip_seed", 1), "雨天夹具有一包萝卜种子")
+	assert_true(FarmState.till(plot) and FarmState.plant(plot, "turnip_seed"), "雨天夹具翻地并种下萝卜")
+	assert_true(FarmState.till(open_soil), "雨天夹具有一块空耕地")
+	GameSession.weather.set_current_weather("rainy")
+	FarmState.advance_day()
+	var dried := FarmState.get_cell(plot)
+	var dried_crop: Dictionary = dried.get("crop", {})
+	assert_true(int(dried.get("state", -1)) == FarmState.TILLED and not bool(dried_crop.get("watered", true)) and int(dried_crop.get("total_days", -1)) == 0, "过夜结算本身不因当前是雨天而浇水，未浇过的作物不生长")
+	GameSession.weather.apply_day_start_watering()
+	var soaked := FarmState.get_cell(plot)
+	var soaked_crop: Dictionary = soaked.get("crop", {})
+	assert_true(int(soaked.get("state", -1)) == FarmState.WATERED and bool(soaked_crop.get("watered", false)) and int(soaked_crop.get("total_days", -1)) == 0, "雨天开始后耕地被浇湿，但不再额外长一天")
+	assert_true(int(FarmState.get_cell(open_soil).get("state", -1)) == FarmState.WATERED, "雨天浇湿没有作物的耕地")
+	assert_true(int(FarmState.get_cell(untouched).get("state", -1)) == FarmState.UNTILLED, "雨天不改未翻的空地")
+	FarmState.advance_day()
+	var grown: Dictionary = FarmState.get_cell(plot).get("crop", {})
+	assert_true(int(grown.get("total_days", -1)) == 1, "雨天浇过的下一夜作物生长")
+
+	FarmState.advance_day()
+	GameSession.weather.set_current_weather("sunny")
+	GameSession.weather.apply_day_start_watering()
+	assert_true(int(FarmState.get_cell(plot).get("state", -1)) == FarmState.TILLED, "晴天不会把耕地浇湿")
+
+	assert_true(FarmState.till(guarded), "暴风雨夹具可以翻开一块新地")
+	GameSession.weather.forced_weather = "stormy"
+	TimeManager.current_time = 9.0
+	GameSession.weather._on_day_changed(TimeManager.current_day)
+	assert_true(GameSession.weather.get_current_weather() == "stormy", "可钉住暴风雨")
+	assert_true(int(FarmState.get_cell(guarded).get("state", -1)) == FarmState.TILLED, "重置时刻的 day_changed 不浇地")
+	TimeManager.current_time = 6.0
+	GameSession.weather._on_day_changed(TimeManager.current_day)
+	assert_true(int(FarmState.get_cell(guarded).get("state", -1)) == FarmState.WATERED, "过夜 6 点的暴风雨浇湿耕地")
+	assert_true(int(FarmState.get_cell(untouched).get("state", -1)) == FarmState.UNTILLED, "暴风雨也不浇空的未翻地")
+	GameSession.weather.forced_weather = ""
+
+	DialogueManager._trigger_single_effect({"type": "open_tool_upgrade"})
+	var from_dialogue := get_tree().root.find_child("ToolUpgradeUI", true, false)
+	assert_true(from_dialogue != null and from_dialogue.visible, "水壶对话效果打开升级界面")
+	if from_dialogue and from_dialogue.has_method("close"):
+		from_dialogue.close()
+		from_dialogue.free()
+
+	TimeManager.current_time = 10.0
+	var packed := load("res://src/entities/npc/NPC.tscn") as PackedScene
+	assert_true(packed != null, "NPC 场景可以加载")
+	if packed != null:
+		var tom := packed.instantiate() as NPC
+		tom.npc_id = "blacksmith_tom"
+		add_child(tom)
+		assert_true(tom.can_interact(), "上午的铁匠汤姆可以交互")
+		tom.interact()
+		var smith_ui := get_tree().root.find_child("ToolUpgradeUI", true, false)
+		assert_true(smith_ui != null and smith_ui.visible, "铁匠汤姆打开工具升级界面")
+		assert_true(not DialogueManager.is_in_dialogue(), "铁匠交互直接打开升级界面，不卡在对话里")
+		if smith_ui and smith_ui.has_method("close"):
+			smith_ui.close()
+		tom.free()
+		if smith_ui and is_instance_valid(smith_ui):
+			smith_ui.free()
+
+	GameSession.weather.forced_weather = ""
+	GameSession.weather.set_current_weather(saved_weather)
+	TimeManager.current_time = saved_time
+	TimeManager.current_day = saved_day
+	TimeManager.current_season = saved_season
+	TimeManager.current_year = saved_year
+	TimeManager._pause_count = saved_pause_count
+	TimeManager.is_paused = saved_paused
+	MoneySystem.set_money(money_before)
+	Inventory.load_state(inv_snapshot)
+	FarmState.load_save_state(farm_snapshot)
+	GameManager.current_state = saved_state
+	GameManager.is_game_active = saved_active
+	get_tree().paused = tree_paused
+	print("  Watering can upgrade and rain: All tests completed")
+
 
 func assert_true(condition: bool, message: String):
 	total_tests += 1

@@ -31,6 +31,10 @@ const PLAYABLE_SCENES := [
 ## Debug sleep. Bare F is not a game binding (interact is Space/E).
 ## Ctrl+F is Godot's built-in ui_filedialog_find; this ignores modifiers. F9 spawns farm animals.
 const DEBUG_SLEEP_KEY := KEY_F
+## Debug iron for the smith. Bare F8, no modifiers. Copper watering can needs 5 iron ingots.
+const DEBUG_IRON_KEY := KEY_F8
+const DEBUG_IRON_ITEM := "iron_ingot"
+const DEBUG_IRON_COUNT := 5
 
 var current_state: GameState = GameState.MENU
 var is_game_active := false
@@ -40,6 +44,10 @@ var _advancing_day := false
 
 
 func _ready() -> void:
+	# Smith UI and UIManager modals pause the tree. Debug F8 still has to arrive.
+	# Sleep keeps the old rule and ignores keys while the tree is paused.
+	if OS.is_debug_build():
+		process_mode = Node.PROCESS_MODE_ALWAYS
 	TimeManager.day_end_requested.connect(_on_day_end_requested)
 	print("[GameManager] Initialized")
 
@@ -290,6 +298,14 @@ func _apply_player_snapshot(data: Dictionary) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if wants_debug_iron(event, OS.is_debug_build()):
+		if _debug_iron_allowed():
+			get_viewport().set_input_as_handled()
+			_grant_debug_iron()
+		return
+	# This autoload used to be pausable, so sleep never saw keys while the tree was paused.
+	if get_tree().paused:
+		return
 	if not wants_debug_sleep(event, OS.is_debug_build()):
 		return
 	if not is_game_active or current_state != GameState.PLAYING:
@@ -310,6 +326,61 @@ func wants_debug_sleep(event: InputEvent, debug_build: bool) -> bool:
 	if key.ctrl_pressed or key.alt_pressed or key.meta_pressed or key.shift_pressed:
 		return false
 	return key.keycode == DEBUG_SLEEP_KEY or key.physical_keycode == DEBUG_SLEEP_KEY
+
+
+## True when this key should grant debug iron. Release builds pass false.
+func wants_debug_iron(event: InputEvent, debug_build: bool) -> bool:
+	if not debug_build or not (event is InputEventKey):
+		return false
+	var key := event as InputEventKey
+	if not key.pressed or key.echo:
+		return false
+	if key.ctrl_pressed or key.alt_pressed or key.meta_pressed or key.shift_pressed:
+		return false
+	return key.keycode == DEBUG_IRON_KEY or key.physical_keycode == DEBUG_IRON_KEY
+
+
+func _debug_iron_allowed() -> bool:
+	if not is_game_active:
+		return false
+	if current_state == GameState.PLAYING and not get_tree().paused:
+		return true
+	if UIManager != null and UIManager.has_open_modal():
+		return true
+	return _tool_upgrade_ui_open()
+
+
+func _tool_upgrade_ui_open() -> bool:
+	var tree := get_tree()
+	if tree == null:
+		return false
+	var ui := tree.root.find_child("ToolUpgradeUI", true, false)
+	return ui != null and is_instance_valid(ui) and ui.visible
+
+
+func _grant_debug_iron() -> void:
+	var added := Inventory.add_item(DEBUG_IRON_ITEM, DEBUG_IRON_COUNT)
+	var now := Inventory.get_item_count(DEBUG_IRON_ITEM)
+	print("[GameManager] debug F8: +%d %s (ok=%s, now=%d)" % [DEBUG_IRON_COUNT, DEBUG_IRON_ITEM, added, now])
+	if UIManager != null and UIManager.has_method("show_toast"):
+		var text := "调试：铁锭 +%d" % DEBUG_IRON_COUNT
+		if not added:
+			text = "调试：铁锭没放进背包"
+		UIManager.show_toast(text, {}, "info" if added else "warning")
+	_refresh_open_tool_upgrade()
+
+
+func _refresh_open_tool_upgrade() -> void:
+	var tree := get_tree()
+	if tree == null:
+		return
+	var ui := tree.root.find_child("ToolUpgradeUI", true, false)
+	if ui == null or not is_instance_valid(ui) or not ui.visible:
+		return
+	if ui.has_method("_update_materials_list"):
+		ui.call("_update_materials_list")
+	if ui.has_method("_update_upgrade_button"):
+		ui.call("_update_upgrade_button")
 
 
 func _on_day_end_requested(reason: String) -> void:
