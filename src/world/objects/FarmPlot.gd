@@ -81,7 +81,11 @@ func setup(coord: Vector2i) -> void:
 	_debris_sprite.name = "DebrisSprite"
 	_debris_sprite.centered = true
 	_debris_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_debris_sprite.z_index = 1
+	# TilledArea is z -1. Absolute z 0 matches the player, so Farm's Y-sort
+	# compares feet instead of always painting the stump over the actor.
+	# The origin itself is moved onto the visible foot in _apply_debris.
+	_debris_sprite.z_as_relative = false
+	_debris_sprite.z_index = 0
 	_debris_sprite.position = Vector2(0, SIZE * 0.5)
 	_debris_sprite.visible = false
 	add_child(_debris_sprite)
@@ -220,5 +224,87 @@ func _apply_debris(kind: String, variant: int) -> void:
 	if not path.begins_with(PRIVATE_ROOT) and tex_size.y > SIZE:
 		sprite_scale = (SIZE * 0.85) / tex_size.y
 	_debris_sprite.scale = Vector2(sprite_scale, sprite_scale)
-	_debris_sprite.position = Vector2(0, SIZE * 0.5)
-	_debris_sprite.offset = Vector2(0, -tex_size.y * 0.5)
+	# Keep the texture's bottom on the cell's south edge, but put the node
+	# origin on the visible foot. Empty padding under the stump was south of
+	# that foot, so a player standing in front of the trunk still sorted behind.
+	var placement := debris_sprite_placement(texture, sprite_scale, SIZE * 0.5)
+	_debris_sprite.position = Vector2(0, float(placement.position_y))
+	_debris_sprite.offset = Vector2(0, float(placement.offset_y))
+
+
+## Greater foot Y draws in front. Same rule as the farmhouse foundation.
+static func actor_draws_in_front_of_debris(actor_y: float, foot_y: float) -> bool:
+	return actor_y > foot_y
+
+
+## Sprite origin (Y-sort key) on the opaque foot; texture bottom stays on ground_y.
+static func debris_sprite_placement(texture: Texture2D, sprite_scale: float, ground_y: float) -> Dictionary:
+	var tex_h := 0.0
+	if texture != null:
+		tex_h = float(texture.get_height())
+	var inset := debris_foot_inset_px(texture)
+	return {
+		"position_y": ground_y - inset * sprite_scale,
+		"offset_y": -tex_h * 0.5 + inset,
+		"inset_px": inset,
+	}
+
+
+## Pixels of transparent padding under each private debris sheet.
+## Baked so gameplay never calls Texture2D.get_image() or Image.load, both of
+## which leave an Image in the resource cache until process exit.
+const DEBRIS_FOOT_INSET_PX := {
+	"res://assets/private/topdown_farm/rocks/x4/separately/Rock1_5_x4.png": 0,
+	"res://assets/private/topdown_farm/rocks/x4/separately/Rock1_4_x4.png": 12,
+	"res://assets/private/topdown_farm/rocks/x4/separately/Rock2_5_x4.png": 8,
+	"res://assets/private/topdown_farm/rocks/x4/separately/Rock2_4_x4.png": 16,
+	"res://assets/private/topdown_farm/rocks/x4/separately/Rock3_5_x4.png": 0,
+	"res://assets/private/topdown_farm/rocks/x4/separately/Rock3_4_x4.png": 20,
+	"res://assets/private/topdown_farm/rocks/x4/separately/Rock4_5_x4.png": 0,
+	"res://assets/private/topdown_farm/rocks/x4/separately/Rock4_4_x4.png": 20,
+	"res://assets/private/topdown_farm/rocks/x4/separately/Rock5_5_x4.png": 0,
+	"res://assets/private/topdown_farm/rocks/x4/separately/Rock5_4_x4.png": 12,
+	"res://assets/private/topdown_farm/rocks/x4/separately/Rock6_5_x4.png": 4,
+	"res://assets/private/topdown_farm/rocks/x4/separately/Rock6_4_x4.png": 8,
+	"res://assets/private/topdown_farm/rocks/x4/separately/Rock7_5_x4.png": 16,
+	"res://assets/private/topdown_farm/rocks/x4/separately/Rock7_4_x4.png": 28,
+	"res://assets/private/topdown_farm/bushes/x4/separately/Assets/Bush_simple1_3_x4.png": 12,
+	"res://assets/private/topdown_farm/bushes/x4/separately/Assets/Bush_simple2_3_x4.png": 8,
+	"res://assets/private/topdown_farm/bushes/x4/separately/Assets/Fern1_3_x4.png": 4,
+	"res://assets/private/topdown_farm/bushes/x4/separately/Assets/Broken_tree1_x4.png": 8,
+	"res://assets/private/topdown_farm/bushes/x4/separately/Assets/Broken_tree2_x4.png": 8,
+	"res://assets/private/topdown_farm/trees/x4/separately/Trees/Broken_tree2_x4.png": 16,
+}
+
+
+## Texture pixels between the image bottom and the lowest opaque row.
+static func debris_foot_inset_px(texture: Texture2D) -> float:
+	if texture == null:
+		return 0.0
+	var path := texture.resource_path
+	if DEBRIS_FOOT_INSET_PX.has(path):
+		return float(DEBRIS_FOOT_INSET_PX[path])
+	if not path.is_empty():
+		return 0.0
+	return _measure_runtime_inset(texture)
+
+
+## Unit-test textures have no file. Duplicate, measure, then drop the copy.
+static func _measure_runtime_inset(texture: Texture2D) -> float:
+	var owned := texture.get_image()
+	if owned == null or owned.is_empty():
+		return 0.0
+	var copy := owned.duplicate() as Image
+	owned = null
+	if copy == null or copy.is_empty():
+		return 0.0
+	if copy.is_compressed():
+		copy.decompress()
+	var used := copy.get_used_rect()
+	var height := copy.get_height()
+	if not copy.resource_path.is_empty():
+		copy.resource_path = ""
+	copy = null
+	if used.size.x <= 0 or used.size.y <= 0:
+		return 0.0
+	return float(height - used.position.y - used.size.y)

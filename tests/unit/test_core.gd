@@ -39,6 +39,7 @@ func _ready() -> void:
 	run_stump_clear_toast_tests()
 	run_tool_number_hotkey_tests()
 	run_house_camera_follow_tests()
+	run_debris_ysort_tests()
 	run_shop_find_guide_tests()
 	run_quest_tracker_feature_tests()
 	
@@ -2533,6 +2534,67 @@ func run_house_camera_follow_tests() -> void:
 	assert_true(Farm.actor_draws_in_front_of_house(360.0, 278.0), "South of the foundation the player draws in front")
 	assert_true(not Farm.actor_draws_in_front_of_house(200.0, 278.0), "North of the foundation the wall draws in front")
 	print("  House camera follow: All tests completed")
+
+
+
+
+func run_debris_ysort_tests() -> void:
+	print("\n[Debris Y-Sort]")
+	var image := Image.create(16, 32, false, Image.FORMAT_RGBA8)
+	image.fill(Color(0, 0, 0, 0))
+	image.fill_rect(Rect2i(2, 4, 12, 16), Color(0.45, 0.28, 0.12, 1))
+	var tex := ImageTexture.create_from_image(image)
+	var place := FarmPlot.debris_sprite_placement(tex, 1.0, FarmPlot.SIZE * 0.5)
+	assert_true(is_equal_approx(float(place.inset_px), 12.0), "透明底边不计入树桩脚底")
+	assert_true(
+		is_equal_approx(float(place.position_y), FarmPlot.SIZE * 0.5 - 12.0),
+		"排序原点在可见脚底，不在贴图底边"
+	)
+	assert_true(is_equal_approx(float(place.offset_y), -4.0), "偏移让脚底落在节点原点")
+	var foot := float(place.position_y)
+	assert_true(FarmPlot.actor_draws_in_front_of_debris(foot + 4.0, foot), "脚在桩南侧时人画在前面")
+	assert_true(not FarmPlot.actor_draws_in_front_of_debris(foot - 4.0, foot), "脚在桩北侧时桩仍画在前面")
+	assert_true(
+		FarmPlot.actor_draws_in_front_of_debris(2.0, 1.0) == Farm.actor_draws_in_front_of_house(2.0, 1.0)
+			and FarmPlot.actor_draws_in_front_of_debris(0.0, 1.0) == Farm.actor_draws_in_front_of_house(0.0, 1.0),
+		"树桩和农舍用同一条脚底 Y 规则"
+	)
+	var solid := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	solid.fill(Color(1, 1, 1, 1))
+	var solid_tex := ImageTexture.create_from_image(solid)
+	var solid_place := FarmPlot.debris_sprite_placement(solid_tex, 1.0, FarmPlot.SIZE * 0.5)
+	assert_true(
+		is_equal_approx(float(solid_place.inset_px), 0.0)
+			and is_equal_approx(float(solid_place.position_y), FarmPlot.SIZE * 0.5),
+		"没有透明边时脚底就在贴图底边"
+	)
+	var plot := FarmPlot.new()
+	add_child(plot)
+	plot.setup(Vector2i(0, 0))
+	plot._apply_debris("stump", 0)
+	var sprite := plot._debris_sprite
+	assert_true(
+		sprite != null and not sprite.z_as_relative and sprite.z_index == 0,
+		"树桩精灵绝对 z 为 0，和玩家同一层"
+	)
+	if sprite != null and sprite.texture != null:
+		var live := FarmPlot.debris_sprite_placement(sprite.texture, sprite.scale.y, FarmPlot.SIZE * 0.5)
+		assert_true(is_equal_approx(sprite.position.y, float(live.position_y)), "树上的树桩节点落在脚底")
+		assert_true(is_equal_approx(sprite.offset.y, float(live.offset_y)), "树上的树桩偏移对准脚底")
+		var anchor_y := sprite.position.y
+		assert_true(FarmPlot.actor_draws_in_front_of_debris(anchor_y + 8.0, anchor_y), "站在树桩南侧时角色画在桩前")
+		assert_true(not FarmPlot.actor_draws_in_front_of_debris(anchor_y - 8.0, anchor_y), "站在树桩北侧时桩还能挡住角色")
+		if str(sprite.texture.resource_path).begins_with("res://assets/private/"):
+			assert_true(
+				float(live.inset_px) >= 8.0 and float(live.inset_px) <= 32.0,
+				"私有树桩脚底在贴图底边之上、树冠之下"
+			)
+	plot.free()
+	tex = null
+	solid_tex = null
+	image = null
+	solid = null
+	print("  Debris Y-sort: All tests completed")
 
 
 

@@ -899,3 +899,13 @@
 - 1–2 下：PASS。斧头 Space toast「树桩还没砍倒（1/3）」「（2/3）」，树桩仍在。截图 stumptoast_hit1.png、stumptoast_hit2.png
 - 第 3 下：PASS。toast「砍倒了树桩，获得木材」；树桩消失；快捷栏出现木材。无「这里没有树枝或树桩」。截图 stumptoast_clear.png
 - 改动待本地 commit（不 push、勿带 resource_sitemap.json）。
+
+## 2026-10-29 17:12 打磨：锄地 toast×2 复测（--new-game，HEAD 3b11635）
+- 一次 Space：PASS。锄头键 `1`，未翻田格南向按一次 Space（非长按）→ 只翻 1 格、toast 仅一条「土地已翻好」、无×2；体力 100→98。截图 hoetoast_once.png
+- 已翻格再 Space：一条「这里已经翻过了（点快捷栏或按 Tab 选种子）」，不多翻格。
+- Build 结论已不复现、未改代码；本复测确认，无需新 commit。
+
+## 2026-10-29 18:38 打磨：树桩/杂物 y-sort（--new-game）
+- 南侧：PASS。脚在桩脚南，角色整人画在桩前，不被盖。截图 stumpy_south.png
+- 北侧：PASS。脚在桩脚北、与干重叠，桩挡住身体，仅头顶右侧一缕可见。截图 stumpy_north.png
+- 改动待本地 commit（不 push、勿带 resource_sitemap.json）。

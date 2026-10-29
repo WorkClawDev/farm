@@ -2316,12 +2316,50 @@ func _exercise_opening_debris() -> void:
 	if stump_sprite != null and stump_sprite.texture != null:
 		stump_art = FarmPlot.resolve_debris_texture_path("stump", int(FarmState.get_cell(stump).get("debris_variant", 0)))
 	_record("杂草画在格子上", weed_sprite != null and weed_sprite.visible and weed_sprite.texture != null)
+	var stump_place := {}
+	if stump_sprite != null and stump_sprite.texture != null:
+		stump_place = FarmPlot.debris_sprite_placement(stump_sprite.texture, stump_sprite.scale.y, FarmPlot.SIZE * 0.5)
+	var stump_tex_bottom := 0.0
+	if stump_sprite != null and stump_sprite.texture != null:
+		stump_tex_bottom = stump_sprite.position.y + (stump_sprite.offset.y + stump_sprite.texture.get_height() * 0.5) * stump_sprite.scale.y
+	var stump_foot := 0.0
+	if stump_sprite != null:
+		stump_foot = stump_sprite.position.y
+	var sort_player := farm.find_child("Player", true, false) as CanvasItem
 	_record(
-		"树桩底边贴着格子底边，私有图 scale 为 1",
+		"树桩脚底是排序原点，贴图底边仍贴着格子底边",
 		stump_sprite != null and stump_sprite.visible and stump_sprite.texture != null
-			and is_equal_approx(stump_sprite.position.y, FarmPlot.SIZE * 0.5)
-			and is_equal_approx(stump_sprite.offset.y, -stump_sprite.texture.get_height() * 0.5)
+			and not stump_place.is_empty()
+			and is_equal_approx(stump_sprite.position.y, float(stump_place.position_y))
+			and is_equal_approx(stump_sprite.offset.y, float(stump_place.offset_y))
+			and is_equal_approx(stump_tex_bottom, FarmPlot.SIZE * 0.5)
+			and (not stump_art.begins_with("res://assets/private/") or (
+				float(stump_place.inset_px) > 0.0 and stump_sprite.position.y < FarmPlot.SIZE * 0.5
+			))
 			and (not stump_art.begins_with("res://assets/private/") or stump_sprite.scale == Vector2.ONE)
+	)
+	_record(
+		"树桩和玩家同 z，南侧人在前、北侧桩仍挡住",
+		stump_sprite != null and sort_player != null
+			and not stump_sprite.z_as_relative
+			and stump_sprite.z_index == sort_player.z_index
+			and farm.y_sort_enabled
+			and farm.tilled_area.y_sort_enabled
+			and stump_plot.y_sort_enabled
+			and FarmPlot.actor_draws_in_front_of_debris(stump_foot + 8.0, stump_foot)
+			and not FarmPlot.actor_draws_in_front_of_debris(stump_foot - 8.0, stump_foot)
+			and FarmPlot.actor_draws_in_front_of_debris(2.0, 1.0) == Farm.actor_draws_in_front_of_house(2.0, 1.0)
+	)
+	var weed_place := {}
+	if weed_sprite != null and weed_sprite.texture != null:
+		weed_place = FarmPlot.debris_sprite_placement(weed_sprite.texture, weed_sprite.scale.y, FarmPlot.SIZE * 0.5)
+	_record(
+		"杂草石枝和树桩用同一套脚底排序",
+		weed_sprite != null and not weed_place.is_empty()
+			and is_equal_approx(weed_sprite.position.y, float(weed_place.position_y))
+			and is_equal_approx(weed_sprite.offset.y, float(weed_place.offset_y))
+			and weed_sprite.z_index == stump_sprite.z_index
+			and weed_sprite.z_as_relative == stump_sprite.z_as_relative
 	)
 	_record(
 		"树桩碰撞是一格",
