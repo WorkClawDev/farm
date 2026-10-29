@@ -54,9 +54,24 @@ func _ready() -> void:
 	_setup_bed_sprite()
 	# Leave by the door you came in through (BUG-40): the village door or the farm.
 	_exit_to_village = GameManager.current_spawn_point == "village_house_entrance"
+	_show_village_home_hint()
 	var player := get_tree().get_first_node_in_group("player") as Node2D
 	if player:
 		player.global_position = player_spawn.global_position
+
+
+## Village door opens a furnished home, not the shop.
+static func village_home_hint(spawn_point: String) -> String:
+	if spawn_point == "village_house_entrance":
+		return "这是住家，商店在外面找莉莉"
+	return ""
+
+func _show_village_home_hint() -> void:
+	var spawn := GameManager.current_spawn_point if GameManager else ""
+	var text := village_home_hint(spawn)
+	if text.is_empty() or UIManager == null:
+		return
+	UIManager.show_toast(text, {}, "info")
 
 func _setup_map() -> void:
 	for issue in map_root.validate():

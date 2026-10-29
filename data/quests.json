@@ -66,7 +66,7 @@
     {
       "id": "village_introduction",
       "title": "认识村民",
-      "description": "去村子里认识一下友善的村民们。",
+      "description": "先去找店主莉莉买种子，再认识其他村民。",
       "quest_giver": "mayor",
       "prerequisites": [],
       "objectives": [
@@ -74,7 +74,7 @@
           "type": "talk_to",
           "target": "shopkeeper",
           "required": 1,
-          "description": "与店主交谈"
+          "description": "去找店主莉莉买种子"
         },
         {
           "type": "talk_to",

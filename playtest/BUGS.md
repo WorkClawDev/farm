@@ -877,3 +877,10 @@
 - 屋前可见：PASS。南侧门廊前人完整在屋前，不被建筑盖住。截图 camhouse_front.png
 - 门前不被 HUD 挡：PASS。台阶处角色在画面中部，任务条/工具栏都不盖人。截图 camhouse_door.png
 - 改动待本地 commit（不 push、勿带 resource_sitemap.json）。
+
+## 2026-10-29 12:46 打磨：商店可发现性（--new-game）
+- 引导：PASS。村西/广场牌子「→ 莉莉的店」；住家门「⌂ 住家」「商店在东边」；莉莉头顶「商店」气泡。截图 shopfind_sign.png
+- 开店：PASS。东侧门外店主·莉莉 Space 开「种子商店」买卖。截图 shopfind_lily_shop.png
+- 误进住家：PASS。toast「这是住家，商店在外面找莉莉」。截图 shopfind_home_toast.png
+- 小问题：任务条仍只显示「农场入门/收获1个防风草」；「认识村民/去找店主莉莉买种子」未出现在当前任务条（日志有 accept village_introduction）。不挡本单。
+- 改动待本地 commit（不 push、勿带 resource_sitemap.json）。

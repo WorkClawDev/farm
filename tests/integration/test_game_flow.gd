@@ -240,6 +240,27 @@ func _exercise_scene(scene_name: String, scene_path: String) -> void:
 			var shopkeeper := instance.get_node_or_null("NPCs/Maria") as ShopNPC
 			var mayor := instance.get_node_or_null("NPCs/MayorThomas") as NPC
 			_record("种子商店NPC可交互", shopkeeper != null)
+			var west_sign := instance.get_node_or_null("ShopGuides/WestSign/ShopSign") as Label
+			var plaza_sign := instance.get_node_or_null("ShopGuides/PlazaSign/ShopSign") as Label
+			_record(
+				"进村路口和广场有莉莉商店牌子",
+				west_sign != null and plaza_sign != null
+					and str(west_sign.text).contains("莉莉")
+					and str(plaza_sign.text).contains("莉莉")
+					and west_sign.get_parent().global_position.distance_to(Vector2(150, 300)) < 280.0
+			)
+			var beacon := shopkeeper.get_node_or_null("ShopBeacon") as Label if shopkeeper else null
+			_record(
+				"莉莉头上有常驻商店气泡",
+				beacon != null and beacon.text == "商店" and beacon.visible
+			)
+			var house_sign := instance.get_node_or_null("TransitionAreas/ToPlayerHouseArea/ExitSign") as Label
+			var house_hint := instance.get_node_or_null("TransitionAreas/ToPlayerHouseArea/ShopHint") as Label
+			_record(
+				"住家门口写明不是商店",
+				house_sign != null and str(house_sign.text).contains("住家")
+					and house_hint != null and str(house_hint.text).contains("商店")
+			)
 			for exit_name in ["ToFarmArea", "ToPlayerHouseArea", "ToBeachArea", "ToForestArea", "ToMineArea"]:
 				_record("村庄出口%s存在" % exit_name, instance.get_node_or_null("TransitionAreas/" + exit_name) is Area2D)
 			GameManager.is_game_active = true
@@ -249,6 +270,13 @@ func _exercise_scene(scene_name: String, scene_path: String) -> void:
 				mayor.schedule.update(10.0, TimeManager.current_day, TimeManager.current_season)
 			if shopkeeper.schedule:
 				shopkeeper.schedule.update(10.0, TimeManager.current_day, TimeManager.current_season)
+				var shop_spot := shopkeeper.schedule.get_destination()
+				_record(
+					"营业时莉莉站在东南店门外",
+					shopkeeper.schedule.get_destination_id() == "general_store"
+						and shop_spot.x < 870.0
+						and shop_spot.distance_to(Vector2(1005, 612)) < 250.0
+				)
 			_record("白天NPC允许交互", mayor.can_interact() and shopkeeper.can_interact())
 			mayor.interact()
 			await get_tree().process_frame

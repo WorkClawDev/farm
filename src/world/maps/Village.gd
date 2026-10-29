@@ -31,7 +31,7 @@ const EXIT_SIGNS := {
 	"ToBeachArea": "海滩 →",
 	"ToForestArea": "↑ 森林",
 	"ToMineArea": "↓ 矿洞",
-	"ToPlayerHouseArea": "⌂ 小屋",
+	"ToPlayerHouseArea": "⌂ 住家",
 }
 ## The mine exit is a band along the bottom edge; its sign sits just above it.
 const EXIT_SIGN_OFFSETS := {
@@ -49,6 +49,7 @@ func _ready() -> void:
 	_setup_ui()
 	add_child(DayNightTint.new())  # night tint (round 7)
 	_connect_transition_areas()
+	_add_shop_guides()
 	# Also on GameManager.change_location (farm/house -> village), which does not go
 	# through SceneTransition: the scene's villagers get registered and placed by
 	# schedule, once (BUG-44).
@@ -188,6 +189,44 @@ func _add_exit_sign(area: Area2D, text: String, offset := Vector2.ZERO) -> void:
 	label.add_theme_constant_override("outline_size", 4)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	area.add_child(label)
+
+
+## Road signs so a new arrival can find Lily without guessing which hut is the shop.
+func _add_shop_guides() -> void:
+	if get_node_or_null("ShopGuides"):
+		return
+	var root := Node2D.new()
+	root.name = "ShopGuides"
+	root.z_as_relative = false
+	root.z_index = 20
+	add_child(root)
+	var signs: Array = [
+		{"name": "WestSign", "pos": Vector2(280, 360), "text": "→ 莉莉的店"},
+		{"name": "PlazaSign", "pos": Vector2(700, 560), "text": "→ 莉莉的店"},
+	]
+	for spec in signs:
+		var anchor := Node2D.new()
+		anchor.name = str(spec["name"])
+		anchor.position = spec["pos"]
+		var label := _make_guide_label(str(spec["text"]), "ShopSign", Vector2(160, 28), Vector2(-80, -14))
+		anchor.add_child(label)
+		root.add_child(anchor)
+	var house := get_node_or_null("TransitionAreas/ToPlayerHouseArea") as Node2D
+	if house and house.get_node_or_null("ShopHint") == null:
+		house.add_child(_make_guide_label("商店在东边", "ShopHint", Vector2(140, 26), Vector2(-70, -42)))
+
+func _make_guide_label(text: String, node_name: String, label_size: Vector2, label_pos: Vector2) -> Label:
+	var label := Label.new()
+	label.name = node_name
+	label.text = text
+	label.size = label_size
+	label.position = label_pos
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 4)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return label
 
 func _on_transition_body_entered(body: Node2D, area_name: String) -> void:
 	if not body is Player:

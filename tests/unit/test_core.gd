@@ -38,6 +38,7 @@ func _ready() -> void:
 	run_debris_wrong_tool_tests()
 	run_tool_number_hotkey_tests()
 	run_house_camera_follow_tests()
+	run_shop_find_guide_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -2430,6 +2431,22 @@ func run_house_camera_follow_tests() -> void:
 	assert_true(Farm.actor_draws_in_front_of_house(360.0, 278.0), "South of the foundation the player draws in front")
 	assert_true(not Farm.actor_draws_in_front_of_house(200.0, 278.0), "North of the foundation the wall draws in front")
 	print("  House camera follow: All tests completed")
+
+
+
+func run_shop_find_guide_tests() -> void:
+	print("\n[Shop Find Guide]")
+	assert_true(
+		QuestSystem.get_objective_description("village_introduction", 0) == "去找店主莉莉买种子",
+		"认识村民的第一目标是去找店主莉莉买种子"
+	)
+	assert_true(
+		PlayerHouse.village_home_hint("village_house_entrance") == "这是住家，商店在外面找莉莉",
+		"从村里进住家会提示商店在外面找莉莉"
+	)
+	assert_true(PlayerHouse.village_home_hint("house_entrance") == "", "从农场回家不把住家说成店")
+	assert_true(PlayerHouse.village_home_hint("farm_start") == "", "其他出生点不提示住家")
+	print("  Shop find guide: All tests completed")
 
 
 func assert_true(condition: bool, message: String):

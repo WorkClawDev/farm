@@ -20,6 +20,7 @@ var shop_ui: Control = null
 
 func _ready() -> void:
 	super._ready()
+	_add_shop_beacon()
 	print("[ShopNPC] Shop NPC initialized: ", npc_name)
 
 ## 重写交互方法
@@ -53,6 +54,22 @@ func _open_shop() -> void:
 			shop_ui.connect("shop_closed", callback)
 	print("[ShopNPC] Opened shop: ", npc_name)
 
+func _add_shop_beacon() -> void:
+	if get_node_or_null("ShopBeacon"):
+		return
+	var label := Label.new()
+	label.name = "ShopBeacon"
+	label.text = "商店"
+	label.size = Vector2(72, 22)
+	label.position = Vector2(-36, -64)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 4)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.z_as_relative = false
+	label.z_index = 100
+	add_child(label)
 
 func _get_shop_id() -> String:
 	match shop_type:
@@ -70,7 +87,15 @@ func _get_shop_id() -> String:
 ## 商店关闭回调
 func _on_shop_closed() -> void:
 	end_interaction()
+	_note_shop_visit()
 	print("[ShopNPC] Shop closed: ", npc_name)
+
+
+## Opening the counter counts as meeting the shopkeeper (village_introduction).
+func _note_shop_visit() -> void:
+	var event_bus = get_node_or_null("/root/EventBus")
+	if event_bus and event_bus.social:
+		event_bus.social.dialogue_ended.emit(npc_id)
 
 ## 获取商店类型名称
 func get_shop_type_name() -> String:
