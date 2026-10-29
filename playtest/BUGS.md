@@ -852,3 +852,9 @@
 - 工具升级开着按 F7：同上，不跳时。
 - 正常 PLAYING 按 F7：仍 toast「调试：时间 → 1:55」、HUD 1:55。
 - 截图 f7gate_pause.png、f7gate_upgrade.png、f7gate_playing.png。发行版未实机。
+
+## 2026-10-29 09:07 打磨：出货箱 Space 统一（--new-game）
+- PASS。靠近出货箱气泡文案「Space 出货」（非仅 E）。
+- Space 开箱：PASS。热键仍锄头，按 Space 打开「农场出货箱」、时间暂停；不挥锄、无翻地 toast、体力 100/100；日志 `[ShippingBin] Interacted!`。
+- E 仍开：PASS。关 UI 后再靠近，E 同样打开出货箱。
+- 截图 shipspace_prompt.png、shipspace_space.png、shipspace_e.png。改动待本地 commit（不 push、勿带 resource_sitemap.json）。

@@ -1661,7 +1661,7 @@ func _exercise_interact_prompt() -> void:
 		await get_tree().physics_frame
 	await get_tree().process_frame
 	_record("走进村长交互范围显示气泡", prompt.visible and player.npc_in_range == mayor)
-	_record("气泡显示当前交互键（E）", prompt.key_label.text == InputManager.get_action_short_prompt(&"interact") and prompt.key_label.text == "E")
+	_record("气泡显示当前交互键（Space）", prompt.key_label.text == InputManager.get_action_short_prompt(&"interact") and prompt.key_label.text == "Space")
 	_record("气泡在村长头顶上方", prompt.global_position.y < mayor.global_position.y - 30.0 and absf(prompt.global_position.x - mayor.global_position.x) < 1.0)
 	# Two NPCs in range: only the one E would talk to (the nearest) shows its bubble.
 	farmer.global_position = player.global_position + Vector2(56, 0)
@@ -1694,7 +1694,7 @@ func _exercise_interact_prompt() -> void:
 	_record("改键后气泡显示新按键（%s）" % prompt.key_label.text, remapped and prompt.key_label.text == "F")
 	InputManager.apply_serialized_bindings(saved_bindings)
 	prompt._refresh_key()
-	_record("恢复按键后气泡回到 E", prompt.key_label.text == "E")
+	_record("恢复按键后气泡回到 Space", prompt.key_label.text == "Space")
 	# Dialogue hides it; it comes back afterwards.
 	var box: DialogueBox = DialogueManager._dialogue_box
 	await _press_action(&"interact")

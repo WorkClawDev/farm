@@ -34,6 +34,7 @@ func _ready() -> void:
 	run_tool_upgrade_focus_select_tests()
 	run_seed_sprite_tests()
 	run_quest_tracker_visibility_tests()
+	run_shipping_bin_interact_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -2085,6 +2086,100 @@ func run_quest_tracker_visibility_tests() -> void:
 	GameManager.is_game_active = saved_active
 	get_tree().paused = saved_paused
 	print("  Quest tracker visibility: All tests completed")
+
+
+func run_shipping_bin_interact_tests() -> void:
+	print("\n[ShippingBin Interact]")
+	var saved_state = GameManager.current_state
+	var saved_active = GameManager.is_game_active
+	var saved_paused := get_tree().paused
+	var saved_bindings := InputManager.serialize_bindings()
+
+	assert_true(
+		InputManager.get_action_short_prompt(&"interact") == "Space",
+		"键盘互动短提示偏好 Space，而不是更短的 E"
+	)
+	var only_e := InputEventKey.new()
+	only_e.physical_keycode = KEY_E
+	var remapped_e := InputManager.remap_action(&"interact", only_e)
+	assert_true(
+		remapped_e and InputManager.get_action_short_prompt(&"interact") == "E",
+		"互动只绑 E 时短提示为 E"
+	)
+	InputManager.apply_serialized_bindings(saved_bindings)
+	assert_true(
+		InputManager.get_action_short_prompt(&"interact") == "Space",
+		"恢复默认键位后短提示回到 Space"
+	)
+
+	var bin := (load("res://src/world/objects/ShippingBin.tscn") as PackedScene).instantiate() as ShippingBin
+	add_child(bin)
+	var player := Player.new()
+	var prompt := bin.get_node_or_null("InteractPrompt") as InteractPrompt
+	var label_text := bin.prompt_label.text if bin.prompt_label else ""
+	assert_true(bin != null and player != null and prompt != null, "出货箱、玩家和气泡可以实例化")
+	assert_true(
+		not bin.interaction_prompt.contains("Press E") and not label_text.contains("Press E"),
+		"出货文案不再写 Press E"
+	)
+	assert_true(
+		prompt != null and prompt.key_label.text == "Space" and prompt.text_label.text == "出货",
+		"出货气泡是 Space 出货"
+	)
+
+	var hits: Array[int] = [0]
+	bin.bin_interacted.connect(func(_node): hits[0] += 1)
+	bin.interact()
+	assert_true(hits[0] == 0 and not UIManager.is_screen_open("shipping_bin"), "不在范围内 interact 不开箱")
+
+	bin._on_body_entered(player)
+	assert_true(
+		player.building_in_range == bin and bin._player_in_range and bin.has_method("interact"),
+		"进范围后 building_in_range 指向出货箱"
+	)
+	if player.building_in_range != null:
+		player.building_in_range.interact()
+	var screen := UIManager.get_screen("shipping_bin")
+	assert_true(hits[0] == 1 and screen != null, "进范围后 interact 打开出货界面")
+	if player.building_in_range != null:
+		player.building_in_range.interact()
+	assert_true(
+		hits[0] == 2 and UIManager.get_screen("shipping_bin") == screen,
+		"再 interact 不叠第二层出货界面"
+	)
+	UIManager.close_all()
+
+	var other := Node.new()
+	player.building_in_range = other
+	bin._on_body_exited(player)
+	assert_true(
+		player.building_in_range == other and not bin._player_in_range,
+		"离开时不清除别的建筑目标"
+	)
+	other.free()
+
+	bin._on_body_entered(player)
+	bin.set_interactable(false)
+	assert_true(player.building_in_range == null, "关闭交互时放开 building_in_range")
+	var hits_before := hits[0]
+	bin.interact()
+	assert_true(
+		hits[0] == hits_before and not UIManager.is_screen_open("shipping_bin"),
+		"不可交互时 interact 不开箱"
+	)
+	bin.set_interactable(true)
+	assert_true(player.building_in_range == bin, "重新可交互且仍在范围内时占回 building_in_range")
+	bin._on_body_exited(player)
+	assert_true(player.building_in_range == null, "离开范围后清除 building_in_range")
+
+	player.free()
+	bin.queue_free()
+	UIManager.close_all()
+	InputManager.apply_serialized_bindings(saved_bindings)
+	GameManager.current_state = saved_state
+	GameManager.is_game_active = saved_active
+	get_tree().paused = saved_paused
+	print("  ShippingBin interact: All tests completed")
 
 func assert_true(condition: bool, message: String):
 	total_tests += 1

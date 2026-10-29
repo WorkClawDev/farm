@@ -24,6 +24,6 @@ offset_right = 50.0
 offset_bottom = -30.0
 horizontal_alignment = 1
 vertical_alignment = 1
-text = "Press E to open shipping bin"
+text = "按 Space 出货"
 horizontal_alignment = 1
 visible = false

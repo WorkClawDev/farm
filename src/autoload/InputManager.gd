@@ -129,18 +129,25 @@ func get_action_prompt(action: StringName, device := -1) -> String:
 	return "—"
 
 
-## Compact key for in-world prompts: with several keyboard keys bound (interact =
-## Space + E) the shortest label wins ("E"); gamepad uses get_action_prompt().
+## In-world key label. Keyboard prefers Space when it is bound (interact is
+## Space + E), matching the HUD hint. Otherwise the first keyboard binding is
+## the primary key. The shortest alias ("E") is not chosen over that primary
+## key. Gamepad uses get_action_prompt().
 func get_action_short_prompt(action: StringName) -> String:
 	if is_using_gamepad():
 		return get_action_prompt(action)
-	var best := ""
+	var primary := ""
 	for event in InputMap.action_get_events(action):
-		if event is InputEventKey:
-			var label := _key_event_label(event)
-			if best.is_empty() or label.length() < best.length():
-				best = label
-	return best if not best.is_empty() else get_action_prompt(action)
+		if not event is InputEventKey:
+			continue
+		var key := event as InputEventKey
+		var label := _key_event_label(key)
+		var code := key.physical_keycode if key.physical_keycode != 0 else key.keycode
+		if code == KEY_SPACE:
+			return label
+		if primary.is_empty():
+			primary = label
+	return primary if not primary.is_empty() else get_action_prompt(action)
 
 
 func get_action_icon_id(action: StringName) -> String:
