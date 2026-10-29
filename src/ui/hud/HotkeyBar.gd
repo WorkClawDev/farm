@@ -62,7 +62,8 @@ func _build_ui() -> void:
 
 		var key_label := _slot_label(&"SlotKeyLabel")
 		key_label.name = "Key"
-		key_label.text = str(index + 1)
+		# 1–6 是工具直选，格子上不再画数字，避免当成物品快捷键。
+		key_label.text = ""
 		key_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		key_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 		slot.add_child(key_label)
@@ -82,6 +83,17 @@ func _build_ui() -> void:
 		selection.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		slot.add_child(selection)
 		_selection_frames.append(selection)
+
+	var hint := Label.new()
+	hint.name = "SelectHint"
+	hint.theme_type_variation = &"HUDSmall"
+	hint.text = "点击或 Tab 选物品"
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hint.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	hint.offset_top = -18
+	hint.offset_bottom = -2
+	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(hint)
 
 
 ## Slot styles (SlotButton / SlotKeyLabel / SlotQuantityLabel / SlotSelectFrame) live in GameTheme.tres.
@@ -111,7 +123,7 @@ func _update_slot(index: int) -> void:
 	var key_label := _key_labels[index]
 	var quantity_label := _quantity_labels[index]
 	icon.texture = null
-	key_label.text = str(index + 1)
+	key_label.text = ""
 	key_label.modulate.a = 0.72
 	quantity_label.text = ""
 	button.text = ""
@@ -120,9 +132,9 @@ func _update_slot(index: int) -> void:
 	if data and not data.is_empty():
 		icon.texture = ItemDatabase.load_icon_texture(data.item_id)
 		quantity_label.text = "×%d" % data.quantity if data.quantity > 1 else ""
-		button.tooltip_text = UIFactory.slot_tooltip(Inventory.get_item_name(data.item_id), data.quantity)
+		button.tooltip_text = _slot_select_tooltip(UIFactory.slot_tooltip(Inventory.get_item_name(data.item_id), data.quantity))
 	else:
-		button.tooltip_text = UIFactory.slot_tooltip("", 0)
+		button.tooltip_text = _slot_select_tooltip(UIFactory.slot_tooltip("", 0))
 	_selection_frames[index].visible = index == Inventory.get_selected_hotbar_index()
 	# 拿着工具时快捷栏选中框变淡：表示按空格用的是工具，不是这个物品。
 	_selection_frames[index].modulate.a = 0.35 if _is_tool_equipped() else 1.0
@@ -134,6 +146,7 @@ func _update_slot(index: int) -> void:
 func _select(index: int) -> void:
 	Inventory.set_selected_hotbar_index(index)
 	# 选快捷栏物品 = 收起工具改拿这个物品（BUG-14：锄头不会顺手把种子种下去）。
+	# 鼠标点击和 Tab 走这里。数字键 1–6 留给工具直选。
 	var tool_manager := _get_tool_manager()
 	if tool_manager:
 		tool_manager.put_away_tool()
@@ -161,13 +174,12 @@ func _on_tool_changed(_tool_type: int, _tool_name: String) -> void:
 	_refresh()
 
 
+func _slot_select_tooltip(item_tip: String) -> String:
+	return "%s\n点击选择 · Tab 下一格" % item_tip
+
+
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo:
-		for index in range(HOTBAR_SIZE):
-			if event.keycode == KEY_1 + index:
-				_select(index)
-				get_viewport().set_input_as_handled()
-				return
+	# 数字键 1–6 由 Player 直选工具，这里不占用。7–9 也不再选物品。
 	if event.is_action_pressed("hotbar_next"):
 		_select((Inventory.get_selected_hotbar_index() + 1) % HOTBAR_SIZE)
 		get_viewport().set_input_as_handled()

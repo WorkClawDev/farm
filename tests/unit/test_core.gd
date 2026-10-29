@@ -36,6 +36,7 @@ func _ready() -> void:
 	run_quest_tracker_visibility_tests()
 	run_shipping_bin_interact_tests()
 	run_debris_wrong_tool_tests()
+	run_tool_number_hotkey_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -2300,6 +2301,100 @@ func _wrong_tool_label(tool: int) -> String:
 		_:
 			return str(tool)
 
+
+func run_tool_number_hotkey_tests() -> void:
+	print("\n[Tool Number Hotkeys]")
+	var inv_snapshot: Dictionary = Inventory.save_state()
+	var farm_snapshot: Dictionary = FarmState.get_save_state()
+	var saved_stamina := StaminaManager.current_stamina
+	var order: Array = ToolManager.TOOL_HOTKEY_ORDER
+	assert_true(order.size() == 6, "工具直选有 6 个")
+	assert_true(order[0] == ToolManager.ToolType.HOE, "1 是锄头")
+	assert_true(order[1] == ToolManager.ToolType.WATERING_CAN, "2 是水壶")
+	assert_true(order[2] == ToolManager.ToolType.AXE, "3 是斧头")
+	assert_true(order[3] == ToolManager.ToolType.PICKAXE, "4 是镐子")
+	assert_true(order[4] == ToolManager.ToolType.SICKLE, "5 是镰刀")
+	assert_true(order[5] == ToolManager.ToolType.FISHING_ROD, "6 是鱼竿")
+	assert_true(ToolDisplay.HINT_TOOL == "1–6 直选 · Q/R 切换", "工具提示写明 1–6 与 Q/R")
+	assert_true(ToolDisplay.HINT_HAND == "1–6 直选 · Q/R 拿回", "收起时提示仍是 1–6 与 Q/R")
+
+	var tm := ToolManager.new()
+	add_child(tm)
+	tm.equip_tool(ToolManager.ToolType.HOE)
+	tm.equip_tool_by_hotkey(1)
+	assert_true(tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN, "下标 1 一键装备水壶")
+	tm.equip_tool_by_hotkey(1)
+	assert_true(tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN, "已是水壶时下标 1 保持")
+	tm.equip_tool_by_hotkey(-1)
+	tm.equip_tool_by_hotkey(6)
+	assert_true(tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN, "越界下标不换工具")
+	tm.next_tool()
+	assert_true(tm.get_current_tool_type() == ToolManager.ToolType.AXE, "Q/R 的下一个仍是斧头")
+	tm.previous_tool()
+	assert_true(tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN, "Q/R 的上一个仍回到水壶")
+	tm.put_away_tool()
+	assert_true(tm.is_using_hotbar_item(), "put_away 仍收起工具")
+	tm.equip_tool_by_hotkey(1)
+	assert_true(tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN, "收起后数字键下标仍能直选水壶")
+
+	var player := Player.new()
+	player.tool_manager = tm
+	tm.equip_tool(ToolManager.ToolType.HOE)
+	assert_true(InputMap.has_action("tool_2"), "tool_2 动作已注册")
+	var bound_2 := false
+	if InputMap.has_action("tool_2"):
+		for event in InputMap.action_get_events("tool_2"):
+			if event is InputEventKey:
+				var key_event := event as InputEventKey
+				if key_event.physical_keycode == KEY_2 or key_event.keycode == KEY_2:
+					bound_2 = true
+	assert_true(bound_2, "数字键 2 绑定到水壶")
+	if InputMap.has_action("tool_2"):
+		Input.action_press("tool_2")
+		player._handle_tool_input()
+		Input.action_release("tool_2")
+	assert_true(tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN, "模拟按下 2 切到水壶")
+
+	var index_before := Inventory.get_selected_hotbar_index()
+	var bar := HotkeyBar.new()
+	add_child(bar)
+	var key := InputEventKey.new()
+	key.keycode = KEY_1
+	key.physical_keycode = KEY_1
+	key.pressed = true
+	bar._input(key)
+	assert_true(Inventory.get_selected_hotbar_index() == index_before, "快捷栏不再吃数字键 1")
+	assert_true(bar.get_node("SelectHint").text == "点击或 Tab 选物品", "快捷栏提示改用点击或 Tab")
+	var tab := InputEventAction.new()
+	tab.action = "hotbar_next"
+	tab.pressed = true
+	bar._input(tab)
+	assert_true(
+		Inventory.get_selected_hotbar_index() == (index_before + 1) % HotkeyBar.HOTBAR_SIZE,
+		"Tab 仍切换快捷栏"
+	)
+	bar.queue_free()
+	tm.queue_free()
+	player.free()
+
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	FarmState.reset()
+	FarmState.till(Vector2i(1, 1))
+	var farm := Farm.new()
+	var again: Dictionary = farm.perform_farm_action(Vector2i(1, 1), ToolManager.ToolType.HOE)
+	assert_true(
+		str(again.get("message", "")) == "这里已经翻过了（点快捷栏或按 Tab 选种子）",
+		"翻过的地提示改用快捷栏或 Tab 选种子"
+	)
+	farm.free()
+	var toast_root := UIManager.get_node_or_null("UIOverlay/ToastRoot")
+	if toast_root != null:
+		for child in toast_root.get_children():
+			child.free()
+	FarmState.load_save_state(farm_snapshot)
+	Inventory.load_state(inv_snapshot)
+	StaminaManager.set_stamina(saved_stamina)
+	print("  Tool number hotkeys: All tests completed")
 
 func assert_true(condition: bool, message: String):
 	total_tests += 1

@@ -865,3 +865,9 @@
 - 树桩用错工具：PASS。镰刀 toast「树桩要用斧头清除」，体力不变，树桩仍在。截图 wrongtool_stump.png
 - 田外草地锄头：PASS。toast「这里不能耕地」，无「要用」。截图 wrongtool_outfield.png
 - 改动待本地 commit（不 push、勿带 resource_sitemap.json）。
+
+## 2026-10-29 11:00 打磨：工具数字键直选（--new-game）
+- 1–6 直选：PASS。2→水壶（一键）、1→锄头、3斧头、4镐子、5镰刀、6鱼竿。截图 toolnum_2_can.png、toolnum_keys.png
+- Q/R 循环：PASS。鱼竿上 Q→镰刀、R→鱼竿。
+- 快捷栏/Tab 播种：PASS。Tab 选手持防风草种子；数字键仍切工具不抢物品；锄翻地后 Tab 再 Space 播种，×15→×14，stage0 可见。截图 toolnum_plant.png
+- 改动待本地 commit（不 push、勿带 resource_sitemap.json）。

@@ -62,6 +62,25 @@ func _ensure_core_actions() -> void:
 			var event := InputEventKey.new()
 			event.physical_keycode = bindings[action]
 			InputMap.action_add_event(action, event)
+	# 1–6 直选工具，顺序与 ToolManager.TOOL_HOTKEY_ORDER 一致。
+	# 不放进可重绑列表：默认就能用，不必进设置改键。
+	# 快捷栏物品用鼠标点击或 Tab（hotbar_next），不再占用数字键。
+	var tool_keys := {
+		"tool_1": KEY_1,
+		"tool_2": KEY_2,
+		"tool_3": KEY_3,
+		"tool_4": KEY_4,
+		"tool_5": KEY_5,
+		"tool_6": KEY_6,
+	}
+	for action in tool_keys:
+		if not InputMap.has_action(action):
+			InputMap.add_action(action)
+		if InputMap.action_get_events(action).is_empty():
+			var tool_event := InputEventKey.new()
+			tool_event.physical_keycode = tool_keys[action]
+			tool_event.keycode = tool_keys[action]
+			InputMap.action_add_event(action, tool_event)
 
 func _input(event: InputEvent) -> void:
 	# 检测输入设备类型

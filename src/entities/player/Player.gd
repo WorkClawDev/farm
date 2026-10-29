@@ -508,8 +508,14 @@ func _handle_combat_input() -> void:
 	# 战斗未纳入当前可玩切片。
 	return
 
-## 处理工具切换输入
+## 处理工具切换输入。1–6 直选（tool_1..tool_6），Q/R 仍循环。
 func _handle_tool_input() -> void:
+	if tool_manager == null:
+		return
+	for slot in ToolManager.TOOL_HOTKEY_ORDER.size():
+		if Input.is_action_just_pressed("tool_%d" % (slot + 1)):
+			tool_manager.equip_tool_by_hotkey(slot)
+			return
 	if Input.is_action_just_pressed("tool_previous"):
 		tool_manager.previous_tool()
 	elif Input.is_action_just_pressed("tool_next"):

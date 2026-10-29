@@ -88,7 +88,7 @@ func _start_fishing() -> void:
 			_refill_watering_can()
 		else:
 			print("[FishingSpot] Need to equip fishing rod first!")
-			UIManager.show_toast("先换上鱼竿再钓鱼（Q / R 切换工具）", {}, "info")
+			UIManager.show_toast("先换上鱼竿再钓鱼（按 6 或 Q/R）", {}, "info")
 
 
 ## 拿着水壶在水边按空格/E：把水壶装满（水量存在 FarmState）。

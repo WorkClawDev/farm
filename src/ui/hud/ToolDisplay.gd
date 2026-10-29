@@ -13,6 +13,9 @@ const TOOL_ICON_IDS := {
 	ToolManager.ToolType.FISHING_ROD: "fishing_rod",
 }
 
+const HINT_TOOL := "1–6 直选 · Q/R 切换"
+const HINT_HAND := "1–6 直选 · Q/R 拿回"
+
 var tool_icon: TextureRect
 var tool_name_label: Label
 var _hint_label: Label
@@ -38,7 +41,7 @@ func _ready() -> void:
 
 func _build_ui() -> void:
 	set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	offset_left = -248
+	offset_left = -300
 	offset_top = -94
 	offset_right = -20
 	offset_bottom = -18
@@ -82,14 +85,14 @@ func _build_ui() -> void:
 	_hint_label = Label.new()
 	_hint_label.theme_type_variation = &"HUDSmall"
 	_hint_label.modulate.a = 0.88
-	_hint_label.text = "Q / R  切换工具"
+	_hint_label.text = HINT_TOOL
 	labels.add_child(_hint_label)
 
 func _on_tool_changed(tool_type: int, tool_name: String) -> void:
 	_current_tool_type = tool_type
 	current_tool_name = tool_name
 	tool_name_label.text = tool_name
-	_hint_label.text = "Q / R  切换工具"
+	_hint_label.text = HINT_TOOL
 	_update_tool_icon(tool_type)
 	_refresh_hand_item()
 	if not UserSettings.get_value("accessibility", "reduce_motion", false):
@@ -114,7 +117,7 @@ func _refresh_hand_item() -> void:
 		tool_icon.texture = ItemDatabase.load_icon_texture(item_id)
 	tool_name_label.text = current_tool_name
 	tool_icon.modulate = Color.WHITE if tool_icon.texture else Color(0.65, 0.62, 0.55)
-	_hint_label.text = "Q / R  拿回工具"
+	_hint_label.text = HINT_HAND
 
 
 func _update_tool_icon(tool_type: int) -> void:

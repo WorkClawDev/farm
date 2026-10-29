@@ -59,6 +59,7 @@ func _ready() -> void:
 	await _exercise_golden_path()
 	await _exercise_watering_can()
 	await _exercise_tool_vs_hotbar_dispatch()
+	await _exercise_tool_number_keys()
 	await _exercise_eat_food()
 	await _exercise_tool_selection_across_scenes()
 	await _exercise_json_save_compatibility()
@@ -831,9 +832,129 @@ func _find_hotkey_bar(node: Node) -> HotkeyBar:
 	return null
 
 
+func _find_tool_display(node: Node) -> ToolDisplay:
+	if node is ToolDisplay:
+		return node
+	for child in node.get_children():
+		var found := _find_tool_display(child)
+		if found:
+			return found
+	return null
+
+
+## 数字键 1–6 直选工具。快捷栏改走点击 / Tab，选中种子后仍能播种。
+func _exercise_tool_number_keys() -> void:
+	print("------------------------------------------------------------")
+	print("数字键 1–6 直选工具；快捷栏用点击或 Tab，选中后仍可播种")
+	var saved_state := GameManager.current_state
+	var saved_active := GameManager.is_game_active
+	TimeManager.reset()
+	Inventory.reset_with_starter_items()
+	FarmState.reset()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	get_tree().paused = false
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	var hotbar := _find_hotkey_bar(farm)
+	var display := _find_tool_display(farm)
+	_record("直选用例有玩家、快捷栏和工具栏", player != null and hotbar != null and display != null)
+	if player == null or hotbar == null:
+		farm.queue_free()
+		GameManager.current_state = saved_state
+		GameManager.is_game_active = saved_active
+		return
+	var tm: ToolManager = player.tool_manager
+	var expected: Array = ToolManager.TOOL_HOTKEY_ORDER
+	_record("直选顺序是锄、水壶、斧、镐、镰、钓", expected == [
+		ToolManager.ToolType.HOE,
+		ToolManager.ToolType.WATERING_CAN,
+		ToolManager.ToolType.AXE,
+		ToolManager.ToolType.PICKAXE,
+		ToolManager.ToolType.SICKLE,
+		ToolManager.ToolType.FISHING_ROD,
+	])
+	tm.equip_tool(ToolManager.ToolType.AXE)
+	var slot_before := Inventory.get_selected_hotbar_index()
+	for i in range(expected.size()):
+		await _tap_key(KEY_1 + i, 1)
+		_record(
+			"数字键 %d 装备对应工具（实际 %d）" % [i + 1, tm.get_current_tool_type()],
+			tm.get_current_tool_type() == expected[i]
+		)
+	_record("数字键不改快捷栏格子", Inventory.get_selected_hotbar_index() == slot_before)
+	_record(
+		"拿着工具时提示是 1–6 直选",
+		display != null and display._hint_label.text == ToolDisplay.HINT_TOOL
+	)
+
+	tm.equip_tool(ToolManager.ToolType.HOE)
+	await _tap_key(KEY_2, 1)
+	_record("锄头按 2 一键到水壶", tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN)
+	await _tap_key(KEY_2, 1)
+	_record("已是水壶时再按 2 保持", tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN)
+
+	await _press_action(&"tool_next", 1)
+	_record("R 仍切到下一个工具（斧）", tm.get_current_tool_type() == ToolManager.ToolType.AXE)
+	await _press_action(&"tool_previous", 1)
+	_record("Q 仍切回上一个工具（水壶）", tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN)
+
+	GameManager.current_state = GameManager.GameState.DIALOGUE
+	await _tap_key(KEY_4, 1)
+	_record("对话中数字键不换工具", tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN)
+	GameManager.current_state = GameManager.GameState.PLAYING
+
+	await _tap_key(KEY_7, 1)
+	_record(
+		"数字键 7 不选快捷栏也不收工具",
+		tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN
+			and Inventory.get_selected_hotbar_index() == slot_before
+	)
+
+	var seeds := Inventory.get_item_count("turnip_seed")
+	var plot := Vector2i(1, 1)
+	tm.equip_tool(ToolManager.ToolType.HOE)
+	farm.perform_farm_action(plot, tm.get_current_tool_type())
+	_record("直选用例先翻地", int(FarmState.get_cell(plot).state) == FarmState.TILLED)
+	hotbar._select(0)
+	_record(
+		"点击快捷栏种子会收起工具",
+		tm.get_current_tool_type() == ToolManager.ToolType.NONE
+			and Inventory.get_selected_item_id() == "turnip_seed"
+	)
+	_record(
+		"收起后提示可以拿回工具",
+		display != null and display._hint_label.text == ToolDisplay.HINT_HAND
+	)
+	farm.perform_farm_action(plot, tm.get_current_tool_type())
+	_record(
+		"收起工具后手持种子仍能播种",
+		not Dictionary(FarmState.get_cell(plot).crop).is_empty()
+			and Inventory.get_item_count("turnip_seed") == seeds - 1
+	)
+
+	tm.equip_tool(ToolManager.ToolType.HOE)
+	var index_before_tab := Inventory.get_selected_hotbar_index()
+	await _press_action(&"hotbar_next", 1)
+	_record(
+		"Tab 切到下一格并收起工具",
+		tm.is_using_hotbar_item()
+			and Inventory.get_selected_hotbar_index() == (index_before_tab + 1) % HotkeyBar.HOTBAR_SIZE
+	)
+
+	farm.queue_free()
+	await get_tree().process_frame
+	FarmState.reset()
+	Inventory.reset_with_starter_items()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	GameManager.current_state = saved_state
+	GameManager.is_game_active = saved_active
+
+
 func _exercise_tool_vs_hotbar_dispatch() -> void:
 	print("------------------------------------------------------------")
-	print("BUG-14 拿着工具只用工具；按数字键选种子才播种")
+	print("BUG-14 拿着工具只用工具；选中快捷栏种子才播种")
 	TimeManager.reset()
 	Inventory.reset_with_starter_items()
 	FarmState.reset()
@@ -869,7 +990,7 @@ func _exercise_tool_vs_hotbar_dispatch() -> void:
 			and Inventory.get_item_count("turnip_seed") == seeds)
 
 	hotbar._select(0)
-	_record("按数字键选种子会收起工具", tm.get_current_tool_type() == ToolManager.ToolType.NONE)
+	_record("选中快捷栏种子会收起工具", tm.get_current_tool_type() == ToolManager.ToolType.NONE)
 	farm.perform_farm_action(a, tm.get_current_tool_type())
 	_record("手持种子对耕地播种",
 		not Dictionary(FarmState.get_cell(a).crop).is_empty() and Inventory.get_item_count("turnip_seed") == seeds - 1)

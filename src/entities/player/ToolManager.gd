@@ -34,6 +34,16 @@ const TOOL_SCENES = {
 	ToolType.FISHING_ROD: "res://src/entities/tools/FishingRod.tscn"
 }
 
+## 数字键 1–6 与 Q/R 共用的顺序。下标 0 = 键 1。
+const TOOL_HOTKEY_ORDER := [
+	ToolType.HOE,
+	ToolType.WATERING_CAN,
+	ToolType.AXE,
+	ToolType.PICKAXE,
+	ToolType.SICKLE,
+	ToolType.FISHING_ROD,
+]
+
 # 信号
 signal tool_changed(new_tool: ToolType, tool_name: String)
 signal tool_used(tool_type: ToolType, success: bool)
@@ -204,9 +214,15 @@ func _get_target_position() -> Vector2:
 	
 	return player.global_position + direction * 32.0
 
-## 收起工具，改用快捷栏选中的物品（按数字键选物品时调用）
+## 收起工具，改用快捷栏选中的物品（点击快捷栏或按 Tab 时调用）
 func put_away_tool() -> void:
 	equip_tool(ToolType.NONE)
+
+## 数字键直选。已是该工具，或下标越界，则保持现状。
+func equip_tool_by_hotkey(slot: int) -> void:
+	if slot < 0 or slot >= TOOL_HOTKEY_ORDER.size():
+		return
+	equip_tool(TOOL_HOTKEY_ORDER[slot])
 
 ## 是否收起了工具（手持快捷栏物品）
 func is_using_hotbar_item() -> bool:
@@ -217,22 +233,24 @@ func next_tool() -> void:
 	if current_tool_type == ToolType.NONE:
 		equip_tool(last_tool_type)
 		return
-	var tool_list = [ToolType.HOE, ToolType.WATERING_CAN, ToolType.AXE, 
-					 ToolType.PICKAXE, ToolType.SICKLE, ToolType.FISHING_ROD]
-	var current_index = tool_list.find(current_tool_type)
-	var next_index = (current_index + 1) % tool_list.size()
-	equip_tool(tool_list[next_index])
+	var current_index: int = TOOL_HOTKEY_ORDER.find(current_tool_type)
+	if current_index < 0:
+		equip_tool(TOOL_HOTKEY_ORDER[0])
+		return
+	var next_index := (current_index + 1) % TOOL_HOTKEY_ORDER.size()
+	equip_tool(TOOL_HOTKEY_ORDER[next_index])
 
 ## 切换到上一个工具
 func previous_tool() -> void:
 	if current_tool_type == ToolType.NONE:
 		equip_tool(last_tool_type)
 		return
-	var tool_list = [ToolType.HOE, ToolType.WATERING_CAN, ToolType.AXE, 
-					 ToolType.PICKAXE, ToolType.SICKLE, ToolType.FISHING_ROD]
-	var current_index = tool_list.find(current_tool_type)
-	var prev_index = (current_index - 1 + tool_list.size()) % tool_list.size()
-	equip_tool(tool_list[prev_index])
+	var current_index: int = TOOL_HOTKEY_ORDER.find(current_tool_type)
+	if current_index < 0:
+		equip_tool(TOOL_HOTKEY_ORDER[0])
+		return
+	var prev_index := (current_index - 1 + TOOL_HOTKEY_ORDER.size()) % TOOL_HOTKEY_ORDER.size()
+	equip_tool(TOOL_HOTKEY_ORDER[prev_index])
 
 ## 获取当前工具
 func get_current_tool() -> Node:

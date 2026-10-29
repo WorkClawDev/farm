@@ -362,12 +362,12 @@ func perform_farm_action(coord: Vector2i, tool_type: ToolManager.ToolType) -> Di
 	var debris := str(cell.get("debris", ""))
 
 	# 规则（BUG-14）：手里拿的东西决定动作。
-	# - 拿着工具（Q/R 切换）时只执行该工具的动作，快捷栏里选着种子也不会播种；
-	# - 按数字键选快捷栏物品会收起工具（ToolType.NONE），这时选中的是种子才播种。
+	# - 拿着工具（1–6 直选，Q/R 循环）时只执行该工具，快捷栏里选着种子也不会播种；
+	# - 点击快捷栏或按 Tab 选物品会收起工具（ToolType.NONE），这时选中的是种子才播种。
 	# 格子上有杂物时，先用对应工具清除；用错工具只提示，不扣体力。
 	if not debris.is_empty():
 		if tool_type == ToolManager.ToolType.NONE:
-			message = "这里有%s，按 Q/R 拿工具清除" % FarmState.debris_display_name(debris)
+			message = "这里有%s，按 1–6 或 Q/R 拿工具清除" % FarmState.debris_display_name(debris)
 		else:
 			var cleared := _clear_debris_with_tool(coord, tool_type)
 			success = bool(cleared.get("success", false))
@@ -384,7 +384,7 @@ func perform_farm_action(coord: Vector2i, tool_type: ToolManager.ToolType) -> Di
 				success = FarmState.plant(coord, selected_item)
 				message = "已播种" if success else "这里不能种植"
 		else:
-			message = "选择种子，或按 Q/R 拿工具"
+			message = "点击或 Tab 选种子，或按 1–6 / Q/R 拿工具"
 	else:
 		match tool_type:
 			ToolManager.ToolType.HOE:
@@ -394,7 +394,7 @@ func perform_farm_action(coord: Vector2i, tool_type: ToolManager.ToolType) -> Di
 				else:
 					success = FarmState.till(coord)
 					message = "土地已翻好" if success else (
-						"这里已经翻过了（按数字键选种子播种）"
+						"这里已经翻过了（点快捷栏或按 Tab 选种子）"
 						if Dictionary(cell.get("crop", {})).is_empty() and not cell.is_empty()
 						else "这里已经翻过了"
 					)
