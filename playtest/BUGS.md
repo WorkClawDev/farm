@@ -890,3 +890,7 @@
 - ↑/左右：PASS。保存上 ↑ 回继续；主菜单左右无邻居焦点不变；退出确认框 → 可从取消到确认。
 - Esc 开关/子界面：PASS。关再开后第一次 ↓ 仍到保存；设置 Esc 回暂停；退出确认 Esc 取消不卡住。
 - 改动待本地 commit（不 push、勿带 resource_sitemap.json）。
+
+## 2026-10-29 15:05 打磨：任务条切到认识村民（--new-game）
+- PASS。开局同时接受农场入门+认识村民后，左上显示「认识村民 / 去找店主莉莉买种子 0/1」，不再卡「农场入门/收获防风草」。进村后仍同文案。
+- 截图 questtrack_farm.png、questtrack_village.png。改动待本地 commit（不 push、勿带 resource_sitemap.json）。

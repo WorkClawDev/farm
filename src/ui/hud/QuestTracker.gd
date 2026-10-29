@@ -21,6 +21,37 @@ static func blocks_bar(tree_paused: bool, game_paused: bool, modal_open: bool, c
 	return tree_paused or game_paused or modal_open or center_open
 
 
+## Active quests are oldest-first. The bar follows the most recently accepted
+## quest instead of index 0. Numeric priority is the wrong key here: the farm
+## tutorial is 100 and village_introduction is 95, so a priority sort stays on
+## 「农场入门」. If the newest entry is that tutorial while the village guide is
+## also active, the guide wins so accepting it actually switches the bar.
+static func select_featured_quest(quests: Variant) -> Variant:
+	if quests == null or int(quests.size()) == 0:
+		return null
+	var newest: Variant = quests[int(quests.size()) - 1]
+	if newest != null and str(newest.id) == "tutorial_farming":
+		for quest in quests:
+			if quest != null and str(quest.id) == "village_introduction":
+				return quest
+	return newest
+
+
+## Collapsed bar shows this objective: the first one that is not finished yet.
+static func first_incomplete_objective(objectives: Variant, progress: Variant) -> int:
+	if objectives == null:
+		return 0
+	var count := int(objectives.size())
+	for index in range(count):
+		var required := int(objectives[index].required)
+		var current := 0
+		if progress != null and index < int(progress.size()):
+			current = int(progress[index])
+		if current < required:
+			return index
+	return 0
+
+
 func _ready() -> void:
 	UIStyles.follow_theme(self)
 	_build_ui()
@@ -92,15 +123,21 @@ func _connect_signals() -> void:
 func _refresh() -> void:
 	if _title == null:
 		return
-	var quests = QuestSystem.get_active_quests() if QuestSystem else []
-	var has_quest := not quests.is_empty()
+	var quests: Array = QuestSystem.get_active_quests() if QuestSystem else []
+	var quest: Variant = select_featured_quest(quests)
+	var has_quest := quest != null
 	if has_quest:
-		var quest = quests[0]
 		_title.text = str(quest.title)
+		var progress_values: Array = []
+		var quest_progress = QuestSystem.get_quest_progress(str(quest.id)) if QuestSystem else null
+		if quest_progress != null:
+			for value in quest_progress.objective_progress:
+				progress_values.append(int(value))
+		var focus := first_incomplete_objective(quest.objectives, progress_values)
 		var lines: Array[String] = []
 		for index in range(quest.objectives.size()):
-			if not _expanded and index > 0:
-				break
+			if not _expanded and index != focus:
+				continue
 			var current := QuestSystem.get_objective_progress(quest.id, index)
 			var required := int(quest.objectives[index].required)
 			lines.append(UIFactory.no_orphan("%s %s  %d/%d" % [

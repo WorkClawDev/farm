@@ -39,6 +39,7 @@ func _ready() -> void:
 	run_tool_number_hotkey_tests()
 	run_house_camera_follow_tests()
 	run_shop_find_guide_tests()
+	run_quest_tracker_feature_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -2447,6 +2448,53 @@ func run_shop_find_guide_tests() -> void:
 	assert_true(PlayerHouse.village_home_hint("house_entrance") == "", "从农场回家不把住家说成店")
 	assert_true(PlayerHouse.village_home_hint("farm_start") == "", "其他出生点不提示住家")
 	print("  Shop find guide: All tests completed")
+
+
+func run_quest_tracker_feature_tests() -> void:
+	print("\n[Quest Tracker Feature]")
+	var tutorial = QuestSystem.get_quest("tutorial_farming")
+	var village = QuestSystem.get_quest("village_introduction")
+	var fisher = QuestSystem.get_quest("fisherman_catch")
+	assert_true(tutorial != null and village != null and fisher != null, "任务条选择夹具能读到三张任务")
+	var featured = QuestTracker.select_featured_quest([tutorial, village])
+	assert_true(featured != null and str(featured.id) == "village_introduction", "先接农场入门再接村导时，任务条选认识村民")
+	var reversed = QuestTracker.select_featured_quest([village, tutorial])
+	assert_true(reversed != null and str(reversed.id) == "village_introduction", "村导进行中时不因农场入门排在后面而退回农场入门")
+	var newest = QuestTracker.select_featured_quest([tutorial, fisher])
+	assert_true(newest != null and str(newest.id) == "fisherman_catch", "没有村导时任务条显示最近接受的任务")
+	var only = QuestTracker.select_featured_quest([tutorial])
+	assert_true(only != null and str(only.id) == "tutorial_farming", "只有农场入门时任务条仍显示农场入门")
+	assert_true(QuestTracker.select_featured_quest([]) == null, "没有活跃任务时没有要展示的任务")
+	assert_true(QuestTracker.first_incomplete_objective([{"required": 1}, {"required": 1}], [0, 0]) == 0, "两项都未完成时当前目标是第一项")
+	assert_true(QuestTracker.first_incomplete_objective([{"required": 1}, {"required": 1}], [1, 0]) == 1, "第一项完成后当前目标切到下一项")
+
+	var snapshot: Dictionary = QuestSystem.save_state()
+	QuestSystem.reset()
+	var tracker: QuestTracker = null
+	QuestSystem.unlock_quest("tutorial_farming")
+	assert_true(QuestSystem.accept_quest("tutorial_farming"), "任务条夹具先接受农场入门")
+	tracker = load("res://src/ui/hud/QuestTracker.tscn").instantiate() as QuestTracker
+	add_child(tracker)
+	assert_true(tracker._title != null and tracker._title.text == "农场入门", "只接农场入门时左上标题是农场入门")
+	assert_true("收获1个防风草" in tracker._objective.text, "只接农场入门时当前目标是收获防风草")
+	QuestSystem.unlock_quest("village_introduction")
+	assert_true(QuestSystem.accept_quest("village_introduction"), "任务条夹具再接受认识村民")
+	var active := QuestSystem.get_active_quests()
+	var active_ids: Array[String] = []
+	for quest in active:
+		active_ids.append(str(quest.id))
+	assert_true(active_ids == ["tutorial_farming", "village_introduction"], "农场入门仍在活跃列表里，手册还能看到")
+	assert_true(tracker._title.text == "认识村民", "接了村导后任务条标题切到认识村民")
+	assert_true("去找店主莉莉买种子" in tracker._objective.text, "接了村导后当前目标是去找店主莉莉买种子")
+	assert_true("收获1个防风草" not in tracker._objective.text, "接了村导后任务条不再停在收获防风草")
+	QuestSystem.set_objective_progress("village_introduction", 0, 1)
+	assert_true(tracker._title.text == "认识村民", "买到种子前的第一步完成后标题仍是认识村民")
+	assert_true("与农夫交谈" in tracker._objective.text, "当前目标改为未完成的第一项：与农夫交谈")
+	assert_true("去找店主莉莉买种子" not in tracker._objective.text, "收起的任务条不再把已完成的买种子目标当成当前目标")
+	if tracker != null:
+		tracker.free()
+	QuestSystem.load_state(snapshot)
+	print("  Quest tracker feature: All tests completed")
 
 
 func assert_true(condition: bool, message: String):
