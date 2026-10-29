@@ -339,10 +339,21 @@ func get_facing_plot_coord(world_position: Vector2, facing: Vector2) -> Vector2i
 		return Vector2i(-1, -1)
 	return target
 
-func perform_farm_action(coord: Vector2i, tool_type: ToolManager.ToolType) -> void:
+
+## Cell the player is standing on, or (-1, -1) outside the field.
+## Unlike get_facing_plot_coord, a point just off the west edge stays off-grid
+## instead of stepping one cell inward.
+func get_standing_plot_coord(world_position: Vector2) -> Vector2i:
+	var local := (world_position - global_position - PLOT_ORIGIN) / PLOT_SPACING
+	var standing := Vector2i(roundi(local.x), roundi(local.y))
+	if standing.x < 0 or standing.y < 0 or standing.x >= FarmState.GRID_WIDTH or standing.y >= FarmState.GRID_HEIGHT:
+		return Vector2i(-1, -1)
+	return standing
+
+func perform_farm_action(coord: Vector2i, tool_type: ToolManager.ToolType) -> Dictionary:
 	if StaminaManager.current_stamina < 2.0:
 		_show_notification("体力不足")
-		return
+		return {"success": false, "message": "体力不足"}
 	var success := false
 	var message := ""
 	var selected_item := Inventory.get_selected_item_id()
@@ -430,6 +441,7 @@ func perform_farm_action(coord: Vector2i, tool_type: ToolManager.ToolType) -> vo
 	if success:
 		StaminaManager.use_stamina(2.0)
 	_show_notification(message)
+	return {"success": success, "message": message}
 
 
 func _farm_tool_key(tool_type: ToolManager.ToolType) -> String:

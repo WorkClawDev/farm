@@ -2139,17 +2139,137 @@ func _exercise_opening_debris() -> void:
 		FarmState.get_debris(weed) == "weed" and Inventory.get_item_count("turnip_seed") == seeds
 	)
 	var stamina := StaminaManager.current_stamina
-	farm.perform_farm_action(weed, ToolManager.ToolType.HOE)
+	var hoe_weed := farm.perform_farm_action(weed, ToolManager.ToolType.HOE)
 	_record(
 		"锄头清不了杂草，也不扣体力",
-		FarmState.get_debris(weed) == "weed" and StaminaManager.current_stamina == stamina
+		not bool(hoe_weed.get("success", true))
+			and str(hoe_weed.get("message", "")) == "杂草要用镰刀清除"
+			and FarmState.get_debris(weed) == "weed"
+			and StaminaManager.current_stamina == stamina
 	)
-	farm.perform_farm_action(stone, ToolManager.ToolType.AXE)
-	_record("斧头清不了石头", FarmState.get_debris(stone) == "stone" and StaminaManager.current_stamina == stamina)
-	farm.perform_farm_action(twig, ToolManager.ToolType.PICKAXE)
-	_record("镐子清不了树枝", FarmState.get_debris(twig) == "twig" and StaminaManager.current_stamina == stamina)
-	farm.perform_farm_action(stump, ToolManager.ToolType.SICKLE)
-	_record("镰刀清不了树桩", FarmState.get_debris(stump) == "stump" and StaminaManager.current_stamina == stamina)
+	var axe_stone := farm.perform_farm_action(stone, ToolManager.ToolType.AXE)
+	_record(
+		"斧头清不了石头",
+		not bool(axe_stone.get("success", true))
+			and str(axe_stone.get("message", "")) == "石头要用镐子清除"
+			and FarmState.get_debris(stone) == "stone"
+			and StaminaManager.current_stamina == stamina
+	)
+	var pick_twig := farm.perform_farm_action(twig, ToolManager.ToolType.PICKAXE)
+	_record(
+		"镐子清不了树枝",
+		not bool(pick_twig.get("success", true))
+			and str(pick_twig.get("message", "")) == "树枝要用斧头清除"
+			and FarmState.get_debris(twig) == "twig"
+			and StaminaManager.current_stamina == stamina
+	)
+	var sickle_stump := farm.perform_farm_action(stump, ToolManager.ToolType.SICKLE)
+	_record(
+		"镰刀清不了树桩",
+		not bool(sickle_stump.get("success", true))
+			and str(sickle_stump.get("message", "")) == "树桩要用斧头清除"
+			and FarmState.get_debris(stump) == "stump"
+			and StaminaManager.current_stamina == stamina
+	)
+
+	var player := farm.find_child("Player", true, false) as Player
+	_record("清田场景有玩家", player != null)
+	if player != null:
+		var wrong_swings := [
+			{"coord": weed, "tool": ToolManager.ToolType.AXE, "message": "杂草要用镰刀清除"},
+			{"coord": weed, "tool": ToolManager.ToolType.PICKAXE, "message": "杂草要用镰刀清除"},
+			{"coord": weed, "tool": ToolManager.ToolType.HOE, "message": "杂草要用镰刀清除"},
+			{"coord": stone, "tool": ToolManager.ToolType.HOE, "message": "石头要用镐子清除"},
+			{"coord": stone, "tool": ToolManager.ToolType.AXE, "message": "石头要用镐子清除"},
+			{"coord": stone, "tool": ToolManager.ToolType.WATERING_CAN, "message": "石头要用镐子清除"},
+			{"coord": twig, "tool": ToolManager.ToolType.HOE, "message": "树枝要用斧头清除"},
+			{"coord": stump, "tool": ToolManager.ToolType.SICKLE, "message": "树桩要用斧头清除"},
+		]
+		for swing in wrong_swings:
+			var coord: Vector2i = swing["coord"]
+			var kind_before := FarmState.get_debris(coord)
+			var state_before := int(FarmState.get_cell(coord).get("state", -1))
+			_clear_toasts()
+			player.tool_manager.equip_tool(int(swing["tool"]))
+			player.global_position = farm.global_position + farm.PLOT_ORIGIN + Vector2(coord) * farm.PLOT_SPACING
+			player.current_direction = _debris_outward_direction(coord)
+			player.velocity = Vector2.ZERO
+			var stam_before := StaminaManager.current_stamina
+			player._use_tool_on_target()
+			_record(
+				"站在%s上朝田外：%s" % [kind_before, str(swing["message"])],
+				_toast_contains(str(swing["message"]))
+					and not _toast_contains("这里不能耕地")
+					and FarmState.get_debris(coord) == kind_before
+					and int(FarmState.get_cell(coord).get("state", -1)) == state_before
+					and is_equal_approx(StaminaManager.current_stamina, stam_before)
+			)
+		_clear_toasts()
+		player.tool_manager.equip_tool(ToolManager.ToolType.HOE)
+		var stone_from: Vector2i = stone + _debris_inward_step(stone)
+		player.global_position = farm.global_position + farm.PLOT_ORIGIN + Vector2(stone_from) * farm.PLOT_SPACING
+		player.current_direction = _direction_of_step(stone - stone_from)
+		player.velocity = Vector2.ZERO
+		var face_stam := StaminaManager.current_stamina
+		player._use_tool_on_target()
+		_record(
+			"面朝田内石头用锄头是石头要用镐子清除",
+			_toast_contains("石头要用镐子清除")
+				and not _toast_contains("这里不能耕地")
+				and FarmState.get_debris(stone) == "stone"
+				and is_equal_approx(StaminaManager.current_stamina, face_stam)
+		)
+		_clear_toasts()
+		player.tool_manager.equip_tool(ToolManager.ToolType.SICKLE)
+		var stump_from: Vector2i = stump + _debris_inward_step(stump)
+		player.global_position = farm.global_position + farm.PLOT_ORIGIN + Vector2(stump_from) * farm.PLOT_SPACING
+		player.current_direction = _direction_of_step(stump - stump_from)
+		player.velocity = Vector2.ZERO
+		face_stam = StaminaManager.current_stamina
+		player._use_tool_on_target()
+		_record(
+			"面朝树桩用镰刀仍是树桩要用斧头清除",
+			_toast_contains("树桩要用斧头清除")
+				and FarmState.get_debris(stump) == "stump"
+				and is_equal_approx(StaminaManager.current_stamina, face_stam)
+		)
+		_clear_toasts()
+		player.tool_manager.equip_tool(ToolManager.ToolType.HOE)
+		player.global_position = farm.global_position + farm.PLOT_ORIGIN + Vector2(-2.4, 3) * farm.PLOT_SPACING
+		player.current_direction = Player.Direction.LEFT
+		player.velocity = Vector2.ZERO
+		var off_stam := StaminaManager.current_stamina
+		player._use_tool_on_target()
+		_record(
+			"田外草地锄头仍提示这里不能耕地",
+			_toast_contains("这里不能耕地")
+				and not _toast_contains("要用")
+				and is_equal_approx(StaminaManager.current_stamina, off_stam)
+		)
+		_clear_toasts()
+		player.tool_manager.equip_tool(ToolManager.ToolType.AXE)
+		player._use_tool_on_target()
+		_record(
+			"田外草地斧头不冒杂物专属提示",
+			not _toast_contains("要用") and not _toast_contains("这里不能耕地")
+		)
+		_clear_toasts()
+		var ridge := Vector2i(3, 0)
+		player.tool_manager.equip_tool(ToolManager.ToolType.HOE)
+		player.global_position = farm.global_position + farm.PLOT_ORIGIN + Vector2(ridge) * farm.PLOT_SPACING
+		player.current_direction = Player.Direction.UP
+		player.velocity = Vector2.ZERO
+		var ridge_state := int(FarmState.get_cell(ridge).get("state", -1))
+		var ridge_stam := StaminaManager.current_stamina
+		player._use_tool_on_target()
+		_record(
+			"空地朝田外锄头不翻脚下那格",
+			FarmState.get_debris(ridge).is_empty()
+				and _toast_contains("这里不能耕地")
+				and int(FarmState.get_cell(ridge).get("state", -1)) == ridge_state
+				and is_equal_approx(StaminaManager.current_stamina, ridge_stam)
+		)
+		_clear_toasts()
 
 	var fiber_before := Inventory.get_item_count("fiber")
 	farm.perform_farm_action(weed, ToolManager.ToolType.SICKLE)
@@ -2253,6 +2373,37 @@ func _exercise_opening_debris() -> void:
 	FarmState.reset()
 	Inventory.reset_with_starter_items()
 	StaminaManager.set_stamina(StaminaManager.max_stamina)
+
+
+
+func _debris_outward_direction(coord: Vector2i) -> int:
+	if coord.x == 0:
+		return Player.Direction.LEFT
+	if coord.x == FarmState.GRID_WIDTH - 1:
+		return Player.Direction.RIGHT
+	if coord.y == 0:
+		return Player.Direction.UP
+	return Player.Direction.DOWN
+
+
+func _debris_inward_step(coord: Vector2i) -> Vector2i:
+	if coord.x == 0:
+		return Vector2i.RIGHT
+	if coord.x == FarmState.GRID_WIDTH - 1:
+		return Vector2i.LEFT
+	if coord.y == 0:
+		return Vector2i.DOWN
+	return Vector2i.UP
+
+
+func _direction_of_step(step: Vector2i) -> int:
+	if step.x < 0:
+		return Player.Direction.LEFT
+	if step.x > 0:
+		return Player.Direction.RIGHT
+	if step.y < 0:
+		return Player.Direction.UP
+	return Player.Direction.DOWN
 
 
 func _find_debris_cell(kind: String) -> Vector2i:

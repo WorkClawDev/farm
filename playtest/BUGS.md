@@ -858,3 +858,10 @@
 - Space 开箱：PASS。热键仍锄头，按 Space 打开「农场出货箱」、时间暂停；不挥锄、无翻地 toast、体力 100/100；日志 `[ShippingBin] Interacted!`。
 - E 仍开：PASS。关 UI 后再靠近，E 同样打开出货箱。
 - 截图 shipspace_prompt.png、shipspace_space.png、shipspace_e.png。改动待本地 commit（不 push、勿带 resource_sitemap.json）。
+
+## 2026-10-29 10:00 打磨：用错工具专属提示（--new-game）
+- 锄头敲石头：PASS。toast「石头要用镐子清除」，体力 100→100，石头仍在。截图 wrongtool_hoe_stone.png
+- 斧头砍草：PASS。toast「杂草要用镰刀清除」，体力 100→100，草仍在。截图 wrongtool_axe_weed.png
+- 树桩用错工具：PASS。镰刀 toast「树桩要用斧头清除」，体力不变，树桩仍在。截图 wrongtool_stump.png
+- 田外草地锄头：PASS。toast「这里不能耕地」，无「要用」。截图 wrongtool_outfield.png
+- 改动待本地 commit（不 push、勿带 resource_sitemap.json）。

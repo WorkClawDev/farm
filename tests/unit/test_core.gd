@@ -35,6 +35,7 @@ func _ready() -> void:
 	run_seed_sprite_tests()
 	run_quest_tracker_visibility_tests()
 	run_shipping_bin_interact_tests()
+	run_debris_wrong_tool_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -2180,6 +2181,125 @@ func run_shipping_bin_interact_tests() -> void:
 	GameManager.is_game_active = saved_active
 	get_tree().paused = saved_paused
 	print("  ShippingBin interact: All tests completed")
+
+
+func run_debris_wrong_tool_tests() -> void:
+	print("\n[Debris Wrong Tool]")
+	var farm_snapshot := FarmState.get_save_state()
+	var inv_snapshot := Inventory.save_state()
+	var saved_stamina := StaminaManager.current_stamina
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	var fixture := FarmState.get_save_state()
+	var placed := {
+		Vector2i(1, 1): FarmState.DEBRIS_WEED,
+		Vector2i(2, 1): FarmState.DEBRIS_STONE,
+		Vector2i(3, 1): FarmState.DEBRIS_TWIG,
+		Vector2i(4, 1): FarmState.DEBRIS_STUMP,
+	}
+	for raw in fixture.get("cells", []):
+		var coord := Vector2i(int(raw.get("x", -1)), int(raw.get("y", -1)))
+		raw["debris"] = str(placed.get(coord, ""))
+		raw["debris_hits"] = 0
+		raw["debris_variant"] = 0
+		raw["state"] = FarmState.UNTILLED
+		raw["crop"] = {}
+	assert_true(FarmState.load_save_state(fixture), "用错工具夹具可以载入")
+	assert_true(FarmState.debris_wrong_tool_message(FarmState.DEBRIS_WEED) == "杂草要用镰刀清除", "杂草文案")
+	assert_true(FarmState.debris_wrong_tool_message(FarmState.DEBRIS_STONE) == "石头要用镐子清除", "石头文案")
+	assert_true(FarmState.debris_wrong_tool_message(FarmState.DEBRIS_TWIG) == "树枝要用斧头清除", "树枝文案")
+	assert_true(FarmState.debris_wrong_tool_message(FarmState.DEBRIS_STUMP) == "树桩要用斧头清除", "树桩文案仍是要用斧头")
+	var farm := Farm.new()
+	var tools_by_kind := {
+		FarmState.DEBRIS_WEED: [
+			ToolManager.ToolType.HOE,
+			ToolManager.ToolType.AXE,
+			ToolManager.ToolType.PICKAXE,
+			ToolManager.ToolType.WATERING_CAN,
+		],
+		FarmState.DEBRIS_STONE: [
+			ToolManager.ToolType.HOE,
+			ToolManager.ToolType.AXE,
+			ToolManager.ToolType.SICKLE,
+			ToolManager.ToolType.WATERING_CAN,
+		],
+		FarmState.DEBRIS_TWIG: [
+			ToolManager.ToolType.HOE,
+			ToolManager.ToolType.PICKAXE,
+			ToolManager.ToolType.SICKLE,
+			ToolManager.ToolType.WATERING_CAN,
+		],
+		FarmState.DEBRIS_STUMP: [
+			ToolManager.ToolType.HOE,
+			ToolManager.ToolType.PICKAXE,
+			ToolManager.ToolType.SICKLE,
+			ToolManager.ToolType.WATERING_CAN,
+		],
+	}
+	var coords := {
+		FarmState.DEBRIS_WEED: Vector2i(1, 1),
+		FarmState.DEBRIS_STONE: Vector2i(2, 1),
+		FarmState.DEBRIS_TWIG: Vector2i(3, 1),
+		FarmState.DEBRIS_STUMP: Vector2i(4, 1),
+	}
+	for kind in [FarmState.DEBRIS_WEED, FarmState.DEBRIS_STONE, FarmState.DEBRIS_TWIG, FarmState.DEBRIS_STUMP]:
+		var expect := FarmState.debris_wrong_tool_message(kind)
+		var plot: Vector2i = coords[kind]
+		for tool in tools_by_kind[kind]:
+			var before_stam := StaminaManager.current_stamina
+			var before_water := FarmState.get_watering_can_uses_left()
+			var before_state := int(FarmState.get_cell(plot).get("state", -1))
+			var result := farm.perform_farm_action(plot, tool)
+			assert_true(
+				bool(result.get("success", true)) == false
+					and str(result.get("message", "")) == expect
+					and FarmState.get_debris(plot) == kind
+					and int(FarmState.get_cell(plot).get("state", -2)) == before_state
+					and is_equal_approx(StaminaManager.current_stamina, before_stam)
+					and FarmState.get_watering_can_uses_left() == before_water,
+				"%s对%s：%s，success=false，不翻地不扣体力" % [
+					_wrong_tool_label(tool),
+					FarmState.debris_display_name(kind),
+					expect,
+				]
+			)
+	var fiber_before := Inventory.get_item_count("fiber")
+	var clear_stam := StaminaManager.current_stamina
+	var cleared := farm.perform_farm_action(Vector2i(1, 1), ToolManager.ToolType.SICKLE)
+	assert_true(
+		bool(cleared.get("success", false))
+			and str(cleared.get("message", "")) == "清除了杂草，获得纤维"
+			and FarmState.get_debris(Vector2i(1, 1)).is_empty()
+			and Inventory.get_item_count("fiber") == fiber_before + 1
+			and is_equal_approx(StaminaManager.current_stamina, clear_stam - 2.0)
+			and int(FarmState.get_cell(Vector2i(1, 1)).get("state", -1)) == FarmState.UNTILLED,
+		"镰刀清草仍然成功、掉纤维、扣 2 体力，不翻地"
+	)
+	farm.free()
+	var toast_root := UIManager.get_node_or_null("UIOverlay/ToastRoot")
+	if toast_root != null:
+		for child in toast_root.get_children():
+			child.free()
+	FarmState.load_save_state(farm_snapshot)
+	Inventory.load_state(inv_snapshot)
+	StaminaManager.set_stamina(saved_stamina)
+	print("  Debris wrong tool: All tests completed")
+
+
+func _wrong_tool_label(tool: int) -> String:
+	match tool:
+		ToolManager.ToolType.HOE:
+			return "锄头"
+		ToolManager.ToolType.WATERING_CAN:
+			return "水壶"
+		ToolManager.ToolType.AXE:
+			return "斧头"
+		ToolManager.ToolType.PICKAXE:
+			return "镐子"
+		ToolManager.ToolType.SICKLE:
+			return "镰刀"
+		_:
+			return str(tool)
+
 
 func assert_true(condition: bool, message: String):
 	total_tests += 1

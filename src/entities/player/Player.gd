@@ -226,10 +226,17 @@ func _use_tool_on_target() -> void:
 	var facing_coord := Vector2i(-1, -1)
 	if farm:
 		facing_coord = farm.get_facing_plot_coord(global_position, _get_direction_vector())
+		# 站在田里的杂物上朝田外挥时，面向格会落到网格外。锄头会误报「这里不能耕地」，
+		# 斧头、镐子、水壶则什么都不提示。这一下改打脚下那格：用错工具给专属文案，
+		# 不翻地、不扣体力、不挥空。脚下没有杂物的田外草地/土路仍走下面的分支。
+		if facing_coord.x < 0:
+			var standing: Vector2i = farm.get_standing_plot_coord(global_position)
+			if standing.x >= 0 and not FarmState.get_debris(standing).is_empty():
+				facing_coord = standing
 		if facing_coord.x >= 0:
 			farm.perform_farm_action(facing_coord, tool_manager.get_current_tool_type())
 			return
-		# BUG-9: 面向田地网格外（草地/土路）时锄头要有提示。不翻地、不扣体力。其它工具仍走下面的探测。
+		# BUG-9: 面向田地网格外（草地/土路，脚下不是杂物）时锄头要有提示。不翻地、不扣体力。其它工具仍走下面的探测。
 		if tool_manager.get_current_tool_type() == ToolManager.ToolType.HOE:
 			UIManager.show_toast("这里不能耕地", {}, "info")
 			return
