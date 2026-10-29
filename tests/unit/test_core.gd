@@ -37,6 +37,7 @@ func _ready() -> void:
 	run_shipping_bin_interact_tests()
 	run_debris_wrong_tool_tests()
 	run_tool_number_hotkey_tests()
+	run_house_camera_follow_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -2395,6 +2396,41 @@ func run_tool_number_hotkey_tests() -> void:
 	Inventory.load_state(inv_snapshot)
 	StaminaManager.set_stamina(saved_stamina)
 	print("  Tool number hotkeys: All tests completed")
+
+func run_house_camera_follow_tests() -> void:
+	print("\n[House Camera Follow]")
+	var screen := Vector2(1280, 720)
+	var limits := Rect2(0, 0, 3200, 2240)
+	var door := Vector2(841, 286)
+	var visual := Vector2(850, 158)
+	var display := Vector2(252, 256)
+	var region := Farm.house_camera_follow_region(door, visual, display)
+	assert_true(region.has_point(Vector2(260, 240)), "Follow region includes the northwest corner by the house")
+	assert_true(region.has_point(door + Vector2(0, 72)), "Follow region includes the door apron")
+	assert_true(not region.has_point(Vector2(2500, 1800)), "Follow region does not cover the far map edge")
+
+	var corner := Vector2(260, 240)
+	var corner_offset := Farm.house_camera_follow_offset(corner, region, limits, screen)
+	assert_true(corner_offset == Vector2(-380, -120), "Northwest clamp is undone so the camera stays on the player")
+	var door_offset := Farm.house_camera_follow_offset(door, region, limits, screen)
+	assert_true(door_offset == Vector2(0, -74), "Door standing spot is pulled down off the top limit")
+	var clear := Vector2(900, 450)
+	assert_true(
+		region.has_point(clear) and Farm.house_camera_follow_offset(clear, region, limits, screen) == Vector2.ZERO,
+		"Inside the house area but clear of the edge, limits already centre the player"
+	)
+	assert_true(
+		Farm.house_camera_follow_offset(Vector2(1600, 1100), region, limits, screen) == Vector2.ZERO,
+		"Mid-map keeps a zero offset so the map limits still apply"
+	)
+	assert_true(
+		Farm.house_camera_follow_offset(Vector2(3100, 1800), region, limits, screen) == Vector2.ZERO,
+		"The far edge keeps a zero offset"
+	)
+	assert_true(Farm.actor_draws_in_front_of_house(360.0, 278.0), "South of the foundation the player draws in front")
+	assert_true(not Farm.actor_draws_in_front_of_house(200.0, 278.0), "North of the foundation the wall draws in front")
+	print("  House camera follow: All tests completed")
+
 
 func assert_true(condition: bool, message: String):
 	total_tests += 1

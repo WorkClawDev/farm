@@ -155,6 +155,56 @@ func _exercise_scene(scene_name: String, scene_path: String) -> void:
 				"农场摄像机被限制在 50x35 地图边缘内",
 				farm_map != null and farm_map.camera_limits_match(farm_camera)
 			)
+			var house_for_camera := instance.find_child("PlayerHouseExterior", true, false) as HouseExterior
+			var south_of_foundation := (
+				house_for_camera != null
+				and farm_player != null
+				and Farm.actor_draws_in_front_of_house(farm_player.global_position.y, house_for_camera.global_position.y)
+			)
+			_record(
+				"农舍和玩家按地基 Y 排序，门南侧画在屋前",
+				house_for_camera != null
+					and not house_for_camera.z_as_relative
+					and house_for_camera.z_index == farm_player.z_index
+					and farm_map.y_sort_enabled
+					and south_of_foundation
+			)
+			_record(
+				"站在农舍北侧时墙画在玩家前面",
+				house_for_camera != null
+					and not Farm.actor_draws_in_front_of_house(
+						house_for_camera.global_position.y - 48.0,
+						house_for_camera.global_position.y
+					)
+			)
+			if farm_player != null and farm_camera != null and farm_map != null:
+				var saved_pos := farm_player.global_position
+				farm_player.global_position = Vector2(520, 220)
+				await get_tree().process_frame
+				await get_tree().process_frame
+				_record(
+					"农舍附近镜头跟着玩家，地图限制仍是地图边界",
+					farm_camera.get_screen_center_position().distance_to(farm_player.global_position) < 12.0
+						and farm_map.camera_limits_match(farm_camera)
+				)
+				farm_player.global_position = Vector2(2500, 1800)
+				await get_tree().process_frame
+				await get_tree().process_frame
+				_record(
+					"离开农舍后镜头仍受地图边界限制",
+					farm_camera.offset.length() < 1.0 and farm_map.camera_limits_match(farm_camera)
+				)
+				farm_player.global_position = saved_pos
+				farm_player.velocity = Vector2.ZERO
+				# Direct teleports leave CharacterBody2D's physics pose behind the
+				# node. The barn Area2D then never reports the player, even after
+				# later move_and_collide calls. Push the restored pose into the server.
+				PhysicsServer2D.body_set_state(
+					farm_player.get_rid(),
+					PhysicsServer2D.BODY_STATE_TRANSFORM,
+					farm_player.global_transform
+				)
+				await get_tree().physics_frame
 			_record("农场加载全部8个布局对象", layout_root != null and layout_root.get_child_count() == 8)
 			_record("农场房屋入口可用", instance.get_node_or_null("HouseEntrance") is Area2D)
 			_record("农场村庄出口可用", instance.get_node_or_null("VillageExit") is Area2D)

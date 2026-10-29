@@ -55,7 +55,9 @@ const HOUSE_ENTRANCE_SIZE := Vector2(40, 24)
 # profile layers (ground 0, terrain_overlay 1, decoration 2, objects 10) end up at:
 #   Ground -3 < TerrainOverlay (paths/fences) -2 < TilledArea soil -1
 #   < Player 0 == crop sprites 0 (Y-sorted together via Farm/TilledArea/FarmPlot y_sort)
-#   < Objects 7 (buildings, unchanged relative to the player).
+#   < Objects 7 (other buildings stay above the player).
+# The farmhouse is the exception: absolute z 0, Y-sorted with the player on the
+# foundation bottom (south in front, north behind the wall).
 # Plot centres sit on tile centres of the fenced field interior (tiles x 2..11, y 10..17).
 const PLOT_ORIGIN := Vector2(640, 400)  # south of farmhouse; house-plot-road triangle
 const PLOT_SPACING := 64.0
@@ -84,6 +86,7 @@ func _ready() -> void:
 				player_node.global_position = player_spawn.global_position
 		var player_camera := player_node.get_node_or_null("Camera2D") as Camera2D
 		map_root.apply_camera_limits(player_camera)
+		_update_house_camera_follow()
 	AudioManager.update_location_bgm("farm")
 
 func _setup_map() -> void:
@@ -101,6 +104,8 @@ func _setup_map() -> void:
 			push_warning("[FarmMap:%s] %s" % [issue.code, issue.message])
 	print("[Farm] Authored map loaded: ", map_root.map_id, " (", map_root.size_in_tiles, ")")
 	_setup_actor_layer()
+	_align_house_draw_order()
+	_extend_sky_for_house_follow()
 	_setup_field_fence()
 
 ## Field fence follows the tilled plot rectangle. Straight runs use Kenney
@@ -544,6 +549,120 @@ func _try_enter_house() -> void:
 		return
 	_entering_house = true
 	GameManager.change_location("res://src/world/maps/PlayerHouse.tscn", "house_entrance")
+
+## How far past the door (south) and past the roof (east) the camera still
+## recentres the player. West and north run to the map origin: that corner is
+## where the limit clamp parks the player under the quest panel (w5/w6).
+const HOUSE_CAMERA_SOUTH_APRON := 220.0
+const HOUSE_CAMERA_EAST_PAD := 180.0
+
+
+## Rect2 of map limits (limit_left/top, size to limit_right/bottom).
+static func camera_limit_rect(camera: Camera2D) -> Rect2:
+	return Rect2(
+		camera.limit_left,
+		camera.limit_top,
+		camera.limit_right - camera.limit_left,
+		camera.limit_bottom - camera.limit_top
+	)
+
+
+## Neighbourhood where the view may slide past the map edge so the player stays
+## centred. Outside it the offset is zero and the authored limits still hold.
+static func house_camera_follow_region(door: Vector2, visual_center: Vector2, display_size: Vector2) -> Rect2:
+	var east := maxf(visual_center.x + display_size.x * 0.5, door.x) + HOUSE_CAMERA_EAST_PAD
+	var south := door.y + HOUSE_CAMERA_SOUTH_APRON
+	return Rect2(Vector2.ZERO, Vector2(maxf(east, 1.0), maxf(south, 1.0)))
+
+
+## Godot adds Camera2D.offset to the top-left after the limit clamp, so this
+## delta recentres the player without changing limit_*. screen_size is the
+## visible world size (viewport / zoom).
+static func house_camera_follow_offset(player_pos: Vector2, follow_region: Rect2, limits: Rect2, screen_size: Vector2) -> Vector2:
+	if screen_size.x <= 1.0 or screen_size.y <= 1.0:
+		return Vector2.ZERO
+	if not follow_region.has_point(player_pos):
+		return Vector2.ZERO
+	var desired := player_pos - screen_size * 0.5
+	var clamped := desired
+	if limits.size.x <= screen_size.x:
+		clamped.x = limits.position.x + (limits.size.x - screen_size.x) * 0.5
+	else:
+		clamped.x = clampf(desired.x, limits.position.x, limits.end.x - screen_size.x)
+	if limits.size.y <= screen_size.y:
+		clamped.y = limits.position.y + (limits.size.y - screen_size.y) * 0.5
+	else:
+		clamped.y = clampf(desired.y, limits.position.y, limits.end.y - screen_size.y)
+	return desired - clamped
+
+
+## Greater Y draws in front. The house root sits on the foundation bottom.
+static func actor_draws_in_front_of_house(actor_y: float, house_anchor_y: float) -> bool:
+	return actor_y > house_anchor_y
+
+
+func _process(_delta: float) -> void:
+	_update_house_camera_follow()
+
+
+func _align_house_draw_order() -> void:
+	# Objects' absolute z is 7, so the whole sprite always covers the player.
+	# Join Farm's Y-sort and draw the house at the player's z. The depth anchor
+	# is already the foundation bottom.
+	if map_root == null or layout_root == null:
+		return
+	map_root.y_sort_enabled = true
+	var house := layout_root.get_node_or_null("PlayerHouseExterior") as CanvasItem
+	if house == null:
+		return
+	var player := get_tree().get_first_node_in_group("player") as CanvasItem
+	house.z_as_relative = false
+	house.z_index = player.z_index if player != null else 0
+
+
+func _extend_sky_for_house_follow() -> void:
+	var sky := get_node_or_null("SkyRect") as ColorRect
+	if sky == null or map_root == null:
+		return
+	var bounds := map_root.get_world_rect()
+	var margin := Vector2(720, 420)
+	sky.position = bounds.position - margin
+	sky.size = bounds.size + margin * 2.0
+
+
+func _camera_visible_world_size(camera: Camera2D) -> Vector2:
+	var screen := camera.get_viewport().get_visible_rect().size
+	var zoom := camera.zoom
+	if is_zero_approx(zoom.x) or is_zero_approx(zoom.y):
+		return screen
+	return Vector2(screen.x / zoom.x, screen.y / zoom.y)
+
+
+func _update_house_camera_follow() -> void:
+	if map_root == null:
+		return
+	var player := get_tree().get_first_node_in_group("player") as Node2D
+	if player == null:
+		return
+	var camera := player.get_node_or_null("Camera2D") as Camera2D
+	if camera == null:
+		return
+	var house := layout_root.get_node_or_null("PlayerHouseExterior") as HouseExterior if layout_root != null else null
+	if house == null:
+		camera.offset = Vector2.ZERO
+		return
+	var region := house_camera_follow_region(
+		house.get_door_global_position(),
+		house.get_visual_center_global_position(),
+		house.get_display_size()
+	)
+	camera.offset = house_camera_follow_offset(
+		player.global_position,
+		region,
+		camera_limit_rect(camera),
+		_camera_visible_world_size(camera)
+	)
+
 
 func _physics_process(_delta: float) -> void:
 	if _player_at_house_door != null:

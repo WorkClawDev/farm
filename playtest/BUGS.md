@@ -871,3 +871,9 @@
 - Q/R 循环：PASS。鱼竿上 Q→镰刀、R→鱼竿。
 - 快捷栏/Tab 播种：PASS。Tab 选手持防风草种子；数字键仍切工具不抢物品；锄翻地后 Tab 再 Space 播种，×15→×14，stage0 可见。截图 toolnum_plant.png
 - 改动待本地 commit（不 push、勿带 resource_sitemap.json）。
+
+## 2026-10-29 11:59 打磨：农舍附近镜头跟人（--new-game）
+- 镜头跟人：PASS。屋前左右走、西/西北沿屋边走，角色约居中（~640,362），镜头不卡死、不滑进任务条下。截图 camhouse_follow.png
+- 屋前可见：PASS。南侧门廊前人完整在屋前，不被建筑盖住。截图 camhouse_front.png
+- 门前不被 HUD 挡：PASS。台阶处角色在画面中部，任务条/工具栏都不盖人。截图 camhouse_door.png
+- 改动待本地 commit（不 push、勿带 resource_sitemap.json）。
