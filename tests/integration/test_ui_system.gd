@@ -51,6 +51,7 @@ func _ready() -> void:
 	await _test_dialogue_long_text()
 	await _test_toast_eviction_timers()
 	await _test_pause_submenu_esc()
+	await _test_pause_menu_first_direction()
 	await _test_bug7_farm3_save_file()
 	await _test_main_menu_down_does_not_activate()
 	await _test_debug_launch_args()
@@ -390,6 +391,80 @@ func _test_pause_submenu_esc() -> void:
 	await get_tree().process_frame
 	GameManager.is_game_active = old_active
 	GameManager.current_state = old_state
+
+
+## Opening used to grab 继续 only after process_frame. Direction keys flushed
+## before that frame did nothing, and a hitch could swallow a whole burst.
+func _test_pause_menu_first_direction() -> void:
+	var old_active := GameManager.is_game_active
+	var old_state := GameManager.current_state
+	var old_paused := get_tree().paused
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	get_tree().paused = false
+	var layer := CanvasLayer.new()
+	layer.layer = 21
+	add_child(layer)
+	var stray := Button.new()
+	stray.text = "STRAY"
+	stray.custom_minimum_size = Vector2(200, 48)
+	stray.position = Vector2(16, 900)
+	layer.add_child(stray)
+	var pm := (load("res://src/ui/menus/PauseMenu.tscn") as PackedScene).instantiate() as PauseMenu
+	pm.visible = false
+	pm.process_mode = Node.PROCESS_MODE_ALWAYS
+	layer.add_child(pm)
+	pm.resume_requested.connect(func():
+		pm.visible = false
+		GameManager.resume_game())
+	await get_tree().process_frame
+	GameManager.pause_game()
+	pm.visible = true
+	var opened_on_resume := get_viewport().gui_get_focus_owner() == pm._resume_button
+	_tap_ui_key(KEY_DOWN)
+	var save_button: Button = pm._menu_buttons[1] if pm._menu_buttons.size() > 1 else null
+	var moved := get_viewport().gui_get_focus_owner() == save_button and save_button != null and save_button.text == "保存"
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var stayed := get_viewport().gui_get_focus_owner() == save_button
+	_tap_ui_key(KEY_UP)
+	var back_to_resume := get_viewport().gui_get_focus_owner() == pm._resume_button
+	_tap_ui_key(KEY_LEFT)
+	var stayed_on_left := get_viewport().gui_get_focus_owner() == pm._resume_button
+	_tap_ui_key(KEY_RIGHT)
+	var stayed_on_right := get_viewport().gui_get_focus_owner() == pm._resume_button
+	var focus_ok := opened_on_resume and pm._resume_button.text == "继续" and moved and stayed and back_to_resume and stayed_on_left and stayed_on_right
+	if not focus_ok:
+		var owner := get_viewport().gui_get_focus_owner()
+		var owner_text := ""
+		if owner is Button:
+			owner_text = (owner as Button).text
+		else:
+			owner_text = str(owner)
+		push_error("pause-focus detail open=%s down=%s stay=%s up=%s left=%s right=%s now=%s" % [opened_on_resume, moved, stayed, back_to_resume, stayed_on_left, stayed_on_right, owner_text])
+	_record("暂停菜单打开后焦点立刻在继续", opened_on_resume and pm._resume_button.text == "继续")
+	_record("暂停菜单第一次 ui_down 从继续移到保存", moved and stayed)
+	_record("暂停菜单第一次 ui_up / 左右不离开菜单", back_to_resume and stayed_on_left and stayed_on_right)
+	await _press_esc()
+	_record("暂停菜单方向键后 Esc 仍一次关闭并恢复", not pm.visible and not get_tree().paused and not GameManager.is_paused())
+	if get_tree().paused or GameManager.is_paused():
+		pm.visible = false
+		get_tree().paused = false
+		GameManager.current_state = GameManager.GameState.PLAYING
+	layer.queue_free()
+	await get_tree().process_frame
+	get_tree().paused = old_paused
+	GameManager.is_game_active = old_active
+	GameManager.current_state = old_state
+
+
+func _tap_ui_key(keycode: Key) -> void:
+	for pressed in [true, false]:
+		var ev := InputEventKey.new()
+		ev.keycode = keycode
+		ev.physical_keycode = keycode
+		ev.pressed = pressed
+		get_viewport().push_input(ev)
 
 
 # BUG-7：选「农场 3」时日志是 Saved slot 2。槽从 0 计，农场 3 = 内部槽 2 = save_2.json。

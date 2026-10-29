@@ -884,3 +884,9 @@
 - 误进住家：PASS。toast「这是住家，商店在外面找莉莉」。截图 shopfind_home_toast.png
 - 小问题：任务条仍只显示「农场入门/收获1个防风草」；「认识村民/去找店主莉莉买种子」未出现在当前任务条（日志有 accept village_introduction）。不挡本单。
 - 改动待本地 commit（不 push、勿带 resource_sitemap.json）。
+
+## 2026-10-29 14:30 打磨：暂停菜单 ↓ 可靠（--new-game）
+- 第一次 ↓：PASS。Esc 开「农场小憩」焦点在「继续」；只按一次 ↓ 焦点到「保存」。截图 pausedown_open.png、pausedown_after_down.png
+- ↑/左右：PASS。保存上 ↑ 回继续；主菜单左右无邻居焦点不变；退出确认框 → 可从取消到确认。
+- Esc 开关/子界面：PASS。关再开后第一次 ↓ 仍到保存；设置 Esc 回暂停；退出确认 Esc 取消不卡住。
+- 改动待本地 commit（不 push、勿带 resource_sitemap.json）。
