@@ -894,3 +894,8 @@
 ## 2026-10-29 15:05 打磨：任务条切到认识村民（--new-game）
 - PASS。开局同时接受农场入门+认识村民后，左上显示「认识村民 / 去找店主莉莉买种子 0/1」，不再卡「农场入门/收获防风草」。进村后仍同文案。
 - 截图 questtrack_farm.png、questtrack_village.png。改动待本地 commit（不 push、勿带 resource_sitemap.json）。
+
+## 2026-10-29 16:14 打磨：树桩砍完 toast（--new-game）
+- 1–2 下：PASS。斧头 Space toast「树桩还没砍倒（1/3）」「（2/3）」，树桩仍在。截图 stumptoast_hit1.png、stumptoast_hit2.png
+- 第 3 下：PASS。toast「砍倒了树桩，获得木材」；树桩消失；快捷栏出现木材。无「这里没有树枝或树桩」。截图 stumptoast_clear.png
+- 改动待本地 commit（不 push、勿带 resource_sitemap.json）。

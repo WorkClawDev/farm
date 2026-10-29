@@ -36,6 +36,7 @@ func _ready() -> void:
 	run_quest_tracker_visibility_tests()
 	run_shipping_bin_interact_tests()
 	run_debris_wrong_tool_tests()
+	run_stump_clear_toast_tests()
 	run_tool_number_hotkey_tests()
 	run_house_camera_follow_tests()
 	run_shop_find_guide_tests()
@@ -2287,6 +2288,106 @@ func run_debris_wrong_tool_tests() -> void:
 	Inventory.load_state(inv_snapshot)
 	StaminaManager.set_stamina(saved_stamina)
 	print("  Debris wrong tool: All tests completed")
+
+
+func _unit_clear_toasts() -> void:
+	var toast_root := UIManager.get_node_or_null("UIOverlay/ToastRoot")
+	if toast_root == null:
+		return
+	for child in toast_root.get_children():
+		child.free()
+
+
+func _unit_toast_has(fragment: String) -> bool:
+	var toast_root := UIManager.get_node_or_null("UIOverlay/ToastRoot")
+	if toast_root == null:
+		return false
+	for child in toast_root.get_children():
+		if child.is_queued_for_deletion():
+			continue
+		if str(child.get_meta("toast_text", "")).find(fragment) >= 0:
+			return true
+	return false
+
+
+## 斧头连砍树桩 3 下：第 3 下是砍倒和木材。紧接着再挥（连按在挥砍锁之后打到空格）
+## 不能再弹「这里没有树枝或树桩」。别的空地仍要这句提示。
+func run_stump_clear_toast_tests() -> void:
+	print("\n[Stump Clear Toast]")
+	var farm_snapshot := FarmState.get_save_state()
+	var inv_snapshot := Inventory.save_state()
+	var saved_stamina := StaminaManager.current_stamina
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	var stump := Vector2i(4, 1)
+	var other := Vector2i(6, 1)
+	var fixture := FarmState.get_save_state()
+	for raw in fixture.get("cells", []):
+		var coord := Vector2i(int(raw.get("x", -1)), int(raw.get("y", -1)))
+		raw["debris"] = FarmState.DEBRIS_STUMP if coord == stump else ""
+		raw["debris_hits"] = 0
+		raw["debris_variant"] = 0
+		raw["state"] = FarmState.UNTILLED
+		raw["crop"] = {}
+	assert_true(FarmState.load_save_state(fixture), "树桩提示夹具可以载入")
+	var farm := Farm.new()
+	_unit_clear_toasts()
+	var wood_before := Inventory.get_item_count("wood")
+	var empty_before := farm.perform_farm_action(other, ToolManager.ToolType.AXE)
+	assert_true(
+		str(empty_before.get("message", "")) == "这里没有树枝或树桩"
+			and not bool(empty_before.get("success", true))
+			and _unit_toast_has("这里没有树枝或树桩"),
+		"还没砍倒任何东西时，空地斧头仍提示这里没有树枝或树桩"
+	)
+	_unit_clear_toasts()
+	var stamina := StaminaManager.current_stamina
+	var hit1 := farm.perform_farm_action(stump, ToolManager.ToolType.AXE)
+	var hit2 := farm.perform_farm_action(stump, ToolManager.ToolType.AXE)
+	var hit3 := farm.perform_farm_action(stump, ToolManager.ToolType.AXE)
+	var third := str(hit3.get("message", ""))
+	assert_true(str(hit1.get("message", "")) == "树桩还没砍倒（1/3）", "第 1 下是树桩还没砍倒（1/3）")
+	assert_true(str(hit2.get("message", "")) == "树桩还没砍倒（2/3）", "第 2 下是树桩还没砍倒（2/3）")
+	assert_true(
+		third.find("砍倒") >= 0 and third.find("木材") >= 0 and third.find("这里没有树枝或树桩") < 0,
+		"第 3 下返回砍倒了树桩、获得木材，不是这里没有树枝或树桩"
+	)
+	assert_true(
+		bool(hit3.get("success", false))
+			and FarmState.get_debris(stump).is_empty()
+			and Inventory.get_item_count("wood") == wood_before + 1
+			and is_equal_approx(StaminaManager.current_stamina, stamina - 6.0)
+			and _unit_toast_has("砍倒了树桩，获得木材")
+			and not _unit_toast_has("这里没有树枝或树桩"),
+		"第 3 下清掉树桩、掉 1 个木材、扣 6 体力，提示只有砍倒"
+	)
+	var follow := farm.perform_farm_action(stump, ToolManager.ToolType.AXE)
+	var follow_again := farm.perform_farm_action(stump, ToolManager.ToolType.AXE)
+	assert_true(
+		str(follow.get("message", "")) != "这里没有树枝或树桩"
+			and str(follow_again.get("message", "")) != "这里没有树枝或树桩"
+			and not bool(follow.get("success", true))
+			and not bool(follow_again.get("success", true))
+			and Inventory.get_item_count("wood") == wood_before + 1
+			and is_equal_approx(StaminaManager.current_stamina, stamina - 6.0)
+			and _unit_toast_has("砍倒了树桩，获得木材")
+			and not _unit_toast_has("这里没有树枝或树桩"),
+		"清除后紧接着再挥两下不弹这里没有树枝或树桩，也不再扣体力、不再掉木头"
+	)
+	var elsewhere := farm.perform_farm_action(other, ToolManager.ToolType.AXE)
+	assert_true(
+		str(elsewhere.get("message", "")) == "这里没有树枝或树桩"
+			and not bool(elsewhere.get("success", true))
+			and _unit_toast_has("这里没有树枝或树桩")
+			and _unit_toast_has("砍倒了树桩，获得木材")
+			and is_equal_approx(StaminaManager.current_stamina, stamina - 6.0),
+		"别的空地真空挥仍提示这里没有树枝或树桩，砍倒提示还在"
+	)
+	farm.free()
+	_unit_clear_toasts()
+	FarmState.load_save_state(farm_snapshot)
+	Inventory.load_state(inv_snapshot)
+	StaminaManager.set_stamina(saved_stamina)
+	print("  Stump clear toast: All tests completed")
 
 
 func _wrong_tool_label(tool: int) -> String:

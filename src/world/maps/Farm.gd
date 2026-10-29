@@ -355,6 +355,14 @@ func get_standing_plot_coord(world_position: Vector2) -> Vector2i:
 		return Vector2i(-1, -1)
 	return standing
 
+## 挥砍锁只吃掉按住不放、以及锁定期里的那一下。树桩要砍 3 下，连按空格会在
+## 锁结束（约 0.28 秒）后再打到刚清掉的那一格。格子已经空了，斧头就弹
+## 「这里没有树枝或树桩」，把「砍倒了树桩，获得木材」顶掉。清掉之后的这段
+## 时间里，同一格的斧头或镐子空挥不再出声。别的格子，以及这段时间过了之后，仍照常提示。
+const DEBRIS_CLEAR_MISS_GUARD_MS := 3000
+var _debris_clear_guard_coord := Vector2i(-999, -999)
+var _debris_clear_guard_until_msec := 0
+
 func perform_farm_action(coord: Vector2i, tool_type: ToolManager.ToolType) -> Dictionary:
 	if StaminaManager.current_stamina < 2.0:
 		_show_notification("体力不足")
@@ -377,6 +385,8 @@ func perform_farm_action(coord: Vector2i, tool_type: ToolManager.ToolType) -> Di
 			var cleared := _clear_debris_with_tool(coord, tool_type)
 			success = bool(cleared.get("success", false))
 			message = str(cleared.get("message", ""))
+			if success and FarmState.get_debris(coord).is_empty():
+				_remember_debris_clear(coord)
 	elif tool_type == ToolManager.ToolType.NONE:
 		if selected_data and selected_data.type == ItemDatabase.ItemType.SEED:
 			if int(cell.get("state", FarmState.UNTILLED)) == FarmState.UNTILLED:
@@ -437,9 +447,9 @@ func perform_farm_action(coord: Vector2i, tool_type: ToolManager.ToolType) -> Di
 					else:
 						message = "作物尚未成熟"
 			ToolManager.ToolType.AXE:
-				message = "这里没有树枝或树桩"
+				message = "" if _debris_clear_miss_suppressed(coord) else "这里没有树枝或树桩"
 			ToolManager.ToolType.PICKAXE:
-				message = "这里没有石头"
+				message = "" if _debris_clear_miss_suppressed(coord) else "这里没有石头"
 			_:
 				message = "选择种子或合适的工具"
 
@@ -447,6 +457,15 @@ func perform_farm_action(coord: Vector2i, tool_type: ToolManager.ToolType) -> Di
 		StaminaManager.use_stamina(2.0)
 	_show_notification(message)
 	return {"success": success, "message": message}
+
+
+func _remember_debris_clear(coord: Vector2i) -> void:
+	_debris_clear_guard_coord = coord
+	_debris_clear_guard_until_msec = Time.get_ticks_msec() + DEBRIS_CLEAR_MISS_GUARD_MS
+
+
+func _debris_clear_miss_suppressed(coord: Vector2i) -> bool:
+	return coord == _debris_clear_guard_coord and Time.get_ticks_msec() < _debris_clear_guard_until_msec
 
 
 func _farm_tool_key(tool_type: ToolManager.ToolType) -> String:
