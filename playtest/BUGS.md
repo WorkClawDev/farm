@@ -909,3 +909,9 @@
 - 南侧：PASS。脚在桩脚南，角色整人画在桩前，不被盖。截图 stumpy_south.png
 - 北侧：PASS。脚在桩脚北、与干重叠，桩挡住身体，仅头顶右侧一缕可见。截图 stumpy_north.png
 - 改动待本地 commit（不 push、勿带 resource_sitemap.json）。
+
+## 2026-11-03 23:12 打磨：农舍屋顶/屋边穿模（--new-game）
+- 西/东侧：PASS。贴墙推挤停在草地上，不走进墙/屋檐精灵。截图 roofclip_west.png、roofclip_east.png
+- 北侧屋顶尖：PASS。推到峰顶外沿被挡，进不了屋顶内部；脚/躯干可压到峰缘像素（精灵与碰撞略差），不挡本单。截图 roofclip_north.png
+- 门进出：PASS。北走上台阶进 PlayerHouse；南走回到农舍前。截图 roofclip_enter.png、roofclip_exit.png
+- 改动待本地 commit（不 push、勿带 resource_sitemap.json）。

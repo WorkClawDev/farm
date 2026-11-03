@@ -20,6 +20,24 @@ const PRIVATE_HOUSE_DOOR := Vector2(-18, 256)
 ## footprint is 0.91 wide and centred 18.5 atlas px left of the region centre.
 const PRIVATE_FOOTPRINT_WIDTH_RATIO := 0.91
 const PRIVATE_FOOTPRINT_CENTER_X := -18.5
+## Region-local atlas pixels of the B06 roof and upper walls. The foundation
+## rectangle only covers the bottom strip, so without this outline the player
+## walks through the peak, eaves and side walls. The bottom edge stops where
+## the porch begins (the door steps stay open). The right edge stays at x=472
+## so the east "beyond the artwork" probe still misses.
+static func _private_roof_outline() -> PackedVector2Array:
+	return PackedVector2Array([
+		Vector2(228, 0),
+		Vector2(112, 112),
+		Vector2(0, 124),
+		Vector2(0, 448),
+		Vector2(472, 448),
+		Vector2(472, 120),
+		Vector2(424, 116),
+		Vector2(360, 112),
+		Vector2(272, 16),
+		Vector2(244, 0),
+	])
 
 const HOUSE_SIZES := {
 	0: Vector2(220, 168),
@@ -140,6 +158,25 @@ func _update_collision_shape(display_size: Vector2) -> void:
 		footprint_x,
 		collision_center_y - _depth_anchor_offset
 	)
+	_sync_roof_collision()
+
+func _sync_roof_collision() -> void:
+	var existing := get_node_or_null("RoofCollision") as CollisionPolygon2D
+	if not _uses_private_art:
+		if existing != null:
+			existing.queue_free()
+		return
+	var poly := existing
+	if poly == null:
+		poly = CollisionPolygon2D.new()
+		poly.name = "RoofCollision"
+		add_child(poly)
+	var points := PackedVector2Array()
+	var center := PRIVATE_HOUSE_REGION.size * 0.5
+	for atlas_px in _private_roof_outline():
+		var centered := (atlas_px - center) * PrivateBuildingArt.DISPLAY_SCALE
+		points.append(sprite.position + centered)
+	poly.polygon = points
 
 func get_door_offset() -> Vector2:
 	if _uses_private_art:
