@@ -915,3 +915,11 @@
 - 北侧屋顶尖：PASS。推到峰顶外沿被挡，进不了屋顶内部；脚/躯干可压到峰缘像素（精灵与碰撞略差），不挡本单。截图 roofclip_north.png
 - 门进出：PASS。北走上台阶进 PlayerHouse；南走回到农舍前。截图 roofclip_enter.png、roofclip_exit.png
 - 改动待本地 commit（不 push、勿带 resource_sitemap.json）。
+
+## 2026-11-04 00:00 打磨：铁匠/医生站位拉开（--new-game，白天）
+- 拉开距离：PASS。汤姆在水井北（北侧建筑南缘），玛丽在井东小路，明显分开不叠交互。截图 smithprox_apart.png
+- 靠近汤姆 Space：PASS。开「工具升级」，日志 Interacting with 铁匠·汤姆，非医生。截图 smithprox_tom.png
+- 靠近玛丽 Space：PASS。对话「医生·玛丽 / 你好！身体健康吗？」，非升级 UI。截图 smithprox_mary.png
+- 旧铁匠位（诊所东）：汤姆不在。截图 smithprox_oldeast.png
+- 小注：汤姆授权点(432,220)落在西北建筑碰撞内，实际站在该建筑南缘（不挡本单）。
+- 改动待本地 commit（不 push、勿带 resource_sitemap.json）。
