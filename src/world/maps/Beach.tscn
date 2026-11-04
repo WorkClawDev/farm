@@ -9,7 +9,7 @@
 radius = 40.0
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_exit"]
-size = Vector2(64, 32)
+size = Vector2(320, 48)
 
 [node name="Beach" type="Node2D"]
 script = ExtResource("1_beach")
@@ -110,17 +110,77 @@ horizontal_alignment = 1
 position = Vector2(0, -200)
 collision_layer = 0
 collision_mask = 2
+z_index = 12
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="ExitToVillage"]
 shape = SubResource("RectangleShape2D_exit")
 
+[node name="ExitPost" type="ColorRect" parent="ExitToVillage"]
+z_index = 12
+offset_left = -5.0
+offset_top = -8.0
+offset_right = 5.0
+offset_bottom = 36.0
+mouse_filter = 2
+color = Color(0.29, 0.16, 0.06, 1)
+
+[node name="ExitBoard" type="ColorRect" parent="ExitToVillage"]
+z_index = 13
+offset_left = -78.0
+offset_top = -58.0
+offset_right = 78.0
+offset_bottom = -16.0
+mouse_filter = 2
+color = Color(0.4, 0.24, 0.09, 0.95)
+
 [node name="ExitLabel" type="Label" parent="ExitToVillage"]
-offset_left = -50.0
-offset_top = -30.0
-offset_right = 50.0
-offset_bottom = -10.0
+z_index = 14
+offset_left = -74.0
+offset_top = -56.0
+offset_right = 74.0
+offset_bottom = -18.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.96, 0.82, 1)
+theme_override_colors/font_outline_color = Color(0.1, 0.05, 0.02, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 22
 text = "↑ 村庄"
 horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="VillagePathSign" type="Node2D" parent="."]
+position = Vector2(0, 16)
+z_index = 12
+
+[node name="Post" type="ColorRect" parent="VillagePathSign"]
+offset_left = -4.0
+offset_top = -6.0
+offset_right = 4.0
+offset_bottom = 34.0
+mouse_filter = 2
+color = Color(0.29, 0.16, 0.06, 1)
+
+[node name="Board" type="ColorRect" parent="VillagePathSign"]
+offset_left = -70.0
+offset_top = -46.0
+offset_right = 70.0
+offset_bottom = -12.0
+mouse_filter = 2
+color = Color(0.4, 0.24, 0.09, 0.95)
+
+[node name="GuideLabel" type="Label" parent="VillagePathSign"]
+offset_left = -66.0
+offset_top = -44.0
+offset_right = 66.0
+offset_bottom = -14.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.96, 0.82, 1)
+theme_override_colors/font_outline_color = Color(0.1, 0.05, 0.02, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 18
+text = "↑ 村庄"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="AmbiencePlayer" type="AudioStreamPlayer" parent="."]
 volume_db = -10.0
