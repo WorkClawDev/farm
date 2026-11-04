@@ -981,3 +981,21 @@
   - 村里「海滩 →」牌完整（beachpolish_sign.png）。
 疑点：海滩回村后有两张截图显示 9:40 PM / 8:55 PM 和夜色，之后的截图都恢复 9:00 AM。可能是冻结时钟在切场景时漏了，也可能是截图滞后，待确认。
 按键延迟：仍有几秒，比之前轻一些。
+
+## freezeleak 挂起
+
+2026-11-04 headless 没有复现「冻结时钟后从海滩切回村庄，时间或昼夜被改写」。业务代码未改。用例留在 `tests/integration/test_freezeleak.gd`。
+
+步骤：`start_new_game` 后用 `SceneTransition.transition_to` 进入海滩（与地图出口同一接口），把 autoload `TimeManager` 设为 21.25（9:15 PM）、第 12 天、夏季、第 2 年、累加器 0.25，并直接置 `_time_frozen = true`（与 `--freeze-time` 在 `TimeManager._ready` 里置的是同一个标志）。再 `transition_to("res://src/world/maps/Village.tscn", "from_beach")`，与 `Beach._on_exit_village` 相同。打印切换前、Village 成为当前场景后的第 1 个 process 帧、第 10 个 process 帧。然后清掉冻结，回到海滩，用同一组哨兵值再走一遍。存档目录改到 `user://freezeleak_saves_*`，真实 `user://saves/` 的 md5 与 mtime 未变。
+
+冻结三处读数一致：`time=21.250000` `clock=9:15 PM` `date=Year 2, Summer 12` `day=12` `season=1` `year=2` `paused=false` `frozen=true` `acc=0.250000` `scale=1` `tint=(0.42, 0.47, 0.72, 1.0)` `season_sys=0` `weather=sunny`。`frozen_changed=false`。
+
+不冻结时淡出约 0.5 秒，时钟按 `TimeManager._update_time`（现实 0.7 秒 = 游戏 1 分钟）走了一分钟：frame1 / frame10 为 `time=21.266795`（9:16 PM），累加器从 0.25 进位后剩 0.070727，第 10 帧为 0.171316。日、季、年、暂停、冻结标志、夜色、`SeasonSystem.current_season`、天气都停在哨兵值。`live_changed=true` 只来自这段正常走时。
+
+`Beach.gd` / `Village.gd` 的 `_ready` 不写 `current_time`。`DayNightTint._ready` 只按当前时间上色。这次切换的日志里没有 `[TimeManager] State loaded`，也没有走到 `reset`（9:00）或 `_advance_day`（6:00）。会给 `current_time` 赋值的生产代码仍是 `TimeManager.gd` 的 `_advance_day`、`reset`、`load_state`，以及 `GameManager._skip_debug_time` 和 `DebugLaunch.apply_new_game_options`。海滩回村没经过这些行。
+
+上文 15:44 的 9:40 PM / 8:55 PM 截图和这次冻结采样对不上，先挂起。
+
+## 2026-11-04 18:37 freezeleak 实机复测 — 冻结时 PASS，不冻结时没测完
+1) 开 --freeze-time 从农场进村，再在海滩和村庄之间来回切 4 趟，每次回村都是 9:00 AM、白天（freezeleak_f_1～4.png）。之前看到的夜间时间没复现，判断是截图滞后。
+2) 不冻结、在夜里来回切：这次测试中途断了，没拿到数据。
