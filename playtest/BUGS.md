@@ -923,3 +923,9 @@
 - 旧铁匠位（诊所东）：汤姆不在。截图 smithprox_oldeast.png
 - 小注：汤姆授权点(432,220)落在西北建筑碰撞内，实际站在该建筑南缘（不挡本单）。
 - 改动待本地 commit（不 push、勿带 resource_sitemap.json）。
+
+## 2026-11-04 10:08 打磨：汤姆白天站位移出建筑（--new-game）
+- 站位：PASS。日志 blacksmith_tom (420,236)；精灵完整在水井北可走格，不进西北建筑碰撞。截图 tomspot_stand.png
+- 与玛丽：PASS。明显分开可区分。截图 tomspot_apart.png
+- Space 升级：PASS。白天 15:10 靠近汤姆开「工具升级」，日志 Interacting with 铁匠·汤姆，非医生。截图 tomspot_upgrade.png
+- 改动待本地 commit（不 push、勿带 resource_sitemap.json）。
