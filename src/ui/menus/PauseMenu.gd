@@ -58,7 +58,34 @@ func _add_button(parent: VBoxContainer, key: String, fallback: String, variation
 	button.pressed.connect(callback)
 	parent.add_child(button)
 	_menu_buttons.append(button)
+	_install_visible_focus(button)
 	return button
+
+
+## PrimaryButton's inherited focus ring is the same green as 继续, so the
+## first row looked unfocused and arrow-key moves were easy to miss.
+func _install_visible_focus(button: Button) -> void:
+	var focus := StyleBoxFlat.new()
+	focus.bg_color = Color(0.73, 0.9, 0.55, 1)
+	focus.border_color = Color(1.0, 0.86, 0.28, 1)
+	focus.set_border_width_all(3)
+	focus.set_corner_radius_all(6)
+	focus.content_margin_left = 14.0
+	focus.content_margin_top = 8.0
+	focus.content_margin_right = 14.0
+	focus.content_margin_bottom = 8.0
+	button.add_theme_stylebox_override("focus", focus)
+	button.focus_mode = Control.FOCUS_ALL
+	button.focus_entered.connect(_paint_menu_focus)
+	button.focus_exited.connect(_paint_menu_focus)
+
+
+func _paint_menu_focus(_arg: Variant = null) -> void:
+	var owner := get_viewport().gui_get_focus_owner() if is_inside_tree() else null
+	for button in _menu_buttons:
+		if not is_instance_valid(button):
+			continue
+		button.modulate = Color(1.12, 1.2, 0.9) if button == owner else Color.WHITE
 
 
 ## Explicit chain so a direction key cannot land on a hotbar slot or a zero-rect
@@ -145,6 +172,7 @@ func _focus_resume() -> void:
 	if _resume_button.focus_mode == Control.FOCUS_NONE:
 		_resume_button.focus_mode = Control.FOCUS_ALL
 	_resume_button.grab_focus()
+	_paint_menu_focus()
 
 
 ## Arrow keys are also move_*. Handle them before the viewport's spatial search
@@ -180,6 +208,7 @@ func _move_menu_focus(delta: int) -> void:
 	var target := _menu_buttons[index]
 	if target != current:
 		target.grab_focus()
+	_paint_menu_focus()
 
 
 func _ensure_menu_focus() -> void:

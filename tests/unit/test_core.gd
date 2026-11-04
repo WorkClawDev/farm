@@ -42,6 +42,7 @@ func _ready() -> void:
 	run_debris_ysort_tests()
 	run_shop_find_guide_tests()
 	run_quest_tracker_feature_tests()
+	run_loopfeedback_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -1330,6 +1331,10 @@ func run_day_start_and_collapse_tests() -> void:
 	assert_true(
 		_day_notices.size() == 1 and _day_notices[0] == "新的一天开始了，出货到账 %d 金" % sleep_sale,
 		"Sleep notice names the shipment payout"
+	)
+	assert_true(
+		_unit_toast_has("昨日出货 +%d 金" % sleep_sale),
+		"睡觉后弹出昨日出货金额"
 	)
 
 	MoneySystem.set_money(200)
@@ -2658,6 +2663,188 @@ func run_quest_tracker_feature_tests() -> void:
 		tracker.free()
 	QuestSystem.load_state(snapshot)
 	print("  Quest tracker feature: All tests completed")
+
+
+
+func run_loopfeedback_tests() -> void:
+	print("\n[Loop Feedback]")
+	var farm_snapshot: Dictionary = FarmState.get_save_state()
+	var inv_snapshot: Dictionary = Inventory.save_state()
+	var ship_snapshot: Dictionary = ShippingSystem.save_state()
+	var saved_stamina: float = StaminaManager.current_stamina
+	var saved_day: int = TimeManager.current_day
+	var saved_season: int = TimeManager.current_season
+	var saved_money: int = MoneySystem.get_money()
+	var saved_state: int = GameManager.current_state
+	var saved_active: bool = GameManager.is_game_active
+	var saved_paused: bool = get_tree().paused
+	var saved_player: Node2D = GameManager.player
+
+	TimeManager.current_day = 2
+	var wet := Vector2i(2, 2)
+	var dry := Vector2i(3, 2)
+	var fixture: Dictionary = FarmState.get_save_state()
+	for raw in fixture.get("cells", []):
+		var coord := Vector2i(int(raw.get("x", -1)), int(raw.get("y", -1)))
+		if coord != wet and coord != dry:
+			continue
+		raw["debris"] = ""
+		raw["debris_hits"] = 0
+		raw["state"] = FarmState.TILLED
+		raw["moisture"] = 0
+		raw["crop"] = {
+			"crop_id": "turnip",
+			"stage": 0,
+			"days_in_stage": 0,
+			"total_days": 0,
+			"watered": coord == wet,
+			"quality": 0,
+			"mature": false,
+			"dead": false,
+		}
+	assert_true(FarmState.load_save_state(fixture), "成长计数夹具可以载入")
+	var before_wet := int(Dictionary(FarmState.get_cell(wet).get("crop", {})).get("total_days", -1))
+	var before_dry := int(Dictionary(FarmState.get_cell(dry).get("crop", {})).get("total_days", -1))
+	FarmState.advance_day()
+	var grown_wet := int(Dictionary(FarmState.get_cell(wet).get("crop", {})).get("total_days", -1))
+	var grown_dry := int(Dictionary(FarmState.get_cell(dry).get("crop", {})).get("total_days", -1))
+	var counted := GrowthSystem.update_all_crops()
+	var again_wet := int(Dictionary(FarmState.get_cell(wet).get("crop", {})).get("total_days", -1))
+	var again_dry := int(Dictionary(FarmState.get_cell(dry).get("crop", {})).get("total_days", -1))
+	assert_true(before_wet == 0 and grown_wet == 1 and again_wet == 1, "浇过水的作物过夜长 1 天，计数后再读不会再长")
+	assert_true(before_dry == 0 and grown_dry == 0 and again_dry == 0, "没浇水的作物过夜不长")
+	assert_true(counted == 2 and GrowthSystem.get_all_crops().is_empty(), "过夜计数是田里的 2 棵活作物，不是空的 Crop 节点列表")
+	var second := GrowthSystem.update_all_crops()
+	var still_wet := int(Dictionary(FarmState.get_cell(wet).get("crop", {})).get("total_days", -1))
+	assert_true(second == 0 and still_wet == 1, "没有新的过夜结算时不再报田里的数量，也不再长")
+
+	FarmState.load_save_state(farm_snapshot)
+	TimeManager.current_season = 0
+	TimeManager.current_day = 2
+	var plot := Vector2i(4, 2)
+	var plant_fixture: Dictionary = FarmState.get_save_state()
+	for raw2 in plant_fixture.get("cells", []):
+		var plant_coord := Vector2i(int(raw2.get("x", -1)), int(raw2.get("y", -1)))
+		if plant_coord != plot:
+			continue
+		raw2["debris"] = ""
+		raw2["debris_hits"] = 0
+		raw2["state"] = FarmState.TILLED
+		raw2["moisture"] = 0
+		raw2["crop"] = {}
+	assert_true(FarmState.load_save_state(plant_fixture), "播种浇水夹具可以载入")
+	FarmState.refill_watering_can()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	Inventory.set_slot(0, "turnip_seed", 2)
+	Inventory.set_selected_hotbar_index(0)
+	var farm := Farm.new()
+	_unit_clear_toasts()
+	var planted: Dictionary = farm.perform_farm_action(plot, ToolManager.ToolType.NONE)
+	assert_true(bool(planted.get("success", false)) and _unit_toast_has("已播种"), "播种弹出已播种")
+	_unit_clear_toasts()
+	var watered: Dictionary = farm.perform_farm_action(plot, ToolManager.ToolType.WATERING_CAN)
+	assert_true(
+		bool(watered.get("success", false))
+			and int(FarmState.get_cell(plot).get("state", -1)) == FarmState.WATERED
+			and _unit_toast_has("浇水"),
+		"浇水弹出浇水提示并浇湿耕地"
+	)
+	farm.free()
+
+	if Inventory.can_add_item("turnip", 1):
+		Inventory.add_item("turnip", 1)
+	else:
+		Inventory.set_slot(1, "turnip", 1)
+	_unit_clear_toasts()
+	var bin_ui := ShippingBinUI.new()
+	bin_ui._deposit("turnip", 1)
+	assert_true(_unit_toast_has("出货"), "出货弹出提示")
+	bin_ui.free()
+
+	var color_coord := Vector2i(5, 2)
+	var color_fixture: Dictionary = FarmState.get_save_state()
+	for raw3 in color_fixture.get("cells", []):
+		var color_at := Vector2i(int(raw3.get("x", -1)), int(raw3.get("y", -1)))
+		if color_at != color_coord:
+			continue
+		raw3["debris"] = ""
+		raw3["state"] = FarmState.TILLED
+		raw3["crop"] = {}
+	assert_true(FarmState.load_save_state(color_fixture), "干湿土夹具可以载入")
+	var visual := FarmPlot.new()
+	visual.setup(color_coord)
+	var dry_color: Color = visual._ground.color
+	FarmState.water(color_coord)
+	visual.refresh()
+	var wet_color: Color = visual._ground.color
+	var dry_lum := dry_color.r * 0.299 + dry_color.g * 0.587 + dry_color.b * 0.114
+	var wet_lum := wet_color.r * 0.299 + wet_color.g * 0.587 + wet_color.b * 0.114
+	assert_true(
+		dry_color == FarmPlot.COLOR_TILLED
+			and wet_color == FarmPlot.COLOR_WATERED
+			and wet_color.r < dry_color.r
+			and wet_color.g < dry_color.g
+			and wet_color.b < dry_color.b
+			and dry_lum - wet_lum > 0.15,
+		"湿土比干土明显更深"
+	)
+	visual.free()
+
+	var hud = load("res://src/ui/hud/HUD.gd").new()
+	add_child(hud)
+	var water_label := hud.find_child("WaterLabel", true, false) as Label
+	assert_true(
+		water_label != null and water_label.text == "水壶 %d/%d" % [FarmState.get_watering_can_uses_left(), FarmState.get_watering_can_max_uses()],
+		"HUD 显示水壶剩余次数"
+	)
+	FarmState.set_watering_can_max_water(50)
+	FarmState.set_watering_can_water(40)
+	assert_true(water_label != null and water_label.text == "水壶 8/10", "水壶剩 8 次、上限 10 次时 HUD 是 8/10")
+	hud.queue_free()
+
+	var house := (load("res://src/world/maps/PlayerHouse.tscn") as PackedScene).instantiate() as PlayerHouse
+	add_child(house)
+	var sleep_prompt: InteractPrompt = null
+	for node in house.find_children("InteractPrompt", "", true, false):
+		var candidate := node as InteractPrompt
+		if candidate != null and str(candidate.action_text) == "睡觉":
+			sleep_prompt = candidate
+			break
+	assert_true(sleep_prompt != null, "床有 InteractPrompt 气泡")
+	if sleep_prompt != null:
+		UIManager.close_all()
+		GameManager.is_game_active = true
+		GameManager.current_state = GameManager.GameState.PLAYING
+		get_tree().paused = false
+		house._in_bed_zone = true
+		if get_tree().has_meta(InteractPrompt.CACHE_META):
+			get_tree().remove_meta(InteractPrompt.CACHE_META)
+		sleep_prompt._process(0.0)
+		assert_true(
+			sleep_prompt.visible
+				and sleep_prompt.key_label.text == "Space"
+				and sleep_prompt.text_label.text == "睡觉"
+				and sleep_prompt.bubble.theme_type_variation == &"InteractPromptBubble",
+			"靠近床显示 Space 睡觉，样式与工作台气泡相同"
+		)
+		house._in_bed_zone = false
+		assert_true(not sleep_prompt.available(), "离开床边后睡觉气泡不可用")
+	GameManager.player = saved_player
+	house.queue_free()
+	GameManager.player = saved_player
+
+	FarmState.load_save_state(farm_snapshot)
+	Inventory.load_state(inv_snapshot)
+	ShippingSystem.load_state(ship_snapshot)
+	StaminaManager.set_stamina(saved_stamina)
+	TimeManager.current_day = saved_day
+	TimeManager.current_season = saved_season
+	MoneySystem.set_money(saved_money)
+	GameManager.current_state = saved_state
+	GameManager.is_game_active = saved_active
+	get_tree().paused = saved_paused
+	GameManager.player = saved_player
+	print("  Loop feedback: All tests completed")
 
 
 func assert_true(condition: bool, message: String):

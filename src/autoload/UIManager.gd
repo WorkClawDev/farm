@@ -23,6 +23,7 @@ var _confirmation: Control
 var _confirmation_owns_pause := false
 var _pause_owned := false
 var _clock_paused := false
+var _held_bright_toasts := false
 
 const MAX_VISIBLE_TOASTS := 4
 const TOAST_DURATION := 3.0
@@ -32,6 +33,12 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_overlay()
 	get_tree().root.window_input.connect(_on_root_window_input)
+
+
+func _process(_delta: float) -> void:
+	if not _held_bright_toasts or not _screen_is_bright():
+		return
+	_release_held_toasts()
 
 
 ## Godot's GUI treats Esc as "hide the tooltip" and marks the event handled while a
@@ -143,7 +150,7 @@ func close_all() -> void:
 	modal_stack_changed.emit(0)
 
 
-func show_toast(message_key: String, args := {}, variant := "info") -> void:
+func show_toast(message_key: String, args := {}, variant := "info", hold_until_bright := false) -> void:
 	if _toast_root == null:
 		return
 	var text := _format_message(message_key, args)
@@ -157,6 +164,9 @@ func show_toast(message_key: String, args := {}, variant := "info") -> void:
 			var existing_label := child.get_meta("toast_label") as Label
 			if is_instance_valid(existing_label):
 				existing_label.text = UIFactory.no_orphan("%s ×%d" % [text, count])
+			if bool(child.get_meta("toast_hold_bright", false)):
+				child.modulate.a = 0.0
+				return
 			child.modulate.a = 1.0
 			_schedule_toast_dismiss(child)
 			return
@@ -203,13 +213,28 @@ func show_toast(message_key: String, args := {}, variant := "info") -> void:
 	panel.set_meta("toast_variant", variant)
 	panel.set_meta("toast_count", 1)
 	panel.set_meta("toast_label", label)
+	panel.process_mode = Node.PROCESS_MODE_ALWAYS
 	_toast_root.add_child(panel)
 
 	var reduce_motion: bool = bool(UserSettings.get_value("accessibility", "reduce_motion", false))
-	if reduce_motion:
+	var hold := hold_until_bright and not _screen_is_bright()
+	if hold:
+		# Keep the node (tests and merges can see the text) but do not start
+		# the 3s clock until the morning fade has let the picture come up.
+		panel.modulate.a = 0.0
+		panel.set_meta("toast_hold_bright", true)
+		_held_bright_toasts = true
+		return
+	panel.set_meta("toast_hold_bright", false)
+	var tree := get_tree()
+	var paused := tree != null and tree.paused
+	# A paused modal (shipping bin) never ticks a bound tween, so the panel
+	# stayed at alpha 0 and the 3s timer dismissed it unseen.
+	if reduce_motion or paused:
 		panel.modulate.a = 1.0
 	else:
 		var intro := panel.create_tween()
+		intro.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 		intro.tween_property(panel, "modulate:a", 1.0, 0.12)
 	_schedule_toast_dismiss(panel)
 
@@ -228,7 +253,10 @@ func _schedule_toast_dismiss(panel: Control) -> void:
 	var gen := int(panel.get_meta("toast_gen", 0)) + 1
 	panel.set_meta("toast_gen", gen)
 	var reduce_motion: bool = bool(UserSettings.get_value("accessibility", "reduce_motion", false))
-	var timer := get_tree().create_timer(TOAST_DURATION, true, false, true)
+	# process_always: shipping UI pauses the tree. ignore_time_scale: 3 real
+	# seconds, not a sped-up clock. Not a physics timer: a catch-up hitch
+	# used to expire the toast in one burst.
+	var timer := get_tree().create_timer(TOAST_DURATION, true, true, false)
 	timer.timeout.connect(_on_toast_timeout.bind(panel, gen, reduce_motion))
 
 
@@ -356,6 +384,10 @@ func _build_overlay() -> void:
 	# right edge stays at viewport/2+160 (800 at 1280, under viewport-300).
 	_toast_root.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_toast_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Screens are siblings underneath. A full-screen shade used to cover the
+	# toast for the whole time the shipping panel was open.
+	_toast_root.z_as_relative = false
+	_toast_root.z_index = 30
 	_toast_root.add_theme_constant_override("separation", 10)
 	UIStyles.follow_theme(_toast_root)
 	_overlay_layer.add_child(_toast_root)
@@ -451,8 +483,30 @@ func _dismiss_toast(panel: Control, reduce_motion: bool) -> void:
 		panel.queue_free()
 		return
 	var tween := panel.create_tween()
+	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tween.tween_property(panel, "modulate:a", 0.0, 0.16)
 	tween.finished.connect(panel.queue_free)
+
+
+func _screen_is_bright() -> bool:
+	var transition := get_node_or_null("/root/SceneTransition")
+	if transition != null and transition.has_method("screen_is_bright"):
+		return bool(transition.screen_is_bright())
+	return true
+
+
+func _release_held_toasts() -> void:
+	_held_bright_toasts = false
+	if _toast_root == null:
+		return
+	for child in _toast_root.get_children():
+		if not is_instance_valid(child) or child.is_queued_for_deletion():
+			continue
+		if not bool(child.get_meta("toast_hold_bright", false)):
+			continue
+		child.set_meta("toast_hold_bright", false)
+		child.modulate.a = 1.0
+		_schedule_toast_dismiss(child)
 
 
 func _format_message(key: String, args: Dictionary) -> String:

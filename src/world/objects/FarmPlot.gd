@@ -7,6 +7,8 @@ const STUMP_BLOCK_OFFSET := Vector2(0, 6)
 ## seed reads on tilled soil, and keep the sprite inside the cell.
 const EARLY_SPRITE_BOOST := 1.12
 const EARLY_SPRITE_CAP := 0.95
+const COLOR_TILLED := Color("#765238")
+const COLOR_WATERED := Color("#1c140f")
 const PRIVATE_ROOT := "res://assets/private/topdown_farm/"
 const FALLBACK_ITEM := {
 	"weed": "res://assets/sprites/items/fiber.png",
@@ -119,10 +121,10 @@ func refresh() -> void:
 			_ground.color = Color(0.38, 0.60, 0.27, 0.12)
 			_outline.visible = false
 		FarmState.TILLED:
-			_ground.color = Color("#765238")
+			_ground.color = COLOR_TILLED
 			_outline.visible = true
 		FarmState.WATERED:
-			_ground.color = Color("#49382f")
+			_ground.color = COLOR_WATERED
 			_outline.visible = true
 
 	var debris := str(cell.get("debris", ""))

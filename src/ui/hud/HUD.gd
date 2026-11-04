@@ -5,6 +5,7 @@ var _info_panel: PanelContainer
 var _date_label: Label
 var _weather_label: Label
 var _money_label: Label
+var _water_label: Label
 var _stamina_panel: PanelContainer
 var _stamina_bar: ProgressBar
 var _stamina_label: Label
@@ -20,6 +21,7 @@ func _ready() -> void:
 	_update_time()
 	_update_money(MoneySystem.get_money() if MoneySystem else 0, 0)
 	_update_stamina(StaminaManager.current_stamina, StaminaManager.max_stamina)
+	_update_watering_can()
 	_update_input_hint(InputManager.get_current_device())
 	_apply_hud_visibility()
 
@@ -57,6 +59,10 @@ func _build_ui() -> void:
 	_money_label = _hud_label(&"HUDAccent")
 	_money_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	weather_money.add_child(_money_label)
+	_water_label = _hud_label(&"HUDText")
+	_water_label.name = "WaterLabel"
+	_water_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	info.add_child(_water_label)
 
 	_stamina_panel = UIFactory.hud_panel()
 	_stamina_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
@@ -106,6 +112,8 @@ func _connect_signals() -> void:
 		MoneySystem.money_changed.connect(_update_money)
 	if StaminaManager:
 		StaminaManager.stamina_changed.connect(_update_stamina)
+	if FarmState and FarmState.has_signal("watering_can_changed"):
+		FarmState.watering_can_changed.connect(_update_watering_can)
 	if InputManager:
 		InputManager.input_device_changed.connect(_update_input_hint)
 	if UserSettings:
@@ -125,6 +133,15 @@ func _update_time() -> void:
 	]
 	var weather := GameSession.weather
 	_weather_label.text = weather.get_weather_name_cn() if weather and weather.has_method("get_weather_name_cn") else "晴朗"
+
+
+func _update_watering_can(_current: int = 0, _maximum: int = 0) -> void:
+	if _water_label == null or FarmState == null:
+		return
+	_water_label.text = "水壶 %d/%d" % [
+		FarmState.get_watering_can_uses_left(),
+		FarmState.get_watering_can_max_uses(),
+	]
 
 
 func _update_money(amount: int, _delta: int) -> void:

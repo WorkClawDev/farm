@@ -13,6 +13,7 @@ const QuestTrackerScene = preload("res://src/ui/hud/QuestTracker.tscn")
 const MapMenuInput = preload("res://src/world/maps/MapMenuInput.gd")
 const IllustratedMapBackdropScene = preload("res://src/world/maps/IllustratedMapBackdrop.gd")
 const WorldCollisionLayoutScene = preload("res://src/world/maps/WorldCollisionLayout.gd")
+const InteractPromptScript = preload("res://src/ui/components/InteractPrompt.gd")
 
 const BED_ATLAS_PATH := "res://assets/private/topdown_farm/interior/x4/hero_home/Interior_x4.png"
 ## I1 single bed on Interior_x4 (already x4, so the sprite stays at scale 1).
@@ -52,6 +53,7 @@ func _ready() -> void:
 	_apply_house_upgrades()
 	_setup_furniture()
 	_setup_bed_sprite()
+	_setup_bed_prompt()
 	# Leave by the door you came in through (BUG-40): the village door or the farm.
 	_exit_to_village = GameManager.current_spawn_point == "village_house_entrance"
 	_show_village_home_hint()
@@ -72,6 +74,24 @@ func _show_village_home_hint() -> void:
 	if text.is_empty() or UIManager == null:
 		return
 	UIManager.show_toast(text, {}, "info")
+
+
+## Same InteractPrompt bubble as the workbench, shipping bin, and stove.
+func _setup_bed_prompt() -> void:
+	if interaction_zones == null:
+		return
+	var zone := interaction_zones.get_node_or_null("BedZone") as Node2D
+	if zone == null:
+		return
+	var anchor: Node2D = zone
+	if furniture_container != null:
+		var bed := furniture_container.get_node_or_null("BedSprite") as Node2D
+		if bed != null and bed.get_node_or_null("Sprite2D") != null:
+			anchor = bed
+	if anchor.get_node_or_null("InteractPrompt") != null or zone.get_node_or_null("InteractPrompt") != null:
+		return
+	InteractPromptScript.attach(anchor, "睡觉", InteractPromptScript.sprite_top(anchor), func(): return _in_bed_zone)
+
 
 func _setup_map() -> void:
 	for issue in map_root.validate():

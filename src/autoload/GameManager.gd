@@ -146,6 +146,16 @@ func advance_day(reason: String = "sleep") -> void:
 		SaveManager.save_game()
 	TimeManager.resume_time()
 	day_advanced.emit(reason, shipment)
+	var sale_paid := maxi(0, int(shipment.get("total_money", 0)))
+	if sale_paid > 0 and UIManager != null:
+		# The payout line waits until the morning fade-in has finished.
+		# Starting it here used to burn the 3s lifetime under the black fade.
+		var transition := get_node_or_null("/root/SceneTransition")
+		if transition != null and transition.has_method("play_wake_fade"):
+			var already_dark := transition.has_method("screen_is_bright") and not bool(transition.screen_is_bright())
+			if not already_dark:
+				transition.play_wake_fade()
+		UIManager.show_toast("昨日出货 +%d 金" % sale_paid, {}, "success", true)
 	_request_notification(day_start_notice(shipment, collapse_paid))
 	if reason == "forced_2am":
 		await _return_player_home()

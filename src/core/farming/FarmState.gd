@@ -56,6 +56,8 @@ enum WaterResult { WATERED_OK, NOT_TILLED, ALREADY_WATERED, CAN_EMPTY }
 var _cells: Dictionary = {}
 var _watering_can_max_water: int = WATERING_CAN_MAX_WATER
 var _watering_can_water: int = WATERING_CAN_MAX_WATER
+## advance_day 刚处理过的活作物数。-1 表示还没有过夜结算在等着被取走。
+var _overnight_crop_count: int = -1
 
 
 func _ready() -> void:
@@ -74,6 +76,7 @@ func reset() -> void:
 	_watering_can_max_water = WATERING_CAN_MAX_WATER
 	_watering_can_water = -1
 	set_watering_can_water(WATERING_CAN_MAX_WATER)
+	_overnight_crop_count = -1
 	farm_reset.emit()
 
 
@@ -505,10 +508,13 @@ func advance_day() -> void:
 	# GameManager 先长田，再让 TimeManager 进入下一天。今天已是季末时，这一夜会换季。
 	var season_changes := _season_changes_tonight()
 	var next_season := _next_season_name()
+	var updated := 0
 	for key in _cells.keys():
 		var cell: Dictionary = _cells[key]
 		var coord := Vector2i(int(cell.x), int(cell.y))
 		if not cell.crop.is_empty():
+			if not bool(cell.crop.get("dead", false)):
+				updated += 1
 			_advance_crop(cell.crop)
 			if season_changes and _should_wilt(cell.crop, next_season):
 				_mark_crop_dead(cell.crop)
@@ -516,7 +522,16 @@ func advance_day() -> void:
 			cell.state = TILLED
 			cell.moisture = 0
 		_emit_changed(coord)
+	_overnight_crop_count = updated
 	day_advanced.emit()
+
+
+
+## GrowthSystem 在 day_changed 里取走。取完回到 -1，避免下一次日历重置报成旧的数。
+func consume_overnight_crop_count() -> int:
+	var count := _overnight_crop_count
+	_overnight_crop_count = -1
+	return count
 
 
 func get_save_state() -> Dictionary:
@@ -550,6 +565,7 @@ func load_save_state(data: Dictionary) -> bool:
 	_watering_can_max_water = maxi(WATERING_CAN_WATER_PER_USE, saved_max)
 	_watering_can_water = -1
 	set_watering_can_water(int(data.get("watering_can_water", _watering_can_max_water)))
+	_overnight_crop_count = -1
 	farm_reset.emit()
 	return true
 
