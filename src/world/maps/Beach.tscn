@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://cbeachscene001"]
+[gd_scene load_steps=8 format=3 uid="uid://cbeachscene001"]
 
 [ext_resource type="Script" path="res://src/world/maps/Beach.gd" id="1_beach"]
 [ext_resource type="Script" path="res://src/world/objects/FishingSpot.gd" id="2_fishingspot"]
@@ -10,6 +10,9 @@ radius = 40.0
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_exit"]
 size = Vector2(320, 48)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_bush"]
+size = Vector2(56, 48)
 
 [sub_resource type="GDScript" id="GDScript_lift"]
 script/source = "extends Node
@@ -26,6 +29,9 @@ y_sort_enabled = true
 script = ExtResource("1_beach")
 
 [node name="BeachMap" parent="." instance=ExtResource("4_map")]
+[node name="PlayerSpawn" parent="BeachMap/Markers"]
+position = Vector2(980, 788)
+
 
 [node name="Background" type="ColorRect" parent="."]
 z_index = -10
@@ -44,7 +50,7 @@ offset_bottom = 400.0
 color = Color(0.2, 0.4, 0.6, 1)
 
 [node name="Player" parent="." instance=ExtResource("3_player")]
-position = Vector2(0, -100)
+position = Vector2(0, 28)
 
 [node name="FishingSpots" type="Node2D" parent="."]
 
@@ -196,6 +202,85 @@ theme_override_font_sizes/font_size = 18
 text = "↑ 村庄"
 horizontal_alignment = 1
 vertical_alignment = 1
+
+[node name="BushRow" type="Node2D" parent="."]
+
+[node name="BushW168" type="StaticBody2D" parent="BushRow"]
+position = Vector2(-168, -48)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BushRow/BushW168"]
+shape = SubResource("RectangleShape2D_bush")
+
+[node name="BushW72" type="StaticBody2D" parent="BushRow"]
+position = Vector2(-72, -48)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BushRow/BushW72"]
+shape = SubResource("RectangleShape2D_bush")
+
+[node name="BushE120" type="StaticBody2D" parent="BushRow"]
+position = Vector2(120, -48)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BushRow/BushE120"]
+shape = SubResource("RectangleShape2D_bush")
+
+[node name="BushE216" type="StaticBody2D" parent="BushRow"]
+position = Vector2(216, -48)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BushRow/BushE216"]
+shape = SubResource("RectangleShape2D_bush")
+
+[node name="BushE312" type="StaticBody2D" parent="BushRow"]
+position = Vector2(312, -48)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BushRow/BushE312"]
+shape = SubResource("RectangleShape2D_bush")
+
+[node name="BushE408" type="StaticBody2D" parent="BushRow"]
+position = Vector2(408, -48)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BushRow/BushE408"]
+shape = SubResource("RectangleShape2D_bush")
+
+[node name="BushE504" type="StaticBody2D" parent="BushRow"]
+position = Vector2(504, -48)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BushRow/BushE504"]
+shape = SubResource("RectangleShape2D_bush")
+
+[node name="BushE600" type="StaticBody2D" parent="BushRow"]
+position = Vector2(600, -48)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BushRow/BushE600"]
+shape = SubResource("RectangleShape2D_bush")
+
+[node name="BushE696" type="StaticBody2D" parent="BushRow"]
+position = Vector2(696, -48)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BushRow/BushE696"]
+shape = SubResource("RectangleShape2D_bush")
+
+[node name="BushE792" type="StaticBody2D" parent="BushRow"]
+position = Vector2(792, -48)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BushRow/BushE792"]
+shape = SubResource("RectangleShape2D_bush")
+
+[node name="BushE888" type="StaticBody2D" parent="BushRow"]
+position = Vector2(888, -48)
+collision_mask = 0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="BushRow/BushE888"]
+shape = SubResource("RectangleShape2D_bush")
 
 [node name="AmbiencePlayer" type="AudioStreamPlayer" parent="."]
 volume_db = -10.0

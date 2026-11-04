@@ -960,3 +960,24 @@
 - 海滩上那排灌木可以直接穿过去。
 - 测试机按键延迟严重，按下到响应要 5～25 秒。
 截图：screenshots/beachentry_{road,sign,ysort_south,ysort_north,prompt}.png
+
+## 2026-11-03 21:52 beachpolish — 部分完成（阻塞）
+步骤：--new-game → 进村看「海滩 →」牌 → 进海滩。
+结果：
+1)「海滩 →」牌整块连箭头都在画面里，PASS（screenshots/beachpolish_sign.png），只是和右下角工具 HUD 靠得近。
+2)～4)（进海滩轻按 ↑、灌木碰撞、去出口和钓鱼点的路）没测成。
+阻塞原因：测试机按键延迟 20～40 秒，游戏时钟大约每 12 秒走 1 小时，到半夜 12:43 就退出了，怕被强制睡觉。
+建议：加一个调试用的冻结时钟启动参数，有了再重测。
+
+## 2026-11-04 15:44 debuglag + beachpolish 复测（--freeze-time）— PASS（附疑点）
+步骤：--new-game --freeze-time → 村 → 海滩 → 村，来回走几趟。
+结果：
+- 时钟冻结生效：日志有 "Clock frozen"；隔约 2 分钟，HUD 一直是 9:00 AM（debuglag_clock1/2.png）。
+- 日志里 remove_child 出现 0 次。
+- beachpolish：
+  - 进海滩后轻按 ↑ 不回村（beachpolish_spawn.png）。
+  - 灌木挡人（beachpolish_bush2.png），从缝隙能走到北出口。
+  - 岸边出现「Space 钓鱼」提示（beachpolish_fish.png）。
+  - 村里「海滩 →」牌完整（beachpolish_sign.png）。
+疑点：海滩回村后有两张截图显示 9:40 PM / 8:55 PM 和夜色，之后的截图都恢复 9:00 AM。可能是冻结时钟在切场景时漏了，也可能是截图滞后，待确认。
+按键延迟：仍有几秒，比之前轻一些。

@@ -26,7 +26,7 @@ const ARRIVALS := {
 	"Village/from_mine": Vector2(520, 880),
 	"Village/from_house": Vector2(470, 575),
 	"Forest/from_village": Vector2(440, 790),
-	"Beach/from_village": Vector2(0, -100),
+	"Beach/from_village": Vector2(0, 28),
 	"Mine/from_village": Vector2(400, 300),
 	"Farm/from_village": Vector2(1320, 608),
 }
