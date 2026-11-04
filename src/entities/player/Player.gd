@@ -194,6 +194,10 @@ func _handle_interaction() -> void:
 		elif building_in_range and building_in_range.has_method("interact"):
 			building_in_range.interact()
 		else:
+			# 农场池塘岸边拿着水壶：装满。人在钓鱼点里时仍交给 FishingSpot，避免弹两次。
+			var farm := _find_farm_scene()
+			if farm != null and farm.has_method("try_refill_watering_can_at_pond") and bool(farm.call("try_refill_watering_can_at_pond", self)):
+				return
 			# 使用工具进行交互
 			_use_tool_on_target()
 

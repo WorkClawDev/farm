@@ -878,6 +878,94 @@ func _exercise_watering_can() -> void:
 		spot.is_player_in_range = false
 		spot.current_player = null
 	_record("拿水壶在池塘边可装满", FarmState.get_watering_can_uses_left() == max_uses)
+	if player != null:
+		player.nearby_npcs.clear()
+		player.nearby_animals.clear()
+		player.npc_in_range = null
+		player.building_in_range = null
+		player.animal_in_range = null
+		player.tool_manager.equip_tool(ToolManager.ToolType.WATERING_CAN)
+		# 东岸在钓鱼点 96px 范围外，仍贴着池塘水格。交互键要等下一帧才算 just pressed。
+		var saved_state := GameManager.current_state
+		GameManager.current_state = GameManager.GameState.PLAYING
+		player.global_position = Vector2(480, 480)
+		PhysicsServer2D.body_set_state(player.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, player.global_transform)
+		if spot != null:
+			spot.is_player_in_range = false
+			spot.current_player = null
+		FarmState.set_watering_can_water(0)
+		await get_tree().process_frame
+		player._interact_needs_release = false
+		player._interact_blocked_until_msec = 0
+		var press := InputEventAction.new()
+		press.action = &"interact"
+		press.pressed = true
+		Input.parse_input_event(press)
+		for _i in 4:
+			if FarmState.get_watering_can_uses_left() == max_uses:
+				break
+			await get_tree().process_frame
+		var release := InputEventAction.new()
+		release.action = &"interact"
+		release.pressed = false
+		Input.parse_input_event(release)
+		await get_tree().process_frame
+		GameManager.current_state = saved_state
+		player._interact_needs_release = true
+		_record(
+			"池塘东岸（钓鱼点外）拿水壶按交互可装满",
+			FarmState.get_watering_can_uses_left() == max_uses and (spot == null or not bool(spot.is_player_in_range))
+		)
+		FarmState.set_watering_can_water(0)
+		player.global_position = Vector2(224, 360)
+		_record(
+			"池塘北岸拿水壶可装满",
+			farm.try_refill_watering_can_at_pond(player) and FarmState.get_watering_can_uses_left() == max_uses
+		)
+		FarmState.set_watering_can_water(0)
+		player.global_position = Vector2(100, 480)
+		_record(
+			"池塘西岸拿水壶可装满",
+			farm.try_refill_watering_can_at_pond(player) and FarmState.get_watering_can_uses_left() == max_uses
+		)
+		FarmState.set_watering_can_water(0)
+		player.global_position = Vector2(224, 600)
+		_record(
+			"池塘南岸拿水壶可装满",
+			farm.try_refill_watering_can_at_pond(player) and FarmState.get_watering_can_uses_left() == max_uses
+		)
+		FarmState.set_watering_can_water(0)
+		player.global_position = Vector2(540, 480)
+		_record(
+			"离岸一格不能装水",
+			not farm.is_beside_farm_pond(player.global_position) and not farm.try_refill_watering_can_at_pond(player) and FarmState.get_watering_can_uses_left() == 0
+		)
+		player.global_position = Vector2(224, 360)
+		player.tool_manager.equip_tool(ToolManager.ToolType.FISHING_ROD)
+		_record(
+			"岸边拿鱼竿不装水",
+			not farm.try_refill_watering_can_at_pond(player) and FarmState.get_watering_can_uses_left() == 0
+		)
+		player.tool_manager.equip_tool(ToolManager.ToolType.HOE)
+		_record(
+			"岸边拿锄头不装水",
+			not farm.try_refill_watering_can_at_pond(player) and FarmState.get_watering_can_uses_left() == 0
+		)
+		FarmState.set_watering_can_water(0)
+		player.tool_manager.equip_tool(ToolManager.ToolType.WATERING_CAN)
+		if spot != null:
+			player.global_position = spot.global_position
+			spot.current_player = player
+			spot.is_player_in_range = true
+			var skipped: bool = not farm.try_refill_watering_can_at_pond(player)
+			_record("人在钓鱼点时岸边逻辑不重复装水", skipped and FarmState.get_watering_can_uses_left() == 0)
+			spot._start_fishing()
+			spot.is_player_in_range = false
+			spot.current_player = null
+			_record("钓鱼点拿水壶仍可装满", FarmState.get_watering_can_uses_left() == max_uses)
+		player._interact_needs_release = true
+		player.tool_manager.equip_tool(ToolManager.ToolType.WATERING_CAN)
+		FarmState.refill_watering_can()
 	farm.perform_farm_action(coords[max_uses], can_type)
 	_record("装满后可以继续浇水", int(FarmState.get_cell(coords[max_uses]).state) == FarmState.WATERED
 		and FarmState.get_watering_can_uses_left() == max_uses - 1)

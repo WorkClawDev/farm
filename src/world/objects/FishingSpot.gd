@@ -92,7 +92,7 @@ func _start_fishing() -> void:
 
 
 ## 拿着水壶在水边按空格/E：把水壶装满（水量存在 FarmState）。
-func _refill_watering_can() -> void:
+static func _refill_watering_can() -> void:
 	var refilled := FarmState.refill_watering_can()
 	var message := (
 		"水壶已装满（%d/%d）" % [FarmState.get_watering_can_uses_left(), FarmState.get_watering_can_max_uses()]

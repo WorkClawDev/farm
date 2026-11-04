@@ -765,6 +765,48 @@ func _show_notification(message: String) -> void:
 		return
 	UIManager.show_toast(message, {}, "info")
 
+## 农场池塘岸边（整圈水岸，不只 FishingSpot）拿水壶按空格/E 装满。
+## 人已经站在钓鱼点里时返回 false，让 FishingSpot 自己装水，钓鱼逻辑不动。
+func try_refill_watering_can_at_pond(player: Player) -> bool:
+	if player == null or player.tool_manager == null:
+		return false
+	if not (player.tool_manager.get_current_tool() is WateringCan):
+		return false
+	if _fishing_spot_claims_player(player):
+		return false
+	if not is_beside_farm_pond(player.global_position):
+		return false
+	FishingSpot._refill_watering_can()
+	return true
+
+
+func _fishing_spot_claims_player(player: Player) -> bool:
+	if map_root == null:
+		return false
+	var spot := map_root.find_child("FishingSpot", true, false)
+	if spot == null:
+		return false
+	return bool(spot.get("is_player_in_range")) and spot.get("current_player") == player
+
+
+## 站在农场池塘水格上，或与水格上下左右斜向相邻的那一圈岸上。
+func is_beside_farm_pond(world_pos: Vector2) -> bool:
+	var overlay := map_root.get_layer(&"terrain_overlay") as TileMapLayer if map_root != null else null
+	if overlay == null:
+		return false
+	var cell := overlay.local_to_map(overlay.to_local(world_pos))
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			if _is_farm_pond_water_cell(overlay, cell + Vector2i(dx, dy)):
+				return true
+	return false
+
+
+func _is_farm_pond_water_cell(overlay: TileMapLayer, cell: Vector2i) -> bool:
+	var atlas := overlay.get_cell_atlas_coords(cell)
+	return atlas.y == 0 and atlas.x >= FarmTilesetBuilder.WATER_CENTER and atlas.x <= FarmTilesetBuilder.WATER_BOTTOM_RIGHT
+
+
 ## 获取指定位置的土壤地块
 func get_soil_at_position(pos: Vector2) -> Soil:
 	for soil in soil_plots:
