@@ -186,20 +186,26 @@ func _handle_interaction() -> void:
 	if Time.get_ticks_msec() < _interact_blocked_until_msec:
 		return
 	if Input.is_action_just_pressed("interact"):
-		_refresh_nearest_npc()
-		_refresh_nearest_animal()
-		# 优先处理NPC交互
-		if npc_in_range and npc_in_range.interactable:
-			_interact_with_npc()
-		elif building_in_range and building_in_range.has_method("interact"):
-			building_in_range.interact()
-		else:
-			# 农场池塘岸边拿着水壶：装满。人在钓鱼点里时仍交给 FishingSpot，避免弹两次。
-			var farm := _find_farm_scene()
-			if farm != null and farm.has_method("try_refill_watering_can_at_pond") and bool(farm.call("try_refill_watering_can_at_pond", self)):
-				return
-			# 使用工具进行交互
+		_dispatch_interact()
+
+## Space / E 按下后的交互顺序。NPC 优先。出货箱在可耕地面前让给地块工具。
+func _dispatch_interact() -> void:
+	_refresh_nearest_npc()
+	_refresh_nearest_animal()
+	if npc_in_range and npc_in_range.interactable:
+		_interact_with_npc()
+	elif building_in_range and building_in_range.has_method("interact"):
+		if station_interact_yields_to_tool(building_in_range):
 			_use_tool_on_target()
+		else:
+			building_in_range.interact()
+	else:
+		# 农场池塘岸边拿着水壶：装满。人在钓鱼点里时仍交给 FishingSpot，避免弹两次。
+		var farm := _find_farm_scene()
+		if farm != null and farm.has_method("try_refill_watering_can_at_pond") and bool(farm.call("try_refill_watering_can_at_pond", self)):
+			return
+		# 使用工具进行交互
+		_use_tool_on_target()
 
 func _interact_key_active() -> bool:
 	for action in [&"interact", &"ui_accept"]:
@@ -213,6 +219,61 @@ func try_eat_held_item() -> int:
 	if tool_manager == null or not tool_manager.is_using_hotbar_item():
 		return Inventory.EAT_NOT_EDIBLE
 	return Inventory.use_selected_item()
+
+## 出货箱/工作台旁按 Space：手持锄头、水壶、斧、镐、镰，且面前格子在田里、
+## 不是这两件本体所占的那一格时，先用工具。空手、鱼竿，或面前就是本体/田外，才打开面板。
+func station_interact_yields_to_tool(station: Node) -> bool:
+	if station == null or not _is_hoe_priority_station(station):
+		return false
+	if not _held_tool_acts_on_plot():
+		return false
+	var farm := _find_farm_scene()
+	if farm == null:
+		return false
+	var origin_value = farm.get("PLOT_ORIGIN")
+	var spacing_value = farm.get("PLOT_SPACING")
+	if origin_value == null or spacing_value == null:
+		return false
+	var facing_coord := Vector2i(-1, -1)
+	facing_coord = farm.get_facing_plot_coord(global_position, _get_direction_vector())
+	if facing_coord.x < 0:
+		return false
+	var origin: Vector2 = origin_value
+	var spacing := float(spacing_value)
+	var root := farm as Node2D
+	var origin_world := root.global_position if root != null else Vector2.ZERO
+	var center := origin_world + origin + Vector2(facing_coord) * spacing
+	return not _station_solid_covers_point(station, center)
+
+
+func _is_hoe_priority_station(station: Node) -> bool:
+	var script := station.get_script() as Script
+	if script == null:
+		return false
+	var path := str(script.resource_path)
+	return path.ends_with("/ShippingBin.gd") or path.ends_with("/Workbench.gd")
+
+
+func _held_tool_acts_on_plot() -> bool:
+	if tool_manager == null:
+		return false
+	match tool_manager.get_current_tool_type():
+		ToolManager.ToolType.HOE, ToolManager.ToolType.WATERING_CAN, ToolManager.ToolType.AXE, ToolManager.ToolType.PICKAXE, ToolManager.ToolType.SICKLE:
+			return true
+		_:
+			return false
+
+
+func _station_solid_covers_point(station: Node, point: Vector2) -> bool:
+	var shape_node := station.get_node_or_null("SolidBody/CollisionShape2D") as CollisionShape2D
+	if shape_node == null:
+		return false
+	var rect := shape_node.shape as RectangleShape2D
+	if rect == null:
+		return false
+	var half := rect.size * 0.5
+	return Rect2(shape_node.global_position - half, rect.size).has_point(point)
+
 
 ## 使用工具与目标交互
 func _use_tool_on_target() -> void:

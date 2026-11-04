@@ -43,6 +43,7 @@ func _ready() -> void:
 	run_shop_find_guide_tests()
 	run_quest_tracker_feature_tests()
 	run_loopfeedback_tests()
+	run_hoe_station_priority_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -2845,6 +2846,230 @@ func run_loopfeedback_tests() -> void:
 	get_tree().paused = saved_paused
 	GameManager.player = saved_player
 	print("  Loop feedback: All tests completed")
+
+
+class HoeStationFarmStub extends Node2D:
+	var actions: Array = []
+	const PLOT_ORIGIN := Vector2.ZERO
+	const PLOT_SPACING := 64.0
+
+	func get_facing_plot_coord(world_position: Vector2, facing: Vector2) -> Vector2i:
+		var local := (world_position - global_position - PLOT_ORIGIN) / PLOT_SPACING
+		var standing := Vector2i(roundi(local.x), roundi(local.y))
+		var target := standing + Vector2i(roundi(facing.x), roundi(facing.y))
+		if target.x < 0 or target.y < 0 or target.x >= FarmState.GRID_WIDTH or target.y >= FarmState.GRID_HEIGHT:
+			return Vector2i(-1, -1)
+		return target
+
+	func get_standing_plot_coord(world_position: Vector2) -> Vector2i:
+		var local := (world_position - global_position - PLOT_ORIGIN) / PLOT_SPACING
+		var standing := Vector2i(roundi(local.x), roundi(local.y))
+		if standing.x < 0 or standing.y < 0 or standing.x >= FarmState.GRID_WIDTH or standing.y >= FarmState.GRID_HEIGHT:
+			return Vector2i(-1, -1)
+		return standing
+
+	func perform_farm_action(coord: Vector2i, tool_type: int) -> Dictionary:
+		actions.append({"coord": coord, "tool": tool_type})
+		return {"success": true, "message": "ok"}
+
+
+func run_hoe_station_priority_tests() -> void:
+	print("\n[Hoe Station Priority]")
+	var saved_state = GameManager.current_state
+	var saved_active = GameManager.is_game_active
+	var saved_paused := get_tree().paused
+	var saved_player = GameManager.player
+	var inv_snapshot: Dictionary = Inventory.save_state()
+
+	var farm := HoeStationFarmStub.new()
+	add_child(farm)
+	var bin := (load("res://src/world/objects/ShippingBin.tscn") as PackedScene).instantiate() as ShippingBin
+	bin.position = Vector2.ZERO
+	farm.add_child(bin)
+	var bench := (load("res://src/world/objects/Workbench.tscn") as PackedScene).instantiate() as Workbench
+	bench.position = Vector2(400, 0)
+	farm.add_child(bench)
+	var player := (load("res://src/entities/player/Player.tscn") as PackedScene).instantiate() as Player
+	farm.add_child(player)
+	GameManager.current_state = GameManager.GameState.PLAYING
+	GameManager.is_game_active = true
+	get_tree().paused = false
+	player._interact_needs_release = false
+	player._interact_blocked_until_msec = 0
+
+	var bin_cells := _hoe_station_cells(farm, bin)
+	var bench_cells := _hoe_station_cells(farm, bench)
+	assert_true(bin_cells["covered"] != Vector2i(-1, -1) and bin_cells["open"] != Vector2i(-1, -1), "出货箱有本体格和旁边可耕格")
+	assert_true(bench_cells["covered"] != Vector2i(-1, -1) and bench_cells["open"] != Vector2i(-1, -1), "工作台有本体格和旁边可耕格")
+
+	bin._on_body_entered(player)
+	_hoe_face_cell(player, farm, bin_cells["open"])
+	player.tool_manager.equip_tool(ToolManager.ToolType.HOE)
+	_hoe_case_begin(player, farm)
+	assert_true(player.station_interact_yields_to_tool(bin), "出货箱旁锄头面对可耕地时工具优先")
+	player._dispatch_interact()
+	assert_true(
+		_hoe_action_is(farm, bin_cells["open"], ToolManager.ToolType.HOE) and not UIManager.is_screen_open("shipping_bin"),
+		"出货箱旁手持锄头、面前可耕地：Space 锄地不开箱"
+	)
+
+	_hoe_face_cell(player, farm, bin_cells["covered"])
+	_hoe_case_begin(player, farm)
+	assert_true(not player.station_interact_yields_to_tool(bin), "面对出货箱本体时不让给锄头")
+	player._dispatch_interact()
+	assert_true(
+		farm.actions.is_empty() and UIManager.is_screen_open("shipping_bin"),
+		"出货箱旁手持锄头、面前是出货箱本体：Space 开箱不锄"
+	)
+
+	_hoe_face_cell(player, farm, bin_cells["open"])
+	player.tool_manager.put_away_tool()
+	_hoe_case_begin(player, farm)
+	assert_true(not player.station_interact_yields_to_tool(bin), "空手时出货箱不让路")
+	player._dispatch_interact()
+	assert_true(
+		farm.actions.is_empty() and UIManager.is_screen_open("shipping_bin"),
+		"出货箱旁空手、面前可耕地：Space 开箱"
+	)
+
+	_hoe_face_cell(player, farm, bin_cells["open"])
+	player.tool_manager.equip_tool(ToolManager.ToolType.WATERING_CAN)
+	_hoe_case_begin(player, farm)
+	player._dispatch_interact()
+	assert_true(
+		_hoe_action_is(farm, bin_cells["open"], ToolManager.ToolType.WATERING_CAN) and not UIManager.is_screen_open("shipping_bin"),
+		"出货箱旁手持水壶、面前可耕地：Space 用水壶不开箱"
+	)
+
+	_hoe_face_cell(player, farm, bin_cells["open"])
+	player.tool_manager.equip_tool(ToolManager.ToolType.AXE)
+	_hoe_case_begin(player, farm)
+	player._dispatch_interact()
+	assert_true(
+		_hoe_action_is(farm, bin_cells["open"], ToolManager.ToolType.AXE) and not UIManager.is_screen_open("shipping_bin"),
+		"出货箱旁手持斧头、面前可耕地：Space 用斧头不开箱"
+	)
+
+	_hoe_face_cell(player, farm, bin_cells["open"])
+	player.tool_manager.equip_tool(ToolManager.ToolType.FISHING_ROD)
+	_hoe_case_begin(player, farm)
+	player._dispatch_interact()
+	assert_true(
+		farm.actions.is_empty() and UIManager.is_screen_open("shipping_bin"),
+		"出货箱旁手持鱼竿、面前可耕地：Space 开箱"
+	)
+
+	player.global_position = Vector2(0, 64)
+	player.current_direction = player.Direction.LEFT
+	player.tool_manager.equip_tool(ToolManager.ToolType.HOE)
+	_hoe_case_begin(player, farm)
+	assert_true(not player.station_interact_yields_to_tool(bin), "面前出了田时锄头不抢出货箱")
+	player._dispatch_interact()
+	assert_true(
+		farm.actions.is_empty() and UIManager.is_screen_open("shipping_bin"),
+		"出货箱旁手持锄头、面前是田外：Space 开箱"
+	)
+
+	bin._on_body_exited(player)
+	player.building_in_range = null
+	bench._on_body_entered(player)
+	_hoe_face_cell(player, farm, bench_cells["open"])
+	player.tool_manager.equip_tool(ToolManager.ToolType.HOE)
+	_hoe_case_begin(player, farm)
+	assert_true(player.station_interact_yields_to_tool(bench), "工作台旁锄头面对可耕地时工具优先")
+	_hoe_workbench_space(bench, player)
+	assert_true(
+		_hoe_action_is(farm, bench_cells["open"], ToolManager.ToolType.HOE) and not UIManager.is_screen_open("journal"),
+		"工作台旁手持锄头、面前可耕地：Space 锄地不打开制作"
+	)
+
+	_hoe_face_cell(player, farm, bench_cells["covered"])
+	_hoe_case_begin(player, farm)
+	assert_true(not player.station_interact_yields_to_tool(bench), "面对工作台本体时不让给锄头")
+	_hoe_workbench_space(bench, player)
+	assert_true(
+		farm.actions.is_empty() and UIManager.is_screen_open("journal"),
+		"工作台旁手持锄头、面前是工作台本体：Space 打开制作不锄"
+	)
+
+	_hoe_face_cell(player, farm, bench_cells["open"])
+	player.tool_manager.put_away_tool()
+	_hoe_case_begin(player, farm)
+	_hoe_workbench_space(bench, player)
+	assert_true(
+		farm.actions.is_empty() and UIManager.is_screen_open("journal"),
+		"工作台旁空手、面前可耕地：Space 打开制作"
+	)
+
+	bench._on_body_exited(player)
+	UIManager.close_all()
+	player.free()
+	farm.free()
+	Inventory.load_state(inv_snapshot)
+	GameManager.player = saved_player
+	GameManager.current_state = saved_state
+	GameManager.is_game_active = saved_active
+	get_tree().paused = saved_paused
+	print("  Hoe station priority: All tests completed")
+
+
+func _hoe_station_cells(farm: HoeStationFarmStub, station: Node2D) -> Dictionary:
+	var covered := Vector2i(-1, -1)
+	var open := Vector2i(-1, -1)
+	for y in FarmState.GRID_HEIGHT:
+		for x in FarmState.GRID_WIDTH:
+			var coord := Vector2i(x, y)
+			var center := farm.global_position + farm.PLOT_ORIGIN + Vector2(coord) * farm.PLOT_SPACING
+			if _hoe_solid_covers(station, center):
+				if covered.x < 0:
+					covered = coord
+			elif open.x < 0:
+				open = coord
+	return {"covered": covered, "open": open}
+
+
+func _hoe_solid_covers(station: Node, point: Vector2) -> bool:
+	var shape_node := station.get_node_or_null("SolidBody/CollisionShape2D") as CollisionShape2D
+	if shape_node == null or not (shape_node.shape is RectangleShape2D):
+		return false
+	var rect := shape_node.shape as RectangleShape2D
+	var half := rect.size * 0.5
+	return Rect2(shape_node.global_position - half, rect.size).has_point(point)
+
+
+func _hoe_face_cell(player: Player, farm: HoeStationFarmStub, target: Vector2i) -> void:
+	var stand := target + Vector2i(0, 1)
+	player.global_position = farm.global_position + farm.PLOT_ORIGIN + Vector2(stand) * farm.PLOT_SPACING
+	player.current_direction = player.Direction.UP
+
+
+func _hoe_case_begin(player: Player, farm: HoeStationFarmStub) -> void:
+	UIManager.close_all()
+	GameManager.current_state = GameManager.GameState.PLAYING
+	get_tree().paused = false
+	player._interact_needs_release = false
+	player._interact_blocked_until_msec = 0
+	player.npc_in_range = null
+	farm.actions.clear()
+
+
+func _hoe_action_is(farm: HoeStationFarmStub, coord: Vector2i, tool: int) -> bool:
+	if farm.actions.size() != 1:
+		return false
+	var last: Dictionary = farm.actions[0]
+	return Vector2i(last["coord"]) == coord and int(last["tool"]) == tool
+
+
+func _hoe_workbench_space(bench: Workbench, player: Player) -> void:
+	var event := InputEventKey.new()
+	event.keycode = KEY_SPACE
+	event.physical_keycode = KEY_SPACE
+	event.pressed = true
+	bench._input(event)
+	if GameManager.current_state != GameManager.GameState.PLAYING:
+		return
+	player._interact_needs_release = false
+	player._dispatch_interact()
 
 
 func assert_true(condition: bool, message: String):
