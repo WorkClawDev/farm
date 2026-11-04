@@ -929,3 +929,10 @@
 - 与玛丽：PASS。明显分开可区分。截图 tomspot_apart.png
 - Space 升级：PASS。白天 15:10 靠近汤姆开「工具升级」，日志 Interacting with 铁匠·汤姆，非医生。截图 tomspot_upgrade.png
 - 改动待本地 commit（不 push、勿带 resource_sitemap.json）。
+
+## 2026-11-04 10:46 打磨：池塘整圈装水（--new-game，HEAD e16ce71）
+- 岸边非 FishingSpot：PASS。水壶键 `2`，北岸无钓鱼提示，Space toast「水壶已经是满的」（开局已满，装水路径触发）。截图 pondfill_shore.png
+- FishingSpot 装水：PASS。东侧闪光点提示「Space 装水」，同 toast。截图 pondfill_spot.png
+- FishingSpot 钓鱼：PASS。鱼竿 `6` 提示「Space 钓鱼」，抛竿咬金鱼进小游戏（未抓住，无崩溃）。截图 pondfill_fish.png
+- 海滩：PASS。进 beach_main 正常；岸边闪光点仍可装水提示；离开点后 Space 不再装。截图 pondfill_beach.png
+- 本单未另测田外锄地提示（先前 wrongtool 已 PASS）。commit 已在 e16ce71，无需再提交。
