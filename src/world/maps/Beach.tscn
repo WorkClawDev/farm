@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://cbeachscene001"]
+[gd_scene load_steps=7 format=3 uid="uid://cbeachscene001"]
 
 [ext_resource type="Script" path="res://src/world/maps/Beach.gd" id="1_beach"]
 [ext_resource type="Script" path="res://src/world/objects/FishingSpot.gd" id="2_fishingspot"]
@@ -11,7 +11,18 @@ radius = 40.0
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_exit"]
 size = Vector2(320, 48)
 
+[sub_resource type="GDScript" id="GDScript_lift"]
+script/source = "extends Node
+
+func _ready() -> void:
+	for child in get_parent().get_children():
+		var prompt := child.get_node_or_null(\"InteractPrompt\") as Node2D
+		if prompt:
+			prompt.position = Vector2(0, -150)
+"
+
 [node name="Beach" type="Node2D"]
+y_sort_enabled = true
 script = ExtResource("1_beach")
 
 [node name="BeachMap" parent="." instance=ExtResource("4_map")]
@@ -106,6 +117,9 @@ offset_bottom = -20.0
 text = "[按E键钓鱼]"
 horizontal_alignment = 1
 
+[node name="PromptLift" type="Node" parent="FishingSpots"]
+script = SubResource("GDScript_lift")
+
 [node name="ExitToVillage" type="Area2D" parent="."]
 position = Vector2(0, -200)
 collision_layer = 0
@@ -149,30 +163,31 @@ horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="VillagePathSign" type="Node2D" parent="."]
-position = Vector2(0, 16)
-z_index = 12
+position = Vector2(0, 50)
+z_as_relative = false
+z_index = 0
 
 [node name="Post" type="ColorRect" parent="VillagePathSign"]
 offset_left = -4.0
-offset_top = -6.0
+offset_top = -40.0
 offset_right = 4.0
-offset_bottom = 34.0
+offset_bottom = 0.0
 mouse_filter = 2
 color = Color(0.29, 0.16, 0.06, 1)
 
 [node name="Board" type="ColorRect" parent="VillagePathSign"]
 offset_left = -70.0
-offset_top = -46.0
+offset_top = -80.0
 offset_right = 70.0
-offset_bottom = -12.0
+offset_bottom = -46.0
 mouse_filter = 2
 color = Color(0.4, 0.24, 0.09, 0.95)
 
 [node name="GuideLabel" type="Label" parent="VillagePathSign"]
 offset_left = -66.0
-offset_top = -44.0
+offset_top = -78.0
 offset_right = 66.0
-offset_bottom = -14.0
+offset_bottom = -48.0
 mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.96, 0.82, 1)
 theme_override_colors/font_outline_color = Color(0.1, 0.05, 0.02, 1)

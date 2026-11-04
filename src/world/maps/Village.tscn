@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://village_map_001"]
+[gd_scene load_steps=19 format=3 uid="uid://village_map_001"]
 
 [ext_resource type="Script" path="res://src/world/maps/Village.gd" id="1_village"]
 [ext_resource type="PackedScene" uid="uid://npc_base_001" path="res://src/entities/npc/NPC.tscn" id="2_npc"]
@@ -10,6 +10,9 @@
 [ext_resource type="PackedScene" uid="uid://dp5y8hqm2x8nr" path="res://src/entities/player/Player.tscn" id="8_player"]
 [ext_resource type="Script" path="res://src/entities/npc/ShopNPC.gd" id="9_shop_script"]
 [ext_resource type="PackedScene" path="res://src/world/maps/content/VillageMap.tscn" id="10_map"]
+[ext_resource type="Texture2D" path="res://assets/tiles/kenney/decor/grass2_64.png" id="11_grass2"]
+[ext_resource type="Texture2D" path="res://assets/tiles/kenney/decor/grass_64.png" id="12_grass"]
+[ext_resource type="Texture2D" path="res://assets/tiles/kenney/decor/dirt_64.png" id="13_dirt"]
 
 [sub_resource type="TileSet" id="TileSet_village"]
 
@@ -33,6 +36,11 @@ y_sort_enabled = true
 script = ExtResource("1_village")
 
 [node name="VillageMap" parent="." instance=ExtResource("10_map")]
+
+[node name="VillageTree05" parent="VillageMap/Collision"]
+
+[node name="CollisionShape2D" parent="VillageMap/Collision/VillageTree05"]
+disabled = true
 
 [node name="Player" parent="." instance=ExtResource("8_player")]
 position = Vector2(420, 500)
@@ -63,6 +71,39 @@ collision_mask = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="TransitionAreas/ToBeachArea"]
 shape = SubResource("RectangleShape2D_tobeach")
+
+[node name="BeachSignPost" type="ColorRect" parent="TransitionAreas/ToBeachArea"]
+z_index = 12
+offset_left = -5.0
+offset_top = -8.0
+offset_right = 5.0
+offset_bottom = 36.0
+mouse_filter = 2
+color = Color(0.29, 0.16, 0.06, 1)
+
+[node name="BeachSignBoard" type="ColorRect" parent="TransitionAreas/ToBeachArea"]
+z_index = 13
+offset_left = -78.0
+offset_top = -58.0
+offset_right = 78.0
+offset_bottom = -16.0
+mouse_filter = 2
+color = Color(0.4, 0.24, 0.09, 0.95)
+
+[node name="ExitSign" type="Label" parent="TransitionAreas/ToBeachArea"]
+z_index = 14
+offset_left = -74.0
+offset_top = -56.0
+offset_right = 74.0
+offset_bottom = -18.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.96, 0.82, 1)
+theme_override_colors/font_outline_color = Color(0.1, 0.05, 0.02, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 22
+text = "海滩 →"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="ToForestArea" type="Area2D" parent="TransitionAreas"]
 position = Vector2(410, -90)
@@ -131,3 +172,55 @@ Sprite2D/hframes = 8
 Sprite2D/vframes = 1
 
 [node name="Buildings" type="Node2D" parent="."]
+
+[node name="EastRoadTreeClear" type="Node2D" parent="."]
+z_as_relative = false
+z_index = -1
+
+[node name="Grass192A" type="Sprite2D" parent="EastRoadTreeClear"]
+texture_filter = 1
+centered = false
+position = Vector2(1088, 192)
+texture = ExtResource("11_grass2")
+
+[node name="Grass192B" type="Sprite2D" parent="EastRoadTreeClear"]
+texture_filter = 1
+centered = false
+position = Vector2(1152, 192)
+texture = ExtResource("12_grass")
+
+[node name="Dirt256A" type="Sprite2D" parent="EastRoadTreeClear"]
+texture_filter = 1
+centered = false
+position = Vector2(1088, 256)
+texture = ExtResource("13_dirt")
+
+[node name="Dirt256B" type="Sprite2D" parent="EastRoadTreeClear"]
+texture_filter = 1
+centered = false
+position = Vector2(1152, 256)
+texture = ExtResource("13_dirt")
+
+[node name="Grass320A" type="Sprite2D" parent="EastRoadTreeClear"]
+texture_filter = 1
+centered = false
+position = Vector2(1088, 320)
+texture = ExtResource("12_grass")
+
+[node name="Grass320B" type="Sprite2D" parent="EastRoadTreeClear"]
+texture_filter = 1
+centered = false
+position = Vector2(1152, 320)
+texture = ExtResource("12_grass")
+
+[node name="Grass384A" type="Sprite2D" parent="EastRoadTreeClear"]
+texture_filter = 1
+centered = false
+position = Vector2(1088, 384)
+texture = ExtResource("12_grass")
+
+[node name="Grass384B" type="Sprite2D" parent="EastRoadTreeClear"]
+texture_filter = 1
+centered = false
+position = Vector2(1152, 384)
+texture = ExtResource("12_grass")
