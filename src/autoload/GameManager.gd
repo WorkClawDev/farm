@@ -273,14 +273,38 @@ func get_stamina_manager():
 func _change_scene(scene_path: String) -> void:
 	# change_scene_to_file 会立刻把当前场景移出场景树。门口/出口是 Area2D.body_entered
 	# 触发的（物理回调里），这时移除 CollisionObject 会报错（BUG-16），先等到空闲帧再切。
+	# MainMenu._ready 里启动时根节点还在 add_child，内部 remove_child 会报
+	# "Parent node is busy"。先按引擎提示把当前场景推迟移出，再加载。
 	if Engine.is_in_physics_frame():
 		await get_tree().process_frame
-	var error := get_tree().change_scene_to_file(scene_path)
+	var tree := get_tree()
+	if tree == null:
+		return
+	if _caller_is_ready():
+		var current := tree.current_scene
+		var parent: Node = current.get_parent() if current != null else null
+		if parent != null:
+			parent.call_deferred("remove_child", current)
+		await tree.process_frame
+		tree = get_tree()
+		if tree == null:
+			return
+		if current != null and is_instance_valid(current) and tree.current_scene == current:
+			tree.current_scene = null
+			current.queue_free()
+	var error := tree.change_scene_to_file(scene_path)
 	if error != OK:
 		notification_requested.emit("无法加载场景")
 		return
-	await get_tree().scene_changed
-	await get_tree().process_frame
+	await tree.scene_changed
+	await tree.process_frame
+
+
+func _caller_is_ready() -> bool:
+	for frame in get_stack():
+		if str(frame.get("function", "")) == "_ready":
+			return true
+	return false
 
 
 func _apply_debug_spawn(spec: Dictionary) -> void:

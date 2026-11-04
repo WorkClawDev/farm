@@ -29,15 +29,21 @@ var _pause_count: int = 0
 
 # 内部计时器
 var _time_accumulator: float = 0.0
+var _time_frozen: bool = false
 
 func _ready() -> void:
+	_time_frozen = _launch_freezes_time()
 	print("[TimeManager] Initialized")
+	if _time_frozen:
+		print("[TimeManager] Clock frozen (--freeze-time)")
 	print("[TimeManager] Starting time: ", _format_time(current_time))
 
 func _process(delta: float) -> void:
 	# Only the autoload clock moves. A second TimeManager in the tree must not.
 	var autoload := get_node_or_null("/root/TimeManager")
 	if autoload != null and autoload != self:
+		return
+	if _time_frozen:
 		return
 	var game_manager = get_node_or_null("/root/GameManager")
 	if is_paused or (game_manager and not game_manager.is_game_active):
@@ -49,6 +55,18 @@ func _process(delta: float) -> void:
 	if engine_scale > 0.0 and not is_equal_approx(engine_scale, 1.0):
 		real_delta = delta / engine_scale
 	_update_time(real_delta)
+
+## --freeze-time on either the engine args or the user args (after --).
+func _launch_freezes_time() -> bool:
+	var user_args := OS.get_cmdline_user_args()
+	var engine_args := OS.get_cmdline_args()
+	return _cmdline_has(user_args, "--freeze-time") or _cmdline_has(engine_args, "--freeze-time")
+
+func _cmdline_has(args: PackedStringArray, flag: String) -> bool:
+	for arg in args:
+		if str(arg).strip_edges() == flag:
+			return true
+	return false
 
 func _update_time(delta: float) -> void:
 	if is_paused:
