@@ -24,9 +24,15 @@ var _confirmation_owns_pause := false
 var _pause_owned := false
 var _clock_paused := false
 var _held_bright_toasts := false
+var _shipping_toast_refit := false
 
 const MAX_VISIBLE_TOASTS := 4
 const TOAST_DURATION := 3.0
+const TOAST_TOP_DEFAULT := 88
+## Pre-layout fallback. The right-hand 「今晚的出货」 row starts near this y,
+## so a laid-out title drops the toast to the bottom of its rect plus a gap.
+const TOAST_TOP_BELOW_SHIPPING_TITLE := 176
+const TOAST_SHIPPING_TITLE_GAP := 8
 
 
 func _ready() -> void:
@@ -100,6 +106,7 @@ func open_screen(screen_id: String, context := {}) -> Control:
 		instance.configure(context)
 	elif screen_id == "inventory" and instance.has_method("open_tab"):
 		instance.open_tab("inventory")
+	_apply_toast_top()
 	await get_tree().process_frame
 	# The screen may have been closed (close_all / close_top_screen / another
 	# open_screen) while we waited; it is then freed or about to be.
@@ -136,6 +143,7 @@ func close_top_screen() -> void:
 		var top_node := _stack.back().get("node") as Control
 		if is_instance_valid(top_node):
 			UIFactory.focus_first(top_node)
+	_apply_toast_top()
 
 
 func close_all() -> void:
@@ -148,11 +156,13 @@ func close_all() -> void:
 		screen_closed.emit(str(entry.get("id", "")))
 	_release_pause()
 	modal_stack_changed.emit(0)
+	_apply_toast_top()
 
 
 func show_toast(message_key: String, args := {}, variant := "info", hold_until_bright := false) -> void:
 	if _toast_root == null:
 		return
+	_apply_toast_top()
 	var text := _format_message(message_key, args)
 	# BUG-10: merge identical live toasts instead of stacking duplicates.
 	for child in _toast_root.get_children():
@@ -358,6 +368,77 @@ func _unhandled_input(event: InputEvent) -> void:
 		_on_confirmation_result(false, config)
 
 
+func toast_top_for_screen(screen_id: String) -> int:
+	if screen_id == "shipping_bin":
+		return TOAST_TOP_BELOW_SHIPPING_TITLE
+	return TOAST_TOP_DEFAULT
+
+
+func _apply_toast_top() -> void:
+	if _toast_root == null:
+		return
+	var screen_id := "shipping_bin" if is_screen_open("shipping_bin") else ""
+	var top := float(toast_top_for_screen(screen_id))
+	if screen_id == "shipping_bin":
+		var fitted := _toast_top_below_shipping_title()
+		if fitted >= 0.0:
+			top = fitted
+		elif not _shipping_toast_refit:
+			# Title rect is still the pre-layout stub. Fit again once it is real.
+			_shipping_toast_refit = true
+			call_deferred("_refit_shipping_toast_once")
+	_toast_root.offset_top = top
+
+
+func _refit_shipping_toast_once() -> void:
+	_shipping_toast_refit = false
+	if _toast_root == null or not is_screen_open("shipping_bin"):
+		return
+	var fitted := _toast_top_below_shipping_title()
+	if fitted >= 0.0:
+		_toast_root.offset_top = fitted
+
+
+## Global y for ToastRoot so the toast sits just under the shipping column title.
+## Returns -1 until that label's get_global_rect() is a real laid-out row.
+func _toast_top_below_shipping_title() -> float:
+	if _toast_root == null:
+		return -1.0
+	var screen := get_screen("shipping_bin")
+	if screen == null:
+		return -1.0
+	var title := _shipping_contents_title(screen)
+	if title == null:
+		return -1.0
+	var blocker := title.get_global_rect()
+	if not _shipping_title_rect_ready(blocker):
+		return -1.0
+	var bias := _toast_root.global_position.y - _toast_root.offset_top
+	return blocker.end.y + float(TOAST_SHIPPING_TITLE_GAP) - bias
+
+
+func _shipping_contents_title(screen: Node) -> Label:
+	for node in screen.find_children("*", "Label", true, false):
+		var lab := node as Label
+		if lab == null:
+			continue
+		var text := lab.text
+		if text.contains("今晚的出货") or text.contains("Tonight's Shipment"):
+			return lab
+	return null
+
+
+func _shipping_title_rect_ready(blocker: Rect2) -> bool:
+	# add_child reports a 1px-wide rect at the origin until the next layout pass.
+	return (
+		blocker.size.x >= 32.0
+		and blocker.size.y >= 8.0
+		and blocker.size.y <= 96.0
+		and blocker.position.x > 1.0
+		and blocker.position.y > 1.0
+	)
+
+
 func _build_overlay() -> void:
 	_overlay_layer = CanvasLayer.new()
 	_overlay_layer.name = "UIOverlay"
@@ -377,7 +458,7 @@ func _build_overlay() -> void:
 	# quest tracker (BUG-4).
 	_toast_root.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	_toast_root.offset_left = -160
-	_toast_root.offset_top = 88
+	_toast_root.offset_top = TOAST_TOP_DEFAULT
 	_toast_root.offset_right = 160
 	_toast_root.offset_bottom = 400
 	# PRESET_CENTER_TOP grows both ways. Pin extra width to the left so the
@@ -419,6 +500,7 @@ func _on_screen_requested_close(screen: Control) -> void:
 		if is_instance_valid(top_node):
 			UIFactory.focus_first(top_node)
 	modal_stack_changed.emit(_stack.size())
+	_apply_toast_top()
 
 
 func _find_entry(screen_id: String) -> Dictionary:
