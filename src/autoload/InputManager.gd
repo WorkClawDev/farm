@@ -62,6 +62,25 @@ func _ensure_core_actions() -> void:
 			var event := InputEventKey.new()
 			event.physical_keycode = bindings[action]
 			InputMap.action_add_event(action, event)
+	# 1–6 直选工具，顺序与 ToolManager.TOOL_HOTKEY_ORDER 一致。
+	# 不放进可重绑列表：默认就能用，不必进设置改键。
+	# 快捷栏物品用鼠标点击或 Tab（hotbar_next），不再占用数字键。
+	var tool_keys := {
+		"tool_1": KEY_1,
+		"tool_2": KEY_2,
+		"tool_3": KEY_3,
+		"tool_4": KEY_4,
+		"tool_5": KEY_5,
+		"tool_6": KEY_6,
+	}
+	for action in tool_keys:
+		if not InputMap.has_action(action):
+			InputMap.add_action(action)
+		if InputMap.action_get_events(action).is_empty():
+			var tool_event := InputEventKey.new()
+			tool_event.physical_keycode = tool_keys[action]
+			tool_event.keycode = tool_keys[action]
+			InputMap.action_add_event(action, tool_event)
 
 func _input(event: InputEvent) -> void:
 	# 检测输入设备类型
@@ -127,6 +146,27 @@ func get_action_prompt(action: StringName, device := -1) -> String:
 		if not use_gamepad and event is InputEventMouseButton:
 			return "鼠标%d" % event.button_index
 	return "—"
+
+
+## In-world key label. Keyboard prefers Space when it is bound (interact is
+## Space + E), matching the HUD hint. Otherwise the first keyboard binding is
+## the primary key. The shortest alias ("E") is not chosen over that primary
+## key. Gamepad uses get_action_prompt().
+func get_action_short_prompt(action: StringName) -> String:
+	if is_using_gamepad():
+		return get_action_prompt(action)
+	var primary := ""
+	for event in InputMap.action_get_events(action):
+		if not event is InputEventKey:
+			continue
+		var key := event as InputEventKey
+		var label := _key_event_label(key)
+		var code := key.physical_keycode if key.physical_keycode != 0 else key.keycode
+		if code == KEY_SPACE:
+			return label
+		if primary.is_empty():
+			primary = label
+	return primary if not primary.is_empty() else get_action_prompt(action)
 
 
 func get_action_icon_id(action: StringName) -> String:

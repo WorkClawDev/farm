@@ -56,6 +56,8 @@ signal weather_day_started(weather: String)
 var current_weather: String = "sunny"
 var current_weather_type: int = WeatherType.SUNNY
 var previous_weather: String = "sunny"
+## 非空时跳过随机，测试用来钉住 rainy / stormy。
+var forced_weather: String = ""
 
 # 天气效果节点
 var _weather_effect: Node2D = null
@@ -85,9 +87,15 @@ func _on_day_changed(new_day: int) -> void:
 	var new_weather = _generate_daily_weather()
 	_set_weather(new_weather)
 	weather_day_started.emit(current_weather)
+	# 过夜把时钟拨到 6:00。TimeManager.reset() 也发 day_changed，但是 9:00，不能顺手浇地。
+	var tm = get_node_or_null("/root/TimeManager")
+	if tm and is_equal_approx(float(tm.current_time), 6.0):
+		apply_day_start_watering()
 
 
 func _generate_daily_weather() -> String:
+	if forced_weather != "":
+		return forced_weather
 	# 使用 SeasonSystem 的权重来生成天气
 	var ss = get_node_or_null("/root/GameSession/SeasonSystem")
 	if ss and ss.has_method("generate_weather_for_season"):
@@ -118,6 +126,23 @@ func _set_weather(weather: String) -> void:
 	weather_changed.emit(weather, current_weather_type)
 	_apply_weather_effect()
 	print("[WeatherSystem] Weather changed to: ", weather)
+
+
+func set_current_weather(weather: String) -> void:
+	_set_weather(weather)
+
+
+func is_rain_or_storm() -> bool:
+	return current_weather == "rainy" or current_weather == "stormy"
+
+
+## 当天是雨或暴风雨时浇地。晴天、多云、雪天不动。
+func apply_day_start_watering() -> void:
+	if not is_rain_or_storm():
+		return
+	var farm = get_node_or_null("/root/FarmState")
+	if farm and farm.has_method("water_from_rain"):
+		farm.water_from_rain()
 
 
 func _weather_name_to_type(name: String) -> int:
@@ -290,5 +315,6 @@ func load_state(data: Dictionary) -> void:
 
 
 func reset() -> void:
+	forced_weather = ""
 	previous_weather = "sunny"
 	_set_weather("sunny")

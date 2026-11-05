@@ -1,6 +1,8 @@
 extends Control
 class_name MainMenu
 
+const DebugLaunchScript = preload("res://src/core/debug/DebugLaunch.gd")
+
 const SEASON_BACKGROUNDS := [
 	preload("res://assets/ui/backgrounds/menu_spring.png"),
 	preload("res://assets/ui/backgrounds/menu_summer.png"),
@@ -37,6 +39,35 @@ var _transitioning := false
 
 func _ready() -> void:
 	print("[MainMenu] Ready")
+	var launch := DebugLaunchScript.from_cmdline()
+	if bool(launch.get("new_game", false)):
+		_boot_debug_new_game()
+		return
+	if int(launch.get("slot", -1)) >= 0:
+		_boot_debug_launch(launch)
+		return
+	_setup_menu()
+
+
+func _boot_debug_new_game() -> void:
+	DebugLaunchScript.apply_debug_new_game_save_dir()
+	print("[DebugLaunch] --new-game save_dir=%s" % SaveManager.save_dir)
+	await GameManager.start_new_game(0)
+
+
+func _boot_debug_launch(launch: Dictionary) -> void:
+	var slot := int(launch["slot"])
+	var spawn := str(launch.get("spawn", ""))
+	print("[DebugLaunch] --load-slot=%d (slot %d) spawn=%s" % [slot + 1, slot, spawn])
+	var loaded: bool = await GameManager.load_game(slot, spawn)
+	if not is_inside_tree():
+		return
+	if loaded:
+		return
+	_setup_menu()
+
+
+func _setup_menu() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	for art_directed_node in [brand_backdrop, title_label, subtitle_label, season_note]:
 		art_directed_node.set_meta("preserve_theme_overrides", true)
@@ -45,8 +76,74 @@ func _ready() -> void:
 	_apply_localized_text()
 	_refresh_save_state()
 	_connect_buttons()
-	$SafeArea/Layout.resized.connect(_apply_main_layout)
+	if not $SafeArea/Layout.resized.is_connected(_apply_main_layout):
+		$SafeArea/Layout.resized.connect(_apply_main_layout)
 	_initialize_main_layout()
+
+
+func _menu_buttons() -> Array[Button]:
+	return [
+		continue_button, new_game_button, load_button,
+		settings_button, credits_button, quit_button,
+	]
+
+
+func _focusable_menu_buttons() -> Array[Button]:
+	var result: Array[Button] = []
+	for button in _menu_buttons():
+		if button.visible and not button.disabled:
+			result.append(button)
+	return result
+
+
+## Disabled and hidden entries are FOCUS_NONE. A disabled "读取进度" used to stay
+## FOCUS_ALL, so the first Down landed on it instead of the next real button.
+func _wire_menu_focus() -> void:
+	var buttons := _focusable_menu_buttons()
+	for button in _menu_buttons():
+		var enabled := button.visible and not button.disabled
+		button.focus_mode = Control.FOCUS_ALL if enabled else Control.FOCUS_NONE
+		button.focus_neighbor_left = NodePath()
+		button.focus_neighbor_right = NodePath()
+		button.focus_neighbor_top = NodePath()
+		button.focus_neighbor_bottom = NodePath()
+	for i in buttons.size():
+		if i == 0:
+			buttons[i].focus_neighbor_top = buttons[i].get_path_to(buttons[i])
+		else:
+			buttons[i].focus_neighbor_top = buttons[i].get_path_to(buttons[i - 1])
+		if i == buttons.size() - 1:
+			buttons[i].focus_neighbor_bottom = buttons[i].get_path_to(buttons[i])
+		else:
+			buttons[i].focus_neighbor_bottom = buttons[i].get_path_to(buttons[i + 1])
+
+
+## Down is both ui_down and move_down. Handle it before Button.gui_input so a
+## navigation key cannot activate the focused button. ui_accept is left alone.
+func _input(event: InputEvent) -> void:
+	if not is_visible_in_tree() or UIManager.has_open_modal():
+		return
+	if event is InputEventJoypadMotion:
+		return
+	if not (event.is_action("ui_down") or event.is_action("ui_up")):
+		return
+	if event.is_pressed():
+		_move_menu_focus(1 if event.is_action("ui_down") else -1)
+	get_viewport().set_input_as_handled()
+
+
+func _move_menu_focus(delta: int) -> void:
+	var buttons := _focusable_menu_buttons()
+	if buttons.is_empty():
+		return
+	var current := get_viewport().gui_get_focus_owner()
+	var index := buttons.find(current)
+	if index < 0:
+		index = 0 if delta > 0 else buttons.size() - 1
+	else:
+		index = clampi(index + delta, 0, buttons.size() - 1)
+	if buttons[index] != current:
+		buttons[index].grab_focus()
 
 
 func _initialize_main_layout() -> void:
@@ -114,8 +211,14 @@ func _refresh_save_state() -> void:
 		]
 	else:
 		save_summary.text = UIStyles.tr_key("ui.main.no_save", "还没有农场记录")
+	_wire_menu_focus()
+	# UIThemeBridge queued style at node_added, before this _ready. Re-apply
+	# after that deferred pass so a disabled "读取进度" stays FOCUS_NONE.
+	call_deferred("_wire_menu_focus")
 	await get_tree().process_frame
-	(continue_button if has_save else new_game_button).grab_focus()
+	var initial := continue_button if has_save else new_game_button
+	if is_instance_valid(initial) and initial.focus_mode != Control.FOCUS_NONE:
+		initial.grab_focus()
 
 
 func _connect_buttons() -> void:

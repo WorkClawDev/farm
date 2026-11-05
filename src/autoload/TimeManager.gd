@@ -11,13 +11,13 @@ signal year_changed(new_year: int)
 signal day_end_requested(reason: String)
 
 # 时间配置
-const REAL_SECONDS_PER_GAME_MINUTE: float = 1.0  # 现实1秒 = 游戏1分钟
+const REAL_SECONDS_PER_GAME_MINUTE: float = 0.7  # 现实 0.7 秒 = 游戏 1 分钟（6:00–2:00 约 14 分钟）
 const GAME_HOURS_PER_DAY: int = 20  # 游戏一天20小时 (6:00-2:00)
 const DAYS_PER_SEASON: int = 28  # 每季28天
 const SEASONS: Array[String] = ["Spring", "Summer", "Fall", "Winter"]
 
 # 当前时间状态
-var current_time: float = 6.0  # 当前时间 (0.0 - 24.0)，从早上6点开始
+var current_time: float = 9.0  # new game boot: mid-morning; day reset stays 6:00
 var current_day: int = 1  # 当前日期 (1-28)
 var current_season: int = 0  # 当前季节 (0-3)
 var current_year: int = 1  # 当前年份
@@ -25,22 +25,52 @@ var current_year: int = 1  # 当前年份
 # 控制状态
 var is_paused: bool = false
 var time_scale: float = 1.0
+var _pause_count: int = 0
 
 # 内部计时器
 var _time_accumulator: float = 0.0
+var _time_frozen: bool = false
 
 func _ready() -> void:
+	_time_frozen = _launch_freezes_time()
 	print("[TimeManager] Initialized")
+	if _time_frozen:
+		print("[TimeManager] Clock frozen (--freeze-time)")
 	print("[TimeManager] Starting time: ", _format_time(current_time))
 
 func _process(delta: float) -> void:
+	# Only the autoload clock moves. A second TimeManager in the tree must not.
+	var autoload := get_node_or_null("/root/TimeManager")
+	if autoload != null and autoload != self:
+		return
+	if _time_frozen:
+		return
 	var game_manager = get_node_or_null("/root/GameManager")
 	if is_paused or (game_manager and not game_manager.is_game_active):
 		return
-	
-	_update_time(delta)
+	# _process delta is already multiplied by Engine.time_scale. Undo that so
+	# speeding up NPC walks does not speed up the day.
+	var real_delta := delta
+	var engine_scale := Engine.time_scale
+	if engine_scale > 0.0 and not is_equal_approx(engine_scale, 1.0):
+		real_delta = delta / engine_scale
+	_update_time(real_delta)
+
+## --freeze-time on either the engine args or the user args (after --).
+func _launch_freezes_time() -> bool:
+	var user_args := OS.get_cmdline_user_args()
+	var engine_args := OS.get_cmdline_args()
+	return _cmdline_has(user_args, "--freeze-time") or _cmdline_has(engine_args, "--freeze-time")
+
+func _cmdline_has(args: PackedStringArray, flag: String) -> bool:
+	for arg in args:
+		if str(arg).strip_edges() == flag:
+			return true
+	return false
 
 func _update_time(delta: float) -> void:
+	if is_paused:
+		return
 	_time_accumulator += delta * time_scale
 	
 	# 计算游戏时间增量
@@ -81,12 +111,13 @@ func advance_to_next_day() -> void:
 	_advance_day()
 
 func reset() -> void:
-	current_time = 6.0
+	current_time = 9.0  # new-game default mid-morning; _advance_day still wakes at 6:00
 	current_day = 1
 	current_season = 0
 	current_year = 1
 	is_paused = false
 	time_scale = 1.0
+	_pause_count = 0
 	_time_accumulator = 0.0
 	time_changed.emit(current_time)
 	day_changed.emit(current_day)
@@ -105,12 +136,15 @@ func _advance_season() -> void:
 	print("[TimeManager] Season changed to: ", SEASONS[current_season])
 
 func pause_time() -> void:
+	_pause_count += 1
 	is_paused = true
 	print("[TimeManager] Time paused")
 
 func resume_time() -> void:
-	is_paused = false
-	print("[TimeManager] Time resumed")
+	_pause_count = maxi(0, _pause_count - 1)
+	if _pause_count == 0:
+		is_paused = false
+		print("[TimeManager] Time resumed")
 
 func set_time_scale(scale: float) -> void:
 	time_scale = max(0.0, scale)
@@ -149,7 +183,7 @@ func save_state() -> Dictionary:
 	}
 
 func load_state(data: Dictionary) -> void:
-	current_time = data.get("current_time", 6.0)
+	current_time = data.get("current_time", 9.0)
 	current_day = data.get("current_day", 1)
 	current_season = data.get("current_season", 0)
 	current_year = data.get("current_year", 1)

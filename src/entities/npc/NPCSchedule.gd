@@ -162,6 +162,8 @@ func _sort_schedule() -> void:
 ## 更新日程状态 (每帧调用)
 func update(current_time: float, current_day: int, current_season: int) -> void:
 	var new_entry := get_entry_for_time(current_time, current_day, current_season)
+	if new_entry == null:
+		return  # no entry covers this time: keep the current one (BUG-48)
 
 	if new_entry != current_entry:
 		current_entry = new_entry
@@ -177,6 +179,9 @@ func update(current_time: float, current_day: int, current_season: int) -> void:
 
 ## 获取指定时间的日程项
 func get_entry_for_time(time: float, day: int = 1, season: int = 0) -> ScheduleEntry:
+	# TimeManager counts past midnight up to 26.0 (2:00 AM ends the day); schedules
+	# use 0-24, so 24.5 is 0:30 of the same night (BUG-48: was null after midnight).
+	time = fposmod(time, 24.0)
 	# 检查特殊日程
 	var special_entry := _get_special_entry(time, day, season)
 	if special_entry:

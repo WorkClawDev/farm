@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3 uid="uid://forest_scene_001"]
+[gd_scene load_steps=7 format=3 uid="uid://forest_scene_001"]
 
 [ext_resource type="Script" path="res://src/world/maps/Forest.gd" id="1_forest"]
 [ext_resource type="PackedScene" uid="uid://dp5y8hqm2x8nr" path="res://src/entities/player/Player.tscn" id="2_player"]
@@ -9,6 +9,9 @@
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_tofarm"]
 size = Vector2(32, 64)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_tosouth"]
+size = Vector2(120, 48)
 
 [node name="Forest" type="Node2D"]
 script = ExtResource("1_forest")
@@ -23,10 +26,18 @@ position = Vector2(400, 360)
 [node name="ToFarmArea" type="Area2D" parent="TransitionAreas"]
 position = Vector2(50, 360)
 collision_layer = 0
-collision_mask = 1
+collision_mask = 2
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="TransitionAreas/ToFarmArea"]
 shape = SubResource("RectangleShape2D_tofarm")
+
+[node name="ToVillageSouthArea" type="Area2D" parent="TransitionAreas"]
+position = Vector2(440, 900)
+collision_layer = 0
+collision_mask = 2
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="TransitionAreas/ToVillageSouthArea"]
+shape = SubResource("RectangleShape2D_tosouth")
 
 [node name="ForagePoints" type="Node2D" parent="."]
 

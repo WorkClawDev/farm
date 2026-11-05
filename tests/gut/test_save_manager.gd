@@ -15,6 +15,7 @@ func test_save_manager_rejects_invalid_slot() -> void:
 
 func test_save_manager_creates_and_deletes_save_file() -> void:
 	var save_manager = add_child_autofree(SaveManagerScript.new())
+	save_manager.save_dir = "user://gut_save_manager_%d/" % Time.get_ticks_usec()
 	var slot: int = save_manager.MAX_SAVE_SLOTS - 1
 
 	save_manager.delete_save(slot)

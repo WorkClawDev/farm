@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3 uid="uid://c8wateringcan001"]
 
 [ext_resource type="Script" path="res://src/entities/tools/WateringCan.gd" id="1_wateringcan"]
-[ext_resource type="Texture2D" path="res://assets/sprites/tools/watering_can.png" id="2_sprite"]
+[ext_resource type="Texture2D" path="res://assets/sprites/tools/watering_can_ninja.png" id="2_sprite"]
 
 [sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_water"]
 blend_mode = 0

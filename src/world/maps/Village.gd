@@ -11,6 +11,8 @@ const HUDScene = preload("res://src/ui/hud/HUD.tscn")
 const HotkeyBarScene = preload("res://src/ui/hud/HotkeyBar.tscn")
 const ToolDisplayScene = preload("res://src/ui/hud/ToolDisplay.tscn")
 const QuestTrackerScene = preload("res://src/ui/hud/QuestTracker.tscn")
+const PauseMenuScene = preload("res://src/ui/menus/PauseMenu.tscn")
+const DayNightTint = preload("res://src/world/maps/DayNightTint.gd")
 var tile_map: TileMap = null # Legacy builder compatibility; no longer part of the runtime scene.
 @onready var map_root: EditableMap2D = $VillageMap
 @onready var player_spawn: MapMarker2D = map_root.get_marker(&"player_spawn")
@@ -19,33 +21,57 @@ var tile_map: TileMap = null # Legacy builder compatibility; no longer part of t
 const FARM_SCENE = "res://src/world/maps/Farm.tscn"
 const TRANSITION_TARGETS := {
 	"ToFarmArea": ["res://src/world/maps/Farm.tscn", "from_village"],
-	"ToPlayerHouseArea": ["res://src/world/maps/PlayerHouse.tscn", "house_entrance"],
+	"ToPlayerHouseArea": ["res://src/world/maps/PlayerHouse.tscn", "village_house_entrance"],
 	"ToBeachArea": ["res://src/world/maps/Beach.tscn", "from_village"],
 	"ToForestArea": ["res://src/world/maps/Forest.tscn", "from_village"],
 	"ToMineArea": ["res://src/world/maps/Mine.tscn", "from_village"],
+}
+const EXIT_SIGNS := {
+	"ToFarmArea": "← 农场",
+	"ToBeachArea": "海滩 →",
+	"ToForestArea": "↑ 森林",
+	"ToMineArea": "↓ 矿洞",
+	"ToPlayerHouseArea": "⌂ 住家",
+}
+## The mine exit is a band along the bottom edge; its sign sits just above it.
+const EXIT_SIGN_OFFSETS := {
+	"ToMineArea": Vector2(0, -44),
 }
 
 # NPC管理器
 var npc_manager: NPCManager = null
 var _map_built: bool = false  # 防止重复构建
+var pause_menu: PauseMenu
 
 func _ready() -> void:
 	print("[Village] Scene loaded")
 	_setup_map()
 	_setup_ui()
+	add_child(DayNightTint.new())  # night tint (round 7)
 	_connect_transition_areas()
+	_add_shop_guides()
+	# Also on GameManager.change_location (farm/house -> village), which does not go
+	# through SceneTransition: the scene's villagers get registered and placed by
+	# schedule, once (BUG-44).
+	_setup_npc_manager()
 
 	var player := get_tree().get_first_node_in_group("player") as Node2D
 	if player:
 		match GameManager.current_spawn_point:
 			"from_farm":
 				player.global_position = Vector2(150, 300)
+			# Arrive next to the exit you came through (BUG-32); the old mine spawn
+			# was inside the north-east building.
 			"from_beach":
-				player.global_position = Vector2(320, 620)
+				player.global_position = Vector2(1110, 690)
 			"from_forest":
-				player.global_position = Vector2(850, 360)
+				player.global_position = Vector2(410, -20)
+			# East of SW building + Tree10 corridor (BUG-53); still above ToMineArea.
 			"from_mine":
-				player.global_position = Vector2(720, 120)
+				player.global_position = Vector2(520, 880)
+			# The house door on the lower road (BUG-40).
+			"from_house":
+				player.global_position = Vector2(470, 575)
 			_:
 				player.global_position = player_spawn.global_position
 	AudioManager.update_location_bgm("village")
@@ -107,13 +133,100 @@ func _setup_ui() -> void:
 	var quest_tracker := QuestTrackerScene.instantiate()
 	quest_tracker.position = Vector2(16, 70)
 	hud.add_child(quest_tracker)
+	# Esc / J used to do nothing in the village: only Farm.gd had these handlers (BUG-20 report).
+	pause_menu = PauseMenuScene.instantiate()
+	pause_menu.visible = false
+	pause_menu.process_mode = Node.PROCESS_MODE_ALWAYS
+	pause_menu.resume_requested.connect(_close_pause_menu)
+	pause_menu.quit_to_menu_requested.connect(GameManager.return_to_menu)
+	pause_menu.quit_game_requested.connect(GameManager.quit_game)
+	hud.add_child(pause_menu)
 	print("[Village] UI setup complete")
+
+## Same Esc / J handling as Farm.gd.
+func _unhandled_input(event: InputEvent) -> void:
+	# Not while a dialogue/shop owns the game state (pause_game() would be a no-op there).
+	var playing := GameManager.current_state == GameManager.GameState.PLAYING
+	if (event.is_action_pressed("inventory") or event.is_action_pressed("journal")) and playing:
+		var context := {}
+		if event.is_action_pressed("inventory"):
+			context["tab"] = "inventory"
+		UIManager.open_screen("journal", context)
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("pause"):
+		if UIManager.has_open_modal():
+			return
+		if GameManager.is_paused():
+			_close_pause_menu()
+		elif playing:
+			GameManager.pause_game()
+			pause_menu.visible = true
+		get_viewport().set_input_as_handled()
+
+func _close_pause_menu() -> void:
+	pause_menu.visible = false
+	GameManager.resume_game()
 
 func _connect_transition_areas() -> void:
 	for area_name in TRANSITION_TARGETS:
 		var area := get_node_or_null("TransitionAreas/%s" % area_name) as Area2D
 		if area:
 			area.body_entered.connect(_on_transition_body_entered.bind(area_name))
+			_add_exit_sign(area, EXIT_SIGNS.get(area_name, ""), EXIT_SIGN_OFFSETS.get(area_name, Vector2.ZERO))
+
+## Small floating sign so map exits can be found (BUG-32).
+func _add_exit_sign(area: Area2D, text: String, offset := Vector2.ZERO) -> void:
+	if text.is_empty() or area.get_node_or_null("ExitSign"):
+		return
+	var label := Label.new()
+	label.name = "ExitSign"
+	label.text = text
+	label.size = Vector2(120, 26)
+	label.position = Vector2(-60, -13) + offset
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 4)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	area.add_child(label)
+
+
+## Road signs so a new arrival can find Lily without guessing which hut is the shop.
+func _add_shop_guides() -> void:
+	if get_node_or_null("ShopGuides"):
+		return
+	var root := Node2D.new()
+	root.name = "ShopGuides"
+	root.z_as_relative = false
+	root.z_index = 20
+	add_child(root)
+	var signs: Array = [
+		{"name": "WestSign", "pos": Vector2(280, 360), "text": "→ 莉莉的店"},
+		{"name": "PlazaSign", "pos": Vector2(700, 560), "text": "→ 莉莉的店"},
+	]
+	for spec in signs:
+		var anchor := Node2D.new()
+		anchor.name = str(spec["name"])
+		anchor.position = spec["pos"]
+		var label := _make_guide_label(str(spec["text"]), "ShopSign", Vector2(160, 28), Vector2(-80, -14))
+		anchor.add_child(label)
+		root.add_child(anchor)
+	var house := get_node_or_null("TransitionAreas/ToPlayerHouseArea") as Node2D
+	if house and house.get_node_or_null("ShopHint") == null:
+		house.add_child(_make_guide_label("商店在东边", "ShopHint", Vector2(140, 26), Vector2(-70, -42)))
+
+func _make_guide_label(text: String, node_name: String, label_size: Vector2, label_pos: Vector2) -> Label:
+	var label := Label.new()
+	label.name = node_name
+	label.text = text
+	label.size = label_size
+	label.position = label_pos
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 16)
+	label.add_theme_color_override("font_outline_color", Color.BLACK)
+	label.add_theme_constant_override("outline_size", 4)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return label
 
 func _on_transition_body_entered(body: Node2D, area_name: String) -> void:
 	if not body is Player:

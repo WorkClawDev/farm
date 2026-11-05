@@ -232,7 +232,7 @@ func _item_row(item_id: String, item_name: String, quantity: int, unit_price: in
 	icon.texture = ItemDatabase.load_icon_texture(item_id)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(icon)
 	var labels := VBoxContainer.new()
@@ -265,10 +265,13 @@ func _deposit(item_id: String, quantity: int) -> void:
 	if not ShippingSystem.deposit_from_inventory(item_id, actual, 0):
 		UIManager.show_toast("ui.shipping.full", {}, "warning")
 		return
-	UIManager.show_toast("ui.shipping.deposited", {
-		"item": str(ItemDatabase.get_item(item_id).name),
-		"count": actual,
-	}, "success")
+	var unit_price := 0
+	var item = ItemDatabase.get_item(item_id)
+	if item != null:
+		unit_price = int(item.sell_price)
+	# Quality 0 on this path. Same unit price the bin row shows.
+	var payout := unit_price * actual
+	UIManager.show_toast("已出货 ×%d（预计 +%d 金）" % [actual, payout], {}, "success")
 
 
 func _withdraw(item_id: String, quantity: int, quality: int) -> void:

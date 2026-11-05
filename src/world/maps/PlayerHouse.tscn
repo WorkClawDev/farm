@@ -1,8 +1,7 @@
-[gd_scene load_steps=7 format=3 uid="uid://playerhouse001"]
+[gd_scene load_steps=6 format=3 uid="uid://playerhouse001"]
 
 [ext_resource type="Script" path="res://src/world/maps/PlayerHouse.gd" id="1_house"]
 [ext_resource type="PackedScene" uid="uid://dp5y8hqm2x8nr" path="res://src/entities/player/Player.tscn" id="2_player"]
-[ext_resource type="Script" path="res://src/world/transitions/SceneTransition.gd" id="3_transition"]
 [ext_resource type="PackedScene" path="res://src/world/objects/Kitchen.tscn" id="4_kitchen"]
 [ext_resource type="PackedScene" path="res://src/world/maps/content/PlayerHouseMap.tscn" id="5_map"]
 
@@ -48,9 +47,6 @@ position = Vector2(350, 150)
 position = Vector2(450, 150)
 
 [node name="RoomExtensions" type="Node2D" parent="."]
-
-[node name="SceneTransition" type="CanvasLayer" parent="."]
-script = ExtResource("3_transition")
 
 [node name="InteractionZones" type="Node2D" parent="."]
 

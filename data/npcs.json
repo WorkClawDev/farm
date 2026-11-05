@@ -24,15 +24,31 @@
           "fiber"
         ]
       },
+      "home_door": {
+        "village": {
+          "x": 200,
+          "y": 204,
+          "via": [
+            {
+              "x": 300,
+              "y": 240
+            },
+            {
+              "x": 200,
+              "y": 240
+            }
+          ]
+        }
+      },
       "schedule": [
         {
           "start_time": 6.0,
           "end_time": 9.0,
-          "activity": 0,
+          "activity": 7,
           "location_id": "mayor_home",
           "location_position": {
-            "x": 200,
-            "y": 150
+            "x": 230,
+            "y": 236
           },
           "dialog_override": ""
         },
@@ -42,8 +58,8 @@
           "activity": 1,
           "location_id": "town_hall",
           "location_position": {
-            "x": 400,
-            "y": 300
+            "x": 240,
+            "y": 240
           }
         },
         {
@@ -52,8 +68,8 @@
           "activity": 3,
           "location_id": "plaza",
           "location_position": {
-            "x": 500,
-            "y": 400
+            "x": 200,
+            "y": 560
           }
         },
         {
@@ -62,8 +78,8 @@
           "activity": 1,
           "location_id": "town_hall",
           "location_position": {
-            "x": 400,
-            "y": 300
+            "x": 240,
+            "y": 240
           }
         },
         {
@@ -72,8 +88,8 @@
           "activity": 2,
           "location_id": "plaza",
           "location_position": {
-            "x": 500,
-            "y": 400
+            "x": 200,
+            "y": 560
           }
         },
         {
@@ -82,8 +98,8 @@
           "activity": 0,
           "location_id": "mayor_home",
           "location_position": {
-            "x": 200,
-            "y": 150
+            "x": 230,
+            "y": 236
           }
         },
         {
@@ -92,12 +108,12 @@
           "activity": 0,
           "location_id": "mayor_home",
           "location_position": {
-            "x": 200,
-            "y": 150
+            "x": 230,
+            "y": 236
           }
         }
       ],
-      "sprite": "res://assets/sprites/characters/npc_sheets/mayor_sheet.png"
+      "sprite": "res://assets/sprites/characters/ninja_adventure/npc_sheets/mayor_sheet.png"
     },
     {
       "id": "farmer_joe",
@@ -123,6 +139,22 @@
           "fish_common"
         ]
       },
+      "home_door": {
+        "village": {
+          "x": 120,
+          "y": 300,
+          "via": [
+            {
+              "x": 520,
+              "y": 250
+            },
+            {
+              "x": 330,
+              "y": 250
+            }
+          ]
+        }
+      },
       "schedule": [
         {
           "start_time": 5.0,
@@ -130,8 +162,8 @@
           "activity": 0,
           "location_id": "farm_house",
           "location_position": {
-            "x": 100,
-            "y": 100
+            "x": 120,
+            "y": 300
           }
         },
         {
@@ -141,7 +173,7 @@
           "location_id": "farm_field",
           "location_position": {
             "x": 150,
-            "y": 200
+            "y": 240
           }
         },
         {
@@ -150,8 +182,8 @@
           "activity": 3,
           "location_id": "farm_house",
           "location_position": {
-            "x": 100,
-            "y": 100
+            "x": 120,
+            "y": 300
           }
         },
         {
@@ -161,7 +193,7 @@
           "location_id": "farm_field",
           "location_position": {
             "x": 150,
-            "y": 200
+            "y": 240
           }
         },
         {
@@ -180,8 +212,8 @@
           "activity": 0,
           "location_id": "farm_house",
           "location_position": {
-            "x": 100,
-            "y": 100
+            "x": 120,
+            "y": 300
           }
         },
         {
@@ -190,12 +222,12 @@
           "activity": 0,
           "location_id": "farm_house",
           "location_position": {
-            "x": 100,
-            "y": 100
+            "x": 120,
+            "y": 300
           }
         }
       ],
-      "sprite": "res://assets/sprites/characters/npc_sheets/farmer_joe_sheet.png"
+      "sprite": "res://assets/sprites/characters/ninja_adventure/npc_sheets/farmer_joe_sheet.png"
     },
     {
       "id": "shopkeeper_lily",
@@ -222,15 +254,31 @@
           "wood"
         ]
       },
+      "home_door": {
+        "village": {
+          "x": 890,
+          "y": 594,
+          "via": [
+            {
+              "x": 500,
+              "y": 620
+            },
+            {
+              "x": 890,
+              "y": 620
+            }
+          ]
+        }
+      },
       "schedule": [
         {
           "start_time": 6.0,
           "end_time": 8.0,
-          "activity": 0,
+          "activity": 7,
           "location_id": "shop_backroom",
           "location_position": {
-            "x": 300,
-            "y": 200
+            "x": 850,
+            "y": 610
           }
         },
         {
@@ -239,8 +287,8 @@
           "activity": 1,
           "location_id": "general_store",
           "location_position": {
-            "x": 350,
-            "y": 220
+            "x": 830,
+            "y": 640
           }
         },
         {
@@ -249,8 +297,8 @@
           "activity": 3,
           "location_id": "plaza",
           "location_position": {
-            "x": 500,
-            "y": 400
+            "x": 650,
+            "y": 480
           }
         },
         {
@@ -259,8 +307,8 @@
           "activity": 1,
           "location_id": "general_store",
           "location_position": {
-            "x": 350,
-            "y": 220
+            "x": 830,
+            "y": 640
           }
         },
         {
@@ -269,8 +317,8 @@
           "activity": 2,
           "location_id": "plaza",
           "location_position": {
-            "x": 500,
-            "y": 400
+            "x": 650,
+            "y": 480
           }
         },
         {
@@ -279,8 +327,8 @@
           "activity": 0,
           "location_id": "shop_backroom",
           "location_position": {
-            "x": 300,
-            "y": 200
+            "x": 850,
+            "y": 610
           }
         },
         {
@@ -289,12 +337,12 @@
           "activity": 0,
           "location_id": "shop_backroom",
           "location_position": {
-            "x": 300,
-            "y": 200
+            "x": 850,
+            "y": 610
           }
         }
       ],
-      "sprite": "res://assets/sprites/characters/npc_sheets/shopkeeper_lily_sheet.png"
+      "sprite": "res://assets/sprites/characters/ninja_adventure/npc_sheets/shopkeeper_lily_sheet.png"
     },
     {
       "id": "blacksmith_tom",
@@ -320,11 +368,31 @@
           "flower_spring"
         ]
       },
+      "home_door": {
+        "village": {
+          "x": 178,
+          "y": 829,
+          "via": [
+            {
+              "x": 600,
+              "y": 450
+            },
+            {
+              "x": 345,
+              "y": 450
+            },
+            {
+              "x": 345,
+              "y": 840
+            }
+          ]
+        }
+      },
       "schedule": [
         {
-          "start_time": 7.0,
+          "start_time": 6.0,
           "end_time": 8.0,
-          "activity": 0,
+          "activity": 7,
           "location_id": "blacksmith_home",
           "location_position": {
             "x": 450,
@@ -337,8 +405,8 @@
           "activity": 1,
           "location_id": "blacksmith_shop",
           "location_position": {
-            "x": 480,
-            "y": 220
+            "x": 420,
+            "y": 236
           }
         },
         {
@@ -347,8 +415,8 @@
           "activity": 3,
           "location_id": "tavern",
           "location_position": {
-            "x": 600,
-            "y": 350
+            "x": 640,
+            "y": 360
           }
         },
         {
@@ -357,8 +425,8 @@
           "activity": 1,
           "location_id": "blacksmith_shop",
           "location_position": {
-            "x": 480,
-            "y": 220
+            "x": 420,
+            "y": 236
           }
         },
         {
@@ -367,8 +435,8 @@
           "activity": 2,
           "location_id": "tavern",
           "location_position": {
-            "x": 600,
-            "y": 350
+            "x": 640,
+            "y": 360
           }
         },
         {
@@ -383,7 +451,7 @@
         },
         {
           "start_time": 22.0,
-          "end_time": 7.0,
+          "end_time": 6.0,
           "activity": 0,
           "location_id": "blacksmith_home",
           "location_position": {
@@ -392,7 +460,7 @@
           }
         }
       ],
-      "sprite": "res://assets/sprites/characters/npc_sheets/blacksmith_tom_sheet.png"
+      "sprite": "res://assets/sprites/characters/ninja_adventure/npc_sheets/blacksmith_tom_sheet.png"
     },
     {
       "id": "fisherman_old_jack",
@@ -425,8 +493,8 @@
           "activity": 0,
           "location_id": "beach_hut",
           "location_position": {
-            "x": 100,
-            "y": 500
+            "x": -260,
+            "y": -60
           }
         },
         {
@@ -435,8 +503,8 @@
           "activity": 1,
           "location_id": "beach_pier",
           "location_position": {
-            "x": 200,
-            "y": 550
+            "x": 150,
+            "y": 59
           }
         },
         {
@@ -445,8 +513,8 @@
           "activity": 2,
           "location_id": "beach",
           "location_position": {
-            "x": 150,
-            "y": 520
+            "x": 300,
+            "y": 40
           }
         },
         {
@@ -455,8 +523,8 @@
           "activity": 3,
           "location_id": "beach_hut",
           "location_position": {
-            "x": 100,
-            "y": 500
+            "x": -260,
+            "y": -60
           }
         },
         {
@@ -465,18 +533,18 @@
           "activity": 1,
           "location_id": "beach_pier",
           "location_position": {
-            "x": 200,
-            "y": 550
+            "x": 150,
+            "y": 59
           }
         },
         {
           "start_time": 18.0,
           "end_time": 21.0,
           "activity": 2,
-          "location_id": "tavern",
+          "location_id": "beach_shore",
           "location_position": {
-            "x": 600,
-            "y": 350
+            "x": 480,
+            "y": 10
           }
         },
         {
@@ -485,12 +553,12 @@
           "activity": 0,
           "location_id": "beach_hut",
           "location_position": {
-            "x": 100,
-            "y": 500
+            "x": -260,
+            "y": -60
           }
         }
       ],
-      "sprite": "res://assets/sprites/characters/npc_sheets/fisherman_jack_sheet.png"
+      "sprite": "res://assets/sprites/characters/ninja_adventure/npc_sheets/fisherman_old_jack_sheet.png"
     },
     {
       "id": "doctor_mary",
@@ -516,11 +584,35 @@
           "fish_common"
         ]
       },
+      "home_door": {
+        "village": {
+          "x": 660,
+          "y": 204,
+          "via": [
+            {
+              "x": 330,
+              "y": 430
+            },
+            {
+              "x": 560,
+              "y": 450
+            },
+            {
+              "x": 560,
+              "y": 240
+            },
+            {
+              "x": 660,
+              "y": 240
+            }
+          ]
+        }
+      },
       "schedule": [
         {
           "start_time": 6.0,
           "end_time": 8.0,
-          "activity": 0,
+          "activity": 7,
           "location_id": "clinic_backroom",
           "location_position": {
             "x": 550,
@@ -533,8 +625,8 @@
           "activity": 1,
           "location_id": "clinic",
           "location_position": {
-            "x": 520,
-            "y": 280
+            "x": 620,
+            "y": 260
           }
         },
         {
@@ -543,8 +635,8 @@
           "activity": 3,
           "location_id": "plaza",
           "location_position": {
-            "x": 500,
-            "y": 400
+            "x": 350,
+            "y": 520
           }
         },
         {
@@ -553,8 +645,8 @@
           "activity": 1,
           "location_id": "clinic",
           "location_position": {
-            "x": 520,
-            "y": 280
+            "x": 620,
+            "y": 260
           }
         },
         {
@@ -588,7 +680,7 @@
           }
         }
       ],
-      "sprite": "res://assets/sprites/characters/npc_sheets/doctor_mary_sheet.png"
+      "sprite": "res://assets/sprites/characters/ninja_adventure/npc_sheets/doctor_mary_sheet.png"
     }
   ]
 }

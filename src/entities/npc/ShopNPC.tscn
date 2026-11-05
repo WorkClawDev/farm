@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://src/entities/npc/ShopNPC.gd" id="1_shopnpc"]
 [ext_resource type="Script" path="res://src/entities/npc/NPCSchedule.gd" id="2_schedule"]
-[ext_resource type="Texture2D" path="res://assets/sprites/characters/npc_sheets/shopkeeper_lily_sheet.png" id="3_sprite"]
+[ext_resource type="Texture2D" path="res://assets/sprites/characters/ninja_adventure/npc_sheets/shopkeeper_lily_sheet.png" id="3_sprite"]
 [ext_resource type="Texture2D" path="res://assets/sprites/ui/coin.png" id="4_indicator"]
 
 [node name="ShopNPC" type="CharacterBody2D"]
@@ -18,7 +18,7 @@ position = Vector2(0, 4)
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 position = Vector2(0, -16)
-scale = Vector2(2, 2)
+scale = Vector2(1, 1)
 texture = ExtResource("3_sprite")
 hframes = 8
 vframes = 1
@@ -38,11 +38,3 @@ texture = ExtResource("4_indicator")
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 
 [node name="NPCSchedule" type="Node" parent="."]
-script = ExtResource("2_schedule")
-schedule_data = {
-"morning": {"time": 6, "action": "idle", "position": Vector2(0, 0)},
-"work_start": {"time": 9, "action": "work", "position": Vector2(0, 0)},
-"lunch": {"time": 12, "action": "idle", "position": Vector2(50, 50)},
-"work_resume": {"time": 13, "action": "work", "position": Vector2(0, 0)},
-"work_end": {"time": 18, "action": "idle", "position": Vector2(0, 0)}
-}

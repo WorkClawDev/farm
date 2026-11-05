@@ -10,8 +10,24 @@ const HUDScene = preload("res://src/ui/hud/HUD.tscn")
 const HotkeyBarScene = preload("res://src/ui/hud/HotkeyBar.tscn")
 const ToolDisplayScene = preload("res://src/ui/hud/ToolDisplay.tscn")
 const QuestTrackerScene = preload("res://src/ui/hud/QuestTracker.tscn")
+const MapMenuInput = preload("res://src/world/maps/MapMenuInput.gd")
 const IllustratedMapBackdropScene = preload("res://src/world/maps/IllustratedMapBackdrop.gd")
 const WorldCollisionLayoutScene = preload("res://src/world/maps/WorldCollisionLayout.gd")
+const InteractPromptScript = preload("res://src/ui/components/InteractPrompt.gd")
+
+const BED_ATLAS_PATH := "res://assets/private/topdown_farm/interior/x4/hero_home/Interior_x4.png"
+## I1 single bed on Interior_x4 (already x4, so the sprite stays at scale 1).
+## Not preloaded: ResourceLoader.exists skips the sprite when the private submodule is absent.
+const BED_REGION := Rect2(268, 64, 92, 156)
+const BED_DISPLAY_SCALE := 1.0
+const WARDROBE_REGION := Rect2(408, 72, 76, 108) # I2
+const TABLE_REGION := Rect2(528, 232, 104, 128) # I7
+const CHAIR_FACE_RIGHT_REGION := Rect2(548, 636, 44, 100) # I14, faces right
+const CHAIR_FACE_LEFT_REGION := Rect2(756, 636, 44, 100) # I16, faces left
+const FOOD_SHELF_REGION := Rect2(88, 404, 204, 220) # I10 full food shelf
+## Southeast floor, west edge x=516. The door (x≈400) to the bed stays outside the sprite.
+## Feet are the Y-sort origin, so a player standing in front (larger Y) draws on top.
+const FOOD_SHELF_FEET := Vector2(618, 428)
 
 var tile_map: TileMap = null # Legacy builder compatibility; no longer part of the runtime scene.
 @onready var map_root: EditableMap2D = $PlayerHouseMap
@@ -25,6 +41,9 @@ var time_display: Control
 var ui_canvas: CanvasLayer
 var house_data: Dictionary = {}
 
+var _exit_to_village := false
+var _in_bed_zone := false
+
 func _ready() -> void:
 	print("[PlayerHouse] Scene loaded")
 	_setup_map()
@@ -33,9 +52,46 @@ func _ready() -> void:
 	_connect_signals()
 	_apply_house_upgrades()
 	_setup_furniture()
+	_setup_bed_sprite()
+	_setup_bed_prompt()
+	# Leave by the door you came in through (BUG-40): the village door or the farm.
+	_exit_to_village = GameManager.current_spawn_point == "village_house_entrance"
+	_show_village_home_hint()
 	var player := get_tree().get_first_node_in_group("player") as Node2D
 	if player:
 		player.global_position = player_spawn.global_position
+
+
+## Village door opens a furnished home, not the shop.
+static func village_home_hint(spawn_point: String) -> String:
+	if spawn_point == "village_house_entrance":
+		return "这是住家，商店在外面找莉莉"
+	return ""
+
+func _show_village_home_hint() -> void:
+	var spawn := GameManager.current_spawn_point if GameManager else ""
+	var text := village_home_hint(spawn)
+	if text.is_empty() or UIManager == null:
+		return
+	UIManager.show_toast(text, {}, "info")
+
+
+## Same InteractPrompt bubble as the workbench, shipping bin, and stove.
+func _setup_bed_prompt() -> void:
+	if interaction_zones == null:
+		return
+	var zone := interaction_zones.get_node_or_null("BedZone") as Node2D
+	if zone == null:
+		return
+	var anchor: Node2D = zone
+	if furniture_container != null:
+		var bed := furniture_container.get_node_or_null("BedSprite") as Node2D
+		if bed != null and bed.get_node_or_null("Sprite2D") != null:
+			anchor = bed
+	if anchor.get_node_or_null("InteractPrompt") != null or zone.get_node_or_null("InteractPrompt") != null:
+		return
+	InteractPromptScript.attach(anchor, "睡觉", InteractPromptScript.sprite_top(anchor), func(): return _in_bed_zone)
+
 
 func _setup_map() -> void:
 	for issue in map_root.validate():
@@ -102,6 +158,7 @@ func _setup_ui() -> void:
 	var quest_tracker := QuestTrackerScene.instantiate()
 	quest_tracker.position = Vector2(16, 70)
 	hud.add_child(quest_tracker)
+	hud.add_child(MapMenuInput.new())  # Esc / J, same as Village
 	print("[PlayerHouse] Unified HUD added")
 
 func _setup_house_data() -> void:
@@ -121,6 +178,7 @@ func _connect_signals() -> void:
 	var bed_zone = interaction_zones.get_node_or_null("BedZone")
 	if bed_zone:
 		bed_zone.body_entered.connect(_on_bed_zone_entered)
+		bed_zone.body_exited.connect(_on_bed_zone_exited)
 
 	# 连接升级站交互
 	var upgrade_station = interaction_zones.get_node_or_null("UpgradeStation")
@@ -135,17 +193,38 @@ func _connect_signals() -> void:
 
 func _on_exit_area_entered(body: Node2D) -> void:
 	if body is Player:
-		GameManager.change_location("res://src/world/maps/Farm.tscn", "house_exit")
-		print("[PlayerHouse] Player exiting to farm")
+		if _exit_to_village:
+			GameManager.change_location("res://src/world/maps/Village.tscn", "from_house")
+			print("[PlayerHouse] Player exiting to village")
+		else:
+			GameManager.change_location("res://src/world/maps/Farm.tscn", "house_exit")
+			print("[PlayerHouse] Player exiting to farm")
 
 func _on_bed_zone_entered(body: Node2D) -> void:
 	if body is Player:
-		_show_sleep_dialog()
+		_in_bed_zone = true
+
+func _on_bed_zone_exited(body: Node2D) -> void:
+	if body is Player:
+		_in_bed_zone = false
+		if UIManager and UIManager.has_open_confirmation():
+			UIManager.close_top_screen()
 
 func _on_upgrade_station_entered(body: Node2D) -> void:
 	if body is Player:
 		# 显示房屋升级UI
 		_show_upgrade_ui()
+
+func _input(event: InputEvent) -> void:
+	# BUG-8: popup only on a fresh interact press while inside the zone.
+	if not _in_bed_zone or event.is_echo() or not event.is_action_pressed("interact"):
+		return
+	if UIManager == null or UIManager.has_open_confirmation():
+		return
+	if GameManager.current_state != GameManager.GameState.PLAYING:
+		return
+	get_viewport().set_input_as_handled()
+	_show_sleep_dialog()
 
 func _show_sleep_dialog() -> void:
 	UIManager.show_confirmation({
@@ -155,6 +234,7 @@ func _show_sleep_dialog() -> void:
 		"cancel_key": "ui.common.cancel",
 		"on_confirm": Callable(self, "_on_sleep_confirmed"),
 		"on_cancel": Callable(self, "_on_sleep_canceled"),
+		"focus_confirm": true,
 	})
 
 func _on_sleep_confirmed() -> void:
@@ -227,7 +307,7 @@ func get_furniture_container() -> Node2D:
 	return furniture_container
 
 func _on_spawn_point_changed(spawn_point: String) -> void:
-	if spawn_point == "house_entrance":
+	if spawn_point in ["house_entrance", "village_house_entrance"]:
 		# 玩家从农场进入房屋
 		if player_spawn:
 			var player = get_tree().current_scene.find_child("Player", true, false)
@@ -248,3 +328,75 @@ func load_state(data: Dictionary) -> void:
 	house_data = data
 	_apply_house_upgrades()
 	_setup_furniture()
+
+## Visual furniture only. Bed feet and the sleep prompt are unchanged.
+func _setup_bed_sprite() -> void:
+	if furniture_container == null or not ResourceLoader.exists(BED_ATLAS_PATH):
+		return
+	var atlas := load(BED_ATLAS_PATH) as Texture2D
+	if atlas == null:
+		return
+	# Foot origin joins the player Y-sort, so someone standing at the foot draws in front.
+	y_sort_enabled = true
+	furniture_container.y_sort_enabled = true
+	var marker := furniture_container.get_node_or_null("BedPosition") as Node2D
+	var feet := Vector2(HouseConstants.BED_POSITION) * float(GameConstants.WORLD_TILE_SIZE)
+	if marker != null:
+		feet = furniture_container.to_local(marker.global_position)
+	_spawn_interior_sprite("BedSprite", BED_REGION, feet, atlas)
+	_setup_extra_furniture(atlas)
+
+## Wardrobe, table, and chairs are sprites only. The food shelf is solid and stays off the bed.
+func _setup_extra_furniture(atlas: Texture2D) -> void:
+	var table_feet := _furniture_feet("TablePosition", Vector2(400, 200))
+	_spawn_interior_sprite("TableSprite", TABLE_REGION, table_feet, atlas)
+	# I14 faces right (west of the table). I16 faces left (east). 52 + 22 + 8px gap.
+	_spawn_interior_sprite("ChairWestSprite", CHAIR_FACE_RIGHT_REGION, table_feet + Vector2(-82, 0), atlas)
+	_spawn_interior_sprite("ChairEastSprite", CHAIR_FACE_LEFT_REGION, table_feet + Vector2(82, 0), atlas)
+	_spawn_interior_sprite("WardrobeSprite", WARDROBE_REGION, _furniture_feet("ChestPosition", Vector2(600, 200)), atlas)
+	_spawn_food_shelf(atlas)
+
+func _furniture_feet(marker_name: String, fallback: Vector2) -> Vector2:
+	var marker := furniture_container.get_node_or_null(marker_name) as Node2D
+	if marker == null:
+		return fallback
+	return furniture_container.to_local(marker.global_position)
+
+func _spawn_interior_sprite(node_name: String, region: Rect2, feet_local: Vector2, atlas: Texture2D) -> void:
+	var texture := AtlasTexture.new()
+	texture.atlas = atlas
+	texture.region = region
+	var root := Node2D.new()
+	root.name = node_name
+	root.position = feet_local
+	furniture_container.add_child(root)
+	var sprite := Sprite2D.new()
+	sprite.name = "Sprite2D"
+	sprite.texture = texture
+	sprite.centered = true
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.scale = Vector2(BED_DISPLAY_SCALE, BED_DISPLAY_SCALE)
+	var display_h := region.size.y * BED_DISPLAY_SCALE
+	sprite.position = Vector2(0.0, -display_h * 0.5)
+	root.add_child(sprite)
+
+func _spawn_food_shelf(atlas: Texture2D) -> void:
+	# Southeast floor. The door-to-bed lane stays west of the sprite.
+	# Feet are the Y-sort origin, so a player standing in front draws on top.
+	_spawn_interior_sprite("FoodShelfSprite", FOOD_SHELF_REGION, FOOD_SHELF_FEET, atlas)
+	var root := furniture_container.get_node_or_null("FoodShelfSprite") as Node2D
+	if root == null:
+		return
+	var size := FOOD_SHELF_REGION.size * BED_DISPLAY_SCALE
+	var body := StaticBody2D.new()
+	body.name = "ShelfCollision"
+	body.collision_layer = 1
+	body.collision_mask = 0
+	var shape_node := CollisionShape2D.new()
+	shape_node.name = "CollisionShape2D"
+	var shape := RectangleShape2D.new()
+	shape.size = size
+	shape_node.shape = shape
+	shape_node.position = Vector2(0.0, -size.y * 0.5)
+	body.add_child(shape_node)
+	root.add_child(body)

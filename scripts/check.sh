@@ -4,8 +4,35 @@
 # Usage: bash scripts/check.sh
 # =====================================================================
 
-GODOT="${GODOT:-/home/admin/tools/bin/godot}"
+resolve_godot() {
+    if [ -n "${GODOT:-}" ]; then
+        if [ -x "$GODOT" ] || command -v "$GODOT" >/dev/null 2>&1; then return 0; fi
+        echo "ERROR: GODOT is set to '$GODOT' but it is not executable." >&2
+        exit 2
+    fi
+    if command -v godot >/dev/null 2>&1; then GODOT="$(command -v godot)"; return 0; fi
+    if [ -x /home/box/.local/bin/godot ]; then GODOT=/home/box/.local/bin/godot; return 0; fi
+    echo "ERROR: Godot binary not found (checked \$GODOT, 'godot' on PATH, /home/box/.local/bin/godot)." >&2
+    echo "       Set it explicitly, e.g.: GODOT=/path/to/godot bash $0" >&2
+    exit 2
+}
+resolve_godot
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+
+stamp_real_saves() {
+    python3 - << 'PY'
+import os
+from pathlib import Path
+root = os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share")
+folder = Path(root) / "godot/app_userdata/Pastoral Tales/saves"
+if folder.is_dir():
+    for path in sorted(p for p in folder.iterdir() if p.is_file()):
+        st = path.stat()
+        print("%s\t%d\t%d" % (path.name, st.st_mtime_ns, st.st_size))
+PY
+}
+
+REAL_SAVE_STAMP_BEFORE="$(stamp_real_saves)"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -41,9 +68,27 @@ normalize_log() {
 run_godot() {
     local log_path="$1"
     shift
+    # Each Godot invocation is one scene or script. Hang = failure, and say which one.
+    # Game-flow loads every map and walks NPCs home; 10 minutes was not enough here.
+    local timeout_secs="${GODOT_SCENE_TIMEOUT:-1800}"
+    local scene_label="project-startup"
+    local prev=""
+    local argument
+    for argument in "$@"; do
+        if [ "$prev" = "--scene" ] || [ "$prev" = "--script" ]; then
+            scene_label="$argument"
+        elif [ "$argument" = "--map-editor-smoke-test" ]; then
+            scene_label="map-editor-smoke-test"
+        fi
+        prev="$argument"
+    done
+    if ! command -v timeout >/dev/null 2>&1; then
+        err "timeout(1) missing; cannot limit Godot scene ${scene_label}"
+        exit 1
+    fi
+    local status=0
     if [[ "$GODOT" == *.exe ]]; then
         local converted_args=()
-        local argument
         for argument in "$@"; do
             if [ "$argument" = "$PROJECT_DIR" ] && command -v wslpath >/dev/null 2>&1; then
                 converted_args+=("$(wslpath -w "$argument")")
@@ -51,10 +96,17 @@ run_godot() {
                 converted_args+=("$argument")
             fi
         done
-        "$GODOT" "${converted_args[@]}" 2>&1 | tr -d '\000' | sed 's/\r$//' > "$log_path" || true
+        timeout "$timeout_secs" "$GODOT" "${converted_args[@]}" > "$log_path.raw" 2>&1 || status=$?
+        tr -d '\000' < "$log_path.raw" | sed 's/\r$//' > "$log_path" || true
+        rm -f "$log_path.raw"
     else
-        "$GODOT" "$@" > "$log_path" 2>&1 || true
+        timeout --foreground "$timeout_secs" "$GODOT" "$@" > "$log_path" 2>&1 || status=$?
         normalize_log "$log_path"
+    fi
+    if [ "$status" -eq 124 ]; then
+        echo "GODOT TIMEOUT: ${scene_label} stuck after ${timeout_secs}s" >> "$log_path"
+        err "Godot timed out after ${timeout_secs}s: ${scene_label}"
+        exit 1
     fi
 }
 
@@ -190,6 +242,30 @@ fi
 
 echo ""
 
+echo -e "${CYAN}========================================${NC}"
+echo -e "${CYAN}  Source load check (every src/ .gd/.tscn)${NC}"
+echo -e "${CYAN}========================================${NC}"
+
+LOAD_ALL_LOG="/tmp/godot_load_all_$$.log"
+run_godot "$LOAD_ALL_LOG" --headless --path "$PROJECT_DIR" --script res://tools/check_load_all.gd
+
+# Leak reports printed at engine exit are not load failures.
+LOAD_ALL_ERRORS=$(grep -E "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call|^ERROR:|FATAL|failed to load|Failed to|\[LOAD FAIL\]" "$LOAD_ALL_LOG" 2>/dev/null \
+    | grep -cvE "resources still in use at exit|RID allocations of type" || true)
+if [ "${LOAD_ALL_ERRORS:-0}" -gt 0 ]; then
+    err "Source load check emitted ${LOAD_ALL_ERRORS} errors"
+    grep -E "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call|^ERROR:|FATAL|failed to load|Failed to|\[LOAD FAIL\]" "$LOAD_ALL_LOG" \
+        | grep -vE "resources still in use at exit|RID allocations of type" | sed 's/^/    /' | head -30
+elif grep -q "LOAD CHECK PASSED" "$LOAD_ALL_LOG"; then
+    ok "Source load check ($(sed -n 's/^LOAD CHECK: \([0-9]*\) scripts, \([0-9]*\) scenes.*/\1 scripts, \2 scenes/p' "$LOAD_ALL_LOG"))"
+else
+    err "Source load check did not finish"
+    tail -20 "$LOAD_ALL_LOG" | sed 's/^/    /'
+fi
+rm -f "$LOAD_ALL_LOG"
+
+echo ""
+
 RUN_LOG="/tmp/godot_check_$$.log"
 run_godot "$RUN_LOG" --no-window --headless --quit --path "$PROJECT_DIR"
 
@@ -309,6 +385,83 @@ elif grep -q "ALL UI TESTS PASSED" "$UI_TEST_LOG"; then
 else
     err "UI system integration test failed"
     grep -E "\[FAIL\]|UI TESTS FAILED" "$UI_TEST_LOG" | sed 's/^/    /' | head -30
+fi
+
+echo ""
+echo -e "${CYAN}========================================${NC}"
+echo -e "${CYAN}  Scene switch cycle test${NC}"
+echo -e "${CYAN}========================================${NC}"
+
+CYCLE_TEST_LOG="/tmp/godot_cycles_$$.log"
+run_godot "$CYCLE_TEST_LOG" --headless --path "$PROJECT_DIR" --script res://tests/integration/test_scene_cycles.gd
+
+CYCLE_ERRORS=$(grep -cE "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call|^ERROR:|FATAL|failed to load|Failed to|handle_crash" "$CYCLE_TEST_LOG" 2>/dev/null || true)
+if [ "${CYCLE_ERRORS:-0}" -gt 0 ]; then
+    err "Scene switch cycles emitted ${CYCLE_ERRORS} script/runtime errors"
+    grep -E "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call|^ERROR:|FATAL|failed to load|Failed to|handle_crash" \
+        "$CYCLE_TEST_LOG" | sed 's/^/    /' | head -30
+elif grep -q "SCENE CYCLE TESTS PASSED" "$CYCLE_TEST_LOG"; then
+    CYCLE_PASSED=$(sed -n 's/.*RESULTS: \([0-9][0-9]*\)\/.*/\1/p' "$CYCLE_TEST_LOG" | head -1)
+    ok "Scene switch cycles passed (${CYCLE_PASSED}/${CYCLE_PASSED})"
+else
+    err "Scene switch cycle test failed"
+    grep -E "\[FAIL\]|SCENE CYCLE TESTS FAILED" "$CYCLE_TEST_LOG" | sed 's/^/    /' | head -30
+fi
+rm -f "$CYCLE_TEST_LOG"
+
+echo ""
+echo -e "${CYAN}========================================${NC}"
+echo -e "${CYAN}  Map points + exit walk test${NC}"
+echo -e "${CYAN}========================================${NC}"
+
+WALK_TEST_LOG="/tmp/godot_map_walk_$$.log"
+run_godot "$WALK_TEST_LOG" --headless --path "$PROJECT_DIR" --script res://tests/integration/test_map_walk.gd
+
+WALK_ERRORS=$(grep -cE "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call|^ERROR:|FATAL|failed to load|Failed to|handle_crash" "$WALK_TEST_LOG" 2>/dev/null || true)
+if [ "${WALK_ERRORS:-0}" -gt 0 ]; then
+    err "Map walk test emitted ${WALK_ERRORS} script/runtime errors"
+    grep -E "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call|^ERROR:|FATAL|failed to load|Failed to|handle_crash" \
+        "$WALK_TEST_LOG" | sed 's/^/    /' | head -30
+elif grep -q "MAP WALK TESTS PASSED" "$WALK_TEST_LOG"; then
+    WALK_PASSED=$(sed -n 's/.*RESULTS: \([0-9][0-9]*\)\/.*/\1/p' "$WALK_TEST_LOG" | head -1)
+    ok "Map points + exits passed (${WALK_PASSED}/${WALK_PASSED})"
+else
+    err "Map walk test failed"
+    grep -E "\[FAIL\]|MAP WALK TESTS FAILED" "$WALK_TEST_LOG" | sed 's/^/    /' | head -30
+fi
+rm -f "$WALK_TEST_LOG"
+
+echo ""
+echo -e "${CYAN}========================================${NC}"
+echo -e "${CYAN}  Village night cycle test${NC}"
+echo -e "${CYAN}========================================${NC}"
+
+NIGHT_TEST_LOG="/tmp/godot_night_cycle_$$.log"
+run_godot "$NIGHT_TEST_LOG" --headless --path "$PROJECT_DIR" --script res://tests/integration/test_night_cycle.gd
+
+NIGHT_ERRORS=$(grep -cE "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call|^ERROR:|FATAL|failed to load|Failed to|handle_crash" "$NIGHT_TEST_LOG" 2>/dev/null || true)
+if [ "${NIGHT_ERRORS:-0}" -gt 0 ]; then
+    err "Night cycle test emitted ${NIGHT_ERRORS} script/runtime errors"
+    grep -E "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call|^ERROR:|FATAL|failed to load|Failed to|handle_crash" \
+        "$NIGHT_TEST_LOG" | sed 's/^/    /' | head -30
+elif grep -q "NIGHT CYCLE TESTS PASSED" "$NIGHT_TEST_LOG"; then
+    NIGHT_PASSED=$(sed -n 's/.*RESULTS: \([0-9][0-9]*\)\/.*/\1/p' "$NIGHT_TEST_LOG" | head -1)
+    ok "Village night cycle passed (${NIGHT_PASSED}/${NIGHT_PASSED})"
+else
+    err "Night cycle test failed"
+    grep -E "\[FAIL\]|NIGHT CYCLE TESTS FAILED" "$NIGHT_TEST_LOG" | sed 's/^/    /' | head -30
+fi
+rm -f "$NIGHT_TEST_LOG"
+
+REAL_SAVE_STAMP_AFTER="$(stamp_real_saves)"
+if [ "$REAL_SAVE_STAMP_BEFORE" = "$REAL_SAVE_STAMP_AFTER" ]; then
+    ok "Real user://saves mtime and size unchanged"
+else
+    err "Real user://saves mtime or size changed"
+    echo "before:"
+    printf '%s\n' "$REAL_SAVE_STAMP_BEFORE" | sed 's/^/    /'
+    echo "after:"
+    printf '%s\n' "$REAL_SAVE_STAMP_AFTER" | sed 's/^/    /'
 fi
 
 echo ""

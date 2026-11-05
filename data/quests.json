@@ -11,13 +11,13 @@
           "type": "harvest",
           "target": "turnip",
           "required": 1,
-          "description": "收获1个芜菁"
+          "description": "收获1个防风草"
         },
         {
           "type": "collect",
           "target": "turnip",
           "required": 3,
-          "description": "收集3个芜菁"
+          "description": "收集3个防风草"
         }
       ],
       "rewards": {
@@ -42,7 +42,7 @@
           "type": "harvest",
           "target": "turnip",
           "required": 3,
-          "description": "收获3个芜菁"
+          "description": "收获3个防风草"
         },
         {
           "type": "harvest",
@@ -66,7 +66,7 @@
     {
       "id": "village_introduction",
       "title": "认识村民",
-      "description": "去村子里认识一下友善的村民们。",
+      "description": "先去找店主莉莉买种子，再认识其他村民。",
       "quest_giver": "mayor",
       "prerequisites": [],
       "objectives": [
@@ -74,7 +74,7 @@
           "type": "talk_to",
           "target": "shopkeeper",
           "required": 1,
-          "description": "与店主交谈"
+          "description": "去找店主莉莉买种子"
         },
         {
           "type": "talk_to",
@@ -109,7 +109,7 @@
           "target": "turnip",
           "required": 5,
           "npc_id": "shopkeeper",
-          "description": "将5个芜菁交给店主"
+          "description": "将5个防风草交给店主"
         }
       ],
       "rewards": {
@@ -377,7 +377,7 @@
           "target": "turnip",
           "required": 10,
           "npc_id": "shopkeeper",
-          "description": "将10个芜菁交给店主"
+          "description": "将10个防风草交给店主"
         },
         {
           "type": "deliver",

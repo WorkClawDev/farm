@@ -29,9 +29,12 @@ const REQUIRED_AUTOLOADS := [
 	"FarmState",
 ]
 
+const DebugLaunchScript = preload("res://src/core/debug/DebugLaunch.gd")
+
 var _total := 0
 var _passed := 0
 var _failures: Array[String] = []
+var _debug_sleep_reasons: Array[String] = []
 
 
 func _ready() -> void:
@@ -54,7 +57,24 @@ func _ready() -> void:
 
 	await _exercise_actor_collisions()
 	await _exercise_golden_path()
+	await _exercise_watering_can()
+	await _exercise_tool_vs_hotbar_dispatch()
+	await _exercise_tool_number_keys()
+	await _exercise_eat_food()
+	await _exercise_tool_selection_across_scenes()
 	await _exercise_json_save_compatibility()
+	await _exercise_npc_dialogue_reentrancy()
+	await _exercise_morning_npcs()
+	await _exercise_npc_go_home()
+	await _exercise_dialogue_close_real_keys()
+	await _exercise_map_menu_keys()
+	await _exercise_idle_breathing()
+	await _exercise_interact_prompt()
+	await _exercise_hoe_facing_and_swing_lock()
+	await _exercise_npc_crowd_squeeze()
+	await _exercise_opening_debris()
+	await _exercise_house_bed_path()
+	await _exercise_overnight_settlement()
 	_finish()
 
 
@@ -104,7 +124,10 @@ func _exercise_scene(scene_name: String, scene_path: String) -> void:
 
 	if scene_path == "res://src/world/maps/Village.tscn":
 		var sample_npc := instance.get_node_or_null("NPCs/MayorThomas")
-		_record("村民使用无毛边矢量角色", sample_npc != null and sample_npc.get_node_or_null("VillagerIllustration") != null)
+		var mayor_sprite := sample_npc.get_node_or_null("Sprite2D") as Sprite2D if sample_npc else null
+		_record("村民使用 Ninja 精灵表（无矢量插画）", sample_npc != null and sample_npc.get_node_or_null("VillagerIllustration") == null
+			and mayor_sprite != null and mayor_sprite.visible and mayor_sprite.hframes >= 8
+			and mayor_sprite.texture != null and mayor_sprite.texture.get_width() == 512)
 	elif scene_path == "res://src/world/maps/Forest.tscn":
 		var forage_points := instance.get_node_or_null("ForagePoints")
 		var sample_forage := (
@@ -132,6 +155,56 @@ func _exercise_scene(scene_name: String, scene_path: String) -> void:
 				"农场摄像机被限制在 50x35 地图边缘内",
 				farm_map != null and farm_map.camera_limits_match(farm_camera)
 			)
+			var house_for_camera := instance.find_child("PlayerHouseExterior", true, false) as HouseExterior
+			var south_of_foundation := (
+				house_for_camera != null
+				and farm_player != null
+				and Farm.actor_draws_in_front_of_house(farm_player.global_position.y, house_for_camera.global_position.y)
+			)
+			_record(
+				"农舍和玩家按地基 Y 排序，门南侧画在屋前",
+				house_for_camera != null
+					and not house_for_camera.z_as_relative
+					and house_for_camera.z_index == farm_player.z_index
+					and farm_map.y_sort_enabled
+					and south_of_foundation
+			)
+			_record(
+				"站在农舍北侧时墙画在玩家前面",
+				house_for_camera != null
+					and not Farm.actor_draws_in_front_of_house(
+						house_for_camera.global_position.y - 48.0,
+						house_for_camera.global_position.y
+					)
+			)
+			if farm_player != null and farm_camera != null and farm_map != null:
+				var saved_pos := farm_player.global_position
+				farm_player.global_position = Vector2(520, 220)
+				await get_tree().process_frame
+				await get_tree().process_frame
+				_record(
+					"农舍附近镜头跟着玩家，地图限制仍是地图边界",
+					farm_camera.get_screen_center_position().distance_to(farm_player.global_position) < 12.0
+						and farm_map.camera_limits_match(farm_camera)
+				)
+				farm_player.global_position = Vector2(2500, 1800)
+				await get_tree().process_frame
+				await get_tree().process_frame
+				_record(
+					"离开农舍后镜头仍受地图边界限制",
+					farm_camera.offset.length() < 1.0 and farm_map.camera_limits_match(farm_camera)
+				)
+				farm_player.global_position = saved_pos
+				farm_player.velocity = Vector2.ZERO
+				# Direct teleports leave CharacterBody2D's physics pose behind the
+				# node. The barn Area2D then never reports the player, even after
+				# later move_and_collide calls. Push the restored pose into the server.
+				PhysicsServer2D.body_set_state(
+					farm_player.get_rid(),
+					PhysicsServer2D.BODY_STATE_TRANSFORM,
+					farm_player.global_transform
+				)
+				await get_tree().physics_frame
 			_record("农场加载全部8个布局对象", layout_root != null and layout_root.get_child_count() == 8)
 			_record("农场房屋入口可用", instance.get_node_or_null("HouseEntrance") is Area2D)
 			_record("农场村庄出口可用", instance.get_node_or_null("VillageExit") is Area2D)
@@ -167,6 +240,27 @@ func _exercise_scene(scene_name: String, scene_path: String) -> void:
 			var shopkeeper := instance.get_node_or_null("NPCs/Maria") as ShopNPC
 			var mayor := instance.get_node_or_null("NPCs/MayorThomas") as NPC
 			_record("种子商店NPC可交互", shopkeeper != null)
+			var west_sign := instance.get_node_or_null("ShopGuides/WestSign/ShopSign") as Label
+			var plaza_sign := instance.get_node_or_null("ShopGuides/PlazaSign/ShopSign") as Label
+			_record(
+				"进村路口和广场有莉莉商店牌子",
+				west_sign != null and plaza_sign != null
+					and str(west_sign.text).contains("莉莉")
+					and str(plaza_sign.text).contains("莉莉")
+					and west_sign.get_parent().global_position.distance_to(Vector2(150, 300)) < 280.0
+			)
+			var beacon := shopkeeper.get_node_or_null("ShopBeacon") as Label if shopkeeper else null
+			_record(
+				"莉莉头上有常驻商店气泡",
+				beacon != null and beacon.text == "商店" and beacon.visible
+			)
+			var house_sign := instance.get_node_or_null("TransitionAreas/ToPlayerHouseArea/ExitSign") as Label
+			var house_hint := instance.get_node_or_null("TransitionAreas/ToPlayerHouseArea/ShopHint") as Label
+			_record(
+				"住家门口写明不是商店",
+				house_sign != null and str(house_sign.text).contains("住家")
+					and house_hint != null and str(house_hint.text).contains("商店")
+			)
 			for exit_name in ["ToFarmArea", "ToPlayerHouseArea", "ToBeachArea", "ToForestArea", "ToMineArea"]:
 				_record("村庄出口%s存在" % exit_name, instance.get_node_or_null("TransitionAreas/" + exit_name) is Area2D)
 			GameManager.is_game_active = true
@@ -176,17 +270,29 @@ func _exercise_scene(scene_name: String, scene_path: String) -> void:
 				mayor.schedule.update(10.0, TimeManager.current_day, TimeManager.current_season)
 			if shopkeeper.schedule:
 				shopkeeper.schedule.update(10.0, TimeManager.current_day, TimeManager.current_season)
+				var shop_spot := shopkeeper.schedule.get_destination()
+				_record(
+					"营业时莉莉站在东南店门外",
+					shopkeeper.schedule.get_destination_id() == "general_store"
+						and shop_spot.x < 870.0
+						and shop_spot.distance_to(Vector2(1005, 612)) < 250.0
+				)
 			_record("白天NPC允许交互", mayor.can_interact() and shopkeeper.can_interact())
 			mayor.interact()
 			await get_tree().process_frame
 			_record("NPC交互会打开真实对话框", DialogueManager.is_in_dialogue())
 			DialogueManager.force_end_dialogue()
 			_record("关闭对话后恢复玩家控制", GameManager.current_state == GameManager.GameState.PLAYING)
+			TimeManager.current_season = 0
 			shopkeeper.interact()
 			await get_tree().process_frame
 			_record("店主交互会打开种子商店", shopkeeper.shop_ui != null and shopkeeper.shop_ui.visible)
 			if shopkeeper.shop_ui:
-				_record("种子商店全部货架商品可显示", shopkeeper.shop_ui.item_list.item_count == 10)
+				var shelf_has_fiber := shopkeeper.shop_ui.find_child("ShopItem_fiber_seeds", true, false) != null
+				_record(
+					"种子商店当季货架可显示，且没有纤维种子",
+					shopkeeper.shop_ui.item_list.item_count == 5 and not shelf_has_fiber
+				)
 				shopkeeper.shop_ui._on_close_button_pressed()
 			_record("关闭商店后恢复玩家控制", GameManager.current_state == GameManager.GameState.PLAYING)
 			GameManager.is_game_active = false
@@ -249,7 +355,7 @@ func _exercise_collision(instance: Node, scene_path: String) -> void:
 			motion = Vector2(300, 0)
 			label = "玩家不能从非桥梁位置穿过河流"
 		"res://src/world/maps/Beach.tscn":
-			start = Vector2(0, 100)
+			start = Vector2(0, 40)
 			motion = Vector2(0, 160)
 			label = "玩家不能走入海水"
 		"res://src/world/maps/Mine.tscn":
@@ -361,6 +467,45 @@ func _exercise_collision(instance: Node, scene_path: String) -> void:
 				house_entrance.global_position.distance_to(house.get_door_global_position()) < 0.1
 					and house_entrance.global_position.x < house.global_position.x - 30.0
 			)
+			var entrance_cs := house_entrance.get_node("CollisionShape2D") as CollisionShape2D
+			var entrance_rect := Rect2(
+				entrance_cs.global_position - (entrance_cs.shape as RectangleShape2D).size * 0.5,
+				(entrance_cs.shape as RectangleShape2D).size
+			)
+			_record(
+				"BUG-59 farm house entrance only covers the porch steps",
+				entrance_rect.size.x <= 48.0 and entrance_rect.end.y <= house.get_door_global_position().y + 0.1
+			)
+			# BUG-59: standing on the steps while walking west must not enter the house.
+			player.global_position = house.get_door_global_position() + Vector2(0, -2)
+			player.current_direction = Player.Direction.LEFT
+			player.is_walking = true
+			await get_tree().physics_frame
+			await get_tree().physics_frame
+			_record(
+				"BUG-59 walking past the door along the road does not enter the house",
+				not bool(instance.get("_entering_house"))
+			)
+			player.is_walking = false
+			player.current_direction = Player.Direction.DOWN
+			player.global_position = house.get_door_global_position() + Vector2(0, 72)
+			await get_tree().physics_frame
+			if ResourceLoader.exists("res://assets/private/topdown_farm/buildings/x4/Houses_x4.png"):
+				for building_name in ["Coop", "Barn"]:
+					var building := instance.find_child(building_name, true, false) as Node2D
+					var building_shape := (
+						building.get_node("CollisionShape2D").shape as RectangleShape2D
+						if building else null
+					)
+					var building_sprite := building.get_node("Sprite2D") as Sprite2D if building else null
+					var drawn_width := (
+						building_sprite.texture.get_size().x * building_sprite.scale.x
+						if building_sprite and building_sprite.texture else 0.0
+					)
+					_record(
+						"BUG-58 %s footprint spans the CraftPix walls" % building_name,
+						building_shape != null and building_shape.size.x >= drawn_width * 0.85
+					)
 			house_entrance.set_deferred("monitoring", false)
 			await get_tree().physics_frame
 			var house_center := house.get_visual_center_global_position()
@@ -393,6 +538,33 @@ func _exercise_collision(instance: Node, scene_path: String) -> void:
 			"Farm pond remains fishable from the shoreline",
 			pond_fishing_spot != null and bool(pond_fishing_spot.get("is_player_in_range"))
 		)
+		# BUG-55: debug F9 spawner puts one of each animal on free farm ground.
+		player.global_position = Vector2(300, 140)
+		await get_tree().physics_frame
+		var debug_animals: Array = instance.call("debug_spawn_animals")
+		await get_tree().physics_frame
+		await get_tree().physics_frame
+		_record("Debug F9 spawns chicken/pig/cow/sheep/horse on the farm", debug_animals.size() == 5)
+		var actor_layer := instance.get_node_or_null("Actors") as Node2D
+		var same_sort_layer := actor_layer != null and actor_layer.y_sort_enabled and actor_layer.z_index == player.z_index
+		for debug_animal in debug_animals:
+			same_sort_layer = same_sort_layer and (debug_animal as Node).get_parent() == actor_layer
+		_record("Farm animals Y-sort with the player in one Actors layer", same_sort_layer)
+		var debug_clear := not debug_animals.is_empty()
+		var debug_types: Array[String] = []
+		for debug_animal in debug_animals:
+			debug_types.append(str(debug_animal.animal_type))
+			if debug_animal.test_move(debug_animal.global_transform, Vector2.ZERO):
+				debug_clear = false
+		_record("Debug-spawned animals are not stuck in collision", debug_clear)
+		_record(
+			"Debug spawner covers every animal type",
+			debug_types.has("chicken") and debug_types.has("pig") and debug_types.has("cow")
+				and debug_types.has("sheep") and debug_types.has("horse")
+		)
+		for debug_animal in debug_animals:
+			debug_animal.queue_free()
+		await get_tree().physics_frame
 	elif scene_path == "res://src/world/maps/PlayerHouse.tscn":
 		var kitchen := instance.get_node_or_null("InteractionZones/Kitchen")
 		if kitchen:
@@ -405,7 +577,7 @@ func _exercise_collision(instance: Node, scene_path: String) -> void:
 		var bridge_collision := player.move_and_collide(Vector2(300, 0))
 		_record("森林桥梁保持可通行", bridge_collision == null)
 	elif scene_path == "res://src/world/maps/Beach.tscn":
-		player.global_position = Vector2(0, 100)
+		player.global_position = Vector2(0, 40)
 		player.move_and_collide(Vector2(0, 100))
 		await get_tree().physics_frame
 		await get_tree().physics_frame
@@ -425,6 +597,40 @@ func _exercise_collision(instance: Node, scene_path: String) -> void:
 					and ore_collision.get_collider() is StaticBody2D
 					and ore_collision.get_collider().get_parent() is Ore
 			)
+
+
+
+func _assert_animal_private_art(animal: Animal, animal_label: String) -> void:
+	var sheet_animals := ["Chicken", "Pig", "Cow", "Sheep"]
+	var sprite := animal.get_node_or_null("Sprite2D") as Sprite2D
+	var has_private := ResourceLoader.exists("res://assets/private/topdown_farm/animals/x4/chicken_sheet_x4.png")
+	if animal_label in sheet_animals:
+		if has_private:
+			_record("%s anim_sprite present with private art" % animal_label, animal.anim_sprite != null)
+			if animal.anim_sprite != null:
+				var frames: SpriteFrames = animal.anim_sprite.sprite_frames
+				_record("%s has 8 directional animations" % animal_label, frames != null and frames.get_animation_names().size() >= 8)
+				if frames != null and frames.has_animation("idle_down"):
+					_record("%s idle speed is 10 FPS" % animal_label, is_equal_approx(frames.get_animation_speed("idle_down"), 10.0))
+					var expect_idle := 6 if animal_label == "Chicken" else 4
+					_record("%s idle_down frame count" % animal_label, frames.get_frame_count("idle_down") == expect_idle)
+				_record("%s Sprite2D hidden when animated" % animal_label, sprite != null and sprite.visible == false)
+				var expect_scale := 0.8 if animal_label in ["Pig", "Cow", "Sheep"] else 1.0
+				_record(
+					"%s private sprite scale is %.1f" % [animal_label, expect_scale],
+					animal.anim_sprite.scale.is_equal_approx(Vector2.ONE * expect_scale)
+				)
+		else:
+			_record("%s anim_sprite null without private art" % animal_label, animal.anim_sprite == null)
+			_record("%s Sprite2D visible without private art" % animal_label, sprite != null and sprite.visible == true)
+			if sprite and sprite.texture:
+				_record(
+					"%s fallback texture is public sprites" % animal_label,
+					str(sprite.texture.resource_path).begins_with("res://assets/sprites/animals/")
+				)
+	else:
+		_record("%s leaves anim_sprite unset" % animal_label, animal.anim_sprite == null)
+		_record("%s Sprite2D remains visible" % animal_label, sprite != null and sprite.visible == true)
 
 
 func _exercise_actor_collisions() -> void:
@@ -466,6 +672,8 @@ func _exercise_actor_collisions() -> void:
 		player.global_position = Vector2(100, 0)
 		player.velocity = Vector2.ZERO
 		await get_tree().physics_frame
+
+		_assert_animal_private_art(animal, animal_label)
 
 		var body_shape := animal.get_node("CollisionShape2D").shape as CircleShape2D
 		var interaction_shape := (
@@ -540,7 +748,8 @@ func _exercise_golden_path() -> void:
 	_record("首日种植任务自动接取", QuestSystem.get_quest_state("tutorial_farming") == QuestSystem.QuestState.ACTIVE)
 	_record("首日村庄任务自动接取", QuestSystem.get_quest_state("village_introduction") == QuestSystem.QuestState.ACTIVE)
 
-	var coords := [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)]
+	# Opening debris covers the field edge. These inner plots stay clear.
+	var coords := [Vector2i(1, 1), Vector2i(2, 1), Vector2i(3, 1)]
 	for coord in coords:
 		_record("耕地%s" % coord, FarmState.till(coord))
 		_record("播种%s" % coord, FarmState.plant(coord, "turnip_seed"))
@@ -586,6 +795,509 @@ func _exercise_golden_path() -> void:
 	MoneySystem.load_state(money_snapshot)
 	_record("背包状态可恢复", Inventory.get_item_count("turnip") == 0)
 	_record("金钱状态可恢复", MoneySystem.get_money() > money_before)
+
+
+func _spawn_farm() -> Node:
+	var farm := (load("res://src/world/maps/Farm.tscn") as PackedScene).instantiate()
+	add_child(farm)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	return farm
+
+
+func _exercise_watering_can() -> void:
+	print("------------------------------------------------------------")
+	print("BUG-12 水壶：按次扣水、空了不浇不扣体力、跨场景保留、水边装满")
+	TimeManager.reset()
+	Inventory.reset_with_starter_items()
+	FarmState.reset()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	_record("水壶场景有玩家", player != null)
+	if player == null:
+		farm.queue_free()
+		return
+	player.tool_manager.equip_tool(ToolManager.ToolType.WATERING_CAN)
+	# 快捷栏选一个空格子，只测浇水（选种子时的行为见 BUG-14 用例）。
+	Inventory.set_selected_hotbar_index(Inventory.HOTBAR_SIZE - 1)
+	var can_type := ToolManager.ToolType.WATERING_CAN
+	var max_uses := FarmState.get_watering_can_max_uses()
+	_record("新档水壶是满的(%d次)" % max_uses, max_uses > 0 and FarmState.get_watering_can_uses_left() == max_uses)
+	var can_node = player.tool_manager.tools.get(can_type)
+	_record("WateringCan 节点水量与 FarmState 一致", can_node != null and can_node.current_water == FarmState.get_watering_can_water())
+
+	var coords: Array[Vector2i] = []
+	for i in range(max_uses + 1):
+		# Inner plots (x 1..8, y 1..6) have no opening debris.
+		var coord := Vector2i(1 + (i % 8), 1 + int(i / 8))
+		FarmState.till(coord)
+		coords.append(coord)
+
+	var stamina := StaminaManager.current_stamina
+	farm.perform_farm_action(Vector2i(FarmState.GRID_WIDTH - 1, FarmState.GRID_HEIGHT - 1), can_type)
+	_record("浇未翻的地不扣水不扣体力",
+		FarmState.get_watering_can_uses_left() == max_uses and StaminaManager.current_stamina == stamina)
+
+	player.tool_manager.use_tool(null)
+	_record("对着空地用水壶不扣水", FarmState.get_watering_can_uses_left() == max_uses)
+
+	var decreased_each_time := true
+	for i in range(max_uses):
+		farm.perform_farm_action(coords[i], can_type)
+		decreased_each_time = decreased_each_time and FarmState.get_watering_can_uses_left() == max_uses - i - 1 \
+			and int(FarmState.get_cell(coords[i]).state) == FarmState.WATERED
+	_record("每浇一格水壶少一次", decreased_each_time)
+	_record("浇满%d格后水壶空了" % max_uses, FarmState.get_watering_can_uses_left() == 0 and not FarmState.has_watering_charge())
+	_record("成功浇水才扣体力", is_equal_approx(StaminaManager.current_stamina, stamina - 2.0 * max_uses))
+
+	stamina = StaminaManager.current_stamina
+	farm.perform_farm_action(coords[max_uses], can_type)
+	_record("空水壶不浇水", int(FarmState.get_cell(coords[max_uses]).state) == FarmState.TILLED)
+	_record("空水壶不扣体力", StaminaManager.current_stamina == stamina)
+
+	FarmState.refill_watering_can()
+	farm.perform_farm_action(coords[0], can_type)
+	_record("已浇过的格子再浇不扣水不扣体力",
+		FarmState.get_watering_can_uses_left() == max_uses and StaminaManager.current_stamina == stamina)
+	FarmState.set_watering_can_water(0)
+
+	farm.queue_free()
+	await get_tree().process_frame
+	farm = await _spawn_farm()
+	player = farm.find_child("Player", true, false) as Player
+	_record("切场景后水壶不会被重新灌满", FarmState.get_watering_can_uses_left() == 0)
+
+	var spot := farm.find_child("FishingSpot", true, false) as FishingSpot
+	_record("农场池塘有水源", spot != null)
+	if spot != null and player != null:
+		player.tool_manager.equip_tool(ToolManager.ToolType.WATERING_CAN)
+		spot.current_player = player
+		spot.is_player_in_range = true
+		spot._start_fishing()
+		spot.is_player_in_range = false
+		spot.current_player = null
+	_record("拿水壶在池塘边可装满", FarmState.get_watering_can_uses_left() == max_uses)
+	if player != null:
+		player.nearby_npcs.clear()
+		player.nearby_animals.clear()
+		player.npc_in_range = null
+		player.building_in_range = null
+		player.animal_in_range = null
+		player.tool_manager.equip_tool(ToolManager.ToolType.WATERING_CAN)
+		# 东岸在钓鱼点 96px 范围外，仍贴着池塘水格。交互键要等下一帧才算 just pressed。
+		var saved_state := GameManager.current_state
+		GameManager.current_state = GameManager.GameState.PLAYING
+		player.global_position = Vector2(480, 480)
+		PhysicsServer2D.body_set_state(player.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, player.global_transform)
+		if spot != null:
+			spot.is_player_in_range = false
+			spot.current_player = null
+		FarmState.set_watering_can_water(0)
+		await get_tree().process_frame
+		player._interact_needs_release = false
+		player._interact_blocked_until_msec = 0
+		var press := InputEventAction.new()
+		press.action = &"interact"
+		press.pressed = true
+		Input.parse_input_event(press)
+		for _i in 4:
+			if FarmState.get_watering_can_uses_left() == max_uses:
+				break
+			await get_tree().process_frame
+		var release := InputEventAction.new()
+		release.action = &"interact"
+		release.pressed = false
+		Input.parse_input_event(release)
+		await get_tree().process_frame
+		GameManager.current_state = saved_state
+		player._interact_needs_release = true
+		_record(
+			"池塘东岸（钓鱼点外）拿水壶按交互可装满",
+			FarmState.get_watering_can_uses_left() == max_uses and (spot == null or not bool(spot.is_player_in_range))
+		)
+		FarmState.set_watering_can_water(0)
+		player.global_position = Vector2(224, 360)
+		_record(
+			"池塘北岸拿水壶可装满",
+			farm.try_refill_watering_can_at_pond(player) and FarmState.get_watering_can_uses_left() == max_uses
+		)
+		FarmState.set_watering_can_water(0)
+		player.global_position = Vector2(100, 480)
+		_record(
+			"池塘西岸拿水壶可装满",
+			farm.try_refill_watering_can_at_pond(player) and FarmState.get_watering_can_uses_left() == max_uses
+		)
+		FarmState.set_watering_can_water(0)
+		player.global_position = Vector2(224, 600)
+		_record(
+			"池塘南岸拿水壶可装满",
+			farm.try_refill_watering_can_at_pond(player) and FarmState.get_watering_can_uses_left() == max_uses
+		)
+		FarmState.set_watering_can_water(0)
+		player.global_position = Vector2(540, 480)
+		_record(
+			"离岸一格不能装水",
+			not farm.is_beside_farm_pond(player.global_position) and not farm.try_refill_watering_can_at_pond(player) and FarmState.get_watering_can_uses_left() == 0
+		)
+		player.global_position = Vector2(224, 360)
+		player.tool_manager.equip_tool(ToolManager.ToolType.FISHING_ROD)
+		_record(
+			"岸边拿鱼竿不装水",
+			not farm.try_refill_watering_can_at_pond(player) and FarmState.get_watering_can_uses_left() == 0
+		)
+		player.tool_manager.equip_tool(ToolManager.ToolType.HOE)
+		_record(
+			"岸边拿锄头不装水",
+			not farm.try_refill_watering_can_at_pond(player) and FarmState.get_watering_can_uses_left() == 0
+		)
+		FarmState.set_watering_can_water(0)
+		player.tool_manager.equip_tool(ToolManager.ToolType.WATERING_CAN)
+		if spot != null:
+			player.global_position = spot.global_position
+			spot.current_player = player
+			spot.is_player_in_range = true
+			var skipped: bool = not farm.try_refill_watering_can_at_pond(player)
+			_record("人在钓鱼点时岸边逻辑不重复装水", skipped and FarmState.get_watering_can_uses_left() == 0)
+			spot._start_fishing()
+			spot.is_player_in_range = false
+			spot.current_player = null
+			_record("钓鱼点拿水壶仍可装满", FarmState.get_watering_can_uses_left() == max_uses)
+		player._interact_needs_release = true
+		player.tool_manager.equip_tool(ToolManager.ToolType.WATERING_CAN)
+		FarmState.refill_watering_can()
+	farm.perform_farm_action(coords[max_uses], can_type)
+	_record("装满后可以继续浇水", int(FarmState.get_cell(coords[max_uses]).state) == FarmState.WATERED
+		and FarmState.get_watering_can_uses_left() == max_uses - 1)
+
+	var snapshot := FarmState.get_save_state()
+	FarmState.reset()
+	FarmState.load_save_state(_json_round_trip(snapshot))
+	_record("水壶水量随存档恢复", FarmState.get_watering_can_uses_left() == max_uses - 1)
+	_record("旧存档没有水量字段时按满水", (func():
+		var legacy := snapshot.duplicate(true)
+		legacy.erase("watering_can_water")
+		FarmState.set_watering_can_water(0)
+		FarmState.load_save_state(legacy)
+		return FarmState.get_watering_can_uses_left() == max_uses).call())
+
+	farm.queue_free()
+	await get_tree().process_frame
+	FarmState.reset()
+	Inventory.reset_with_starter_items()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+
+
+func _find_hotkey_bar(node: Node) -> HotkeyBar:
+	if node is HotkeyBar:
+		return node
+	for child in node.get_children():
+		var found := _find_hotkey_bar(child)
+		if found:
+			return found
+	return null
+
+
+func _find_tool_display(node: Node) -> ToolDisplay:
+	if node is ToolDisplay:
+		return node
+	for child in node.get_children():
+		var found := _find_tool_display(child)
+		if found:
+			return found
+	return null
+
+
+## 数字键 1–6 直选工具。快捷栏改走点击 / Tab，选中种子后仍能播种。
+func _exercise_tool_number_keys() -> void:
+	print("------------------------------------------------------------")
+	print("数字键 1–6 直选工具；快捷栏用点击或 Tab，选中后仍可播种")
+	var saved_state := GameManager.current_state
+	var saved_active := GameManager.is_game_active
+	TimeManager.reset()
+	Inventory.reset_with_starter_items()
+	FarmState.reset()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	get_tree().paused = false
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	var hotbar := _find_hotkey_bar(farm)
+	var display := _find_tool_display(farm)
+	_record("直选用例有玩家、快捷栏和工具栏", player != null and hotbar != null and display != null)
+	if player == null or hotbar == null:
+		farm.queue_free()
+		GameManager.current_state = saved_state
+		GameManager.is_game_active = saved_active
+		return
+	var tm: ToolManager = player.tool_manager
+	var expected: Array = ToolManager.TOOL_HOTKEY_ORDER
+	_record("直选顺序是锄、水壶、斧、镐、镰、钓", expected == [
+		ToolManager.ToolType.HOE,
+		ToolManager.ToolType.WATERING_CAN,
+		ToolManager.ToolType.AXE,
+		ToolManager.ToolType.PICKAXE,
+		ToolManager.ToolType.SICKLE,
+		ToolManager.ToolType.FISHING_ROD,
+	])
+	tm.equip_tool(ToolManager.ToolType.AXE)
+	var slot_before := Inventory.get_selected_hotbar_index()
+	for i in range(expected.size()):
+		await _tap_key(KEY_1 + i, 1)
+		_record(
+			"数字键 %d 装备对应工具（实际 %d）" % [i + 1, tm.get_current_tool_type()],
+			tm.get_current_tool_type() == expected[i]
+		)
+	_record("数字键不改快捷栏格子", Inventory.get_selected_hotbar_index() == slot_before)
+	_record(
+		"拿着工具时提示是 1–6 直选",
+		display != null and display._hint_label.text == ToolDisplay.HINT_TOOL
+	)
+
+	tm.equip_tool(ToolManager.ToolType.HOE)
+	await _tap_key(KEY_2, 1)
+	_record("锄头按 2 一键到水壶", tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN)
+	await _tap_key(KEY_2, 1)
+	_record("已是水壶时再按 2 保持", tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN)
+
+	await _press_action(&"tool_next", 1)
+	_record("R 仍切到下一个工具（斧）", tm.get_current_tool_type() == ToolManager.ToolType.AXE)
+	await _press_action(&"tool_previous", 1)
+	_record("Q 仍切回上一个工具（水壶）", tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN)
+
+	GameManager.current_state = GameManager.GameState.DIALOGUE
+	await _tap_key(KEY_4, 1)
+	_record("对话中数字键不换工具", tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN)
+	GameManager.current_state = GameManager.GameState.PLAYING
+
+	await _tap_key(KEY_7, 1)
+	_record(
+		"数字键 7 不选快捷栏也不收工具",
+		tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN
+			and Inventory.get_selected_hotbar_index() == slot_before
+	)
+
+	var seeds := Inventory.get_item_count("turnip_seed")
+	var plot := Vector2i(1, 1)
+	tm.equip_tool(ToolManager.ToolType.HOE)
+	farm.perform_farm_action(plot, tm.get_current_tool_type())
+	_record("直选用例先翻地", int(FarmState.get_cell(plot).state) == FarmState.TILLED)
+	hotbar._select(0)
+	_record(
+		"点击快捷栏种子会收起工具",
+		tm.get_current_tool_type() == ToolManager.ToolType.NONE
+			and Inventory.get_selected_item_id() == "turnip_seed"
+	)
+	_record(
+		"收起后提示可以拿回工具",
+		display != null and display._hint_label.text == ToolDisplay.HINT_HAND
+	)
+	farm.perform_farm_action(plot, tm.get_current_tool_type())
+	_record(
+		"收起工具后手持种子仍能播种",
+		not Dictionary(FarmState.get_cell(plot).crop).is_empty()
+			and Inventory.get_item_count("turnip_seed") == seeds - 1
+	)
+
+	tm.equip_tool(ToolManager.ToolType.HOE)
+	var index_before_tab := Inventory.get_selected_hotbar_index()
+	await _press_action(&"hotbar_next", 1)
+	_record(
+		"Tab 切到下一格并收起工具",
+		tm.is_using_hotbar_item()
+			and Inventory.get_selected_hotbar_index() == (index_before_tab + 1) % HotkeyBar.HOTBAR_SIZE
+	)
+
+	farm.queue_free()
+	await get_tree().process_frame
+	FarmState.reset()
+	Inventory.reset_with_starter_items()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	GameManager.current_state = saved_state
+	GameManager.is_game_active = saved_active
+
+
+func _exercise_tool_vs_hotbar_dispatch() -> void:
+	print("------------------------------------------------------------")
+	print("BUG-14 拿着工具只用工具；选中快捷栏种子才播种")
+	TimeManager.reset()
+	Inventory.reset_with_starter_items()
+	FarmState.reset()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	var hotbar := _find_hotkey_bar(farm)
+	_record("调度用例有玩家和快捷栏", player != null and hotbar != null)
+	if player == null or hotbar == null:
+		farm.queue_free()
+		return
+	var tm: ToolManager = player.tool_manager
+	var hoe := ToolManager.ToolType.HOE
+	var seeds := Inventory.get_item_count("turnip_seed")
+	_record("开局拿锄头且快捷栏选着种子",
+		tm.get_current_tool_type() == hoe and Inventory.get_selected_item_id() == "turnip_seed")
+
+	var a := Vector2i(1, 1)
+	farm.perform_farm_action(a, tm.get_current_tool_type())
+	_record("锄头翻地", int(FarmState.get_cell(a).state) == FarmState.TILLED)
+	var stamina := StaminaManager.current_stamina
+	for i in range(3):
+		farm.perform_farm_action(a, tm.get_current_tool_type())
+	_record("选着种子时锄头对耕地按空格不播种",
+		Dictionary(FarmState.get_cell(a).crop).is_empty() and Inventory.get_item_count("turnip_seed") == seeds)
+	_record("锄头对已翻的地不扣体力", StaminaManager.current_stamina == stamina)
+
+	tm.equip_tool(ToolManager.ToolType.WATERING_CAN)
+	farm.perform_farm_action(a, tm.get_current_tool_type())
+	_record("选着种子时水壶只浇水不播种",
+		int(FarmState.get_cell(a).state) == FarmState.WATERED
+			and Dictionary(FarmState.get_cell(a).crop).is_empty()
+			and Inventory.get_item_count("turnip_seed") == seeds)
+
+	hotbar._select(0)
+	_record("选中快捷栏种子会收起工具", tm.get_current_tool_type() == ToolManager.ToolType.NONE)
+	farm.perform_farm_action(a, tm.get_current_tool_type())
+	_record("手持种子对耕地播种",
+		not Dictionary(FarmState.get_cell(a).crop).is_empty() and Inventory.get_item_count("turnip_seed") == seeds - 1)
+	var b := Vector2i(2, 1)
+	farm.perform_farm_action(b, tm.get_current_tool_type())
+	_record("手持种子不能在未翻的地上播种",
+		Dictionary(FarmState.get_cell(b).crop).is_empty() and Inventory.get_item_count("turnip_seed") == seeds - 1)
+
+	tm.next_tool()
+	_record("收起工具后按 R 拿回上次的工具(水壶)", tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN)
+	hotbar._select(0)
+	tm.previous_tool()
+	_record("收起工具后按 Q 也拿回上次的工具", tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN)
+
+	farm.queue_free()
+	await get_tree().process_frame
+	FarmState.reset()
+	Inventory.reset_with_starter_items()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+
+
+func _exercise_eat_food() -> void:
+	print("------------------------------------------------------------")
+	print("吃东西：收起工具后空格吃掉带 energy 的食物并回体力")
+	# 体力已满时不吃（EAT_FULL），数量不变。没满才扣 1 个并 restore_stamina。
+	var inv_snapshot := Inventory.save_state()
+	var farm_snapshot := FarmState.get_save_state()
+	var saved_stamina := StaminaManager.current_stamina
+	Inventory.clear_inventory()
+	Inventory.set_slot(0, "wild_berry", 2)
+	Inventory.set_slot(1, "turnip_seed", 4)
+	Inventory.set_slot(2, "stone", 5)
+	Inventory.set_selected_hotbar_index(0)
+	Inventory.set_equipped_tool(ToolManager.ToolType.HOE, ToolManager.ToolType.HOE)
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	_record("吃东西用例有玩家", player != null)
+	if player == null:
+		farm.queue_free()
+		Inventory.load_state(inv_snapshot)
+		FarmState.load_save_state(farm_snapshot)
+		StaminaManager.set_stamina(saved_stamina)
+		return
+	var tm: ToolManager = player.tool_manager
+	StaminaManager.set_stamina(40.0)
+	_record("拿着锄头时选中野莓按吃不会扣物品",
+		tm.get_current_tool_type() == ToolManager.ToolType.HOE
+			and player.try_eat_held_item() == Inventory.EAT_NOT_EDIBLE
+			and Inventory.get_item_count("wild_berry") == 2
+			and is_equal_approx(StaminaManager.current_stamina, 40.0))
+
+	tm.put_away_tool()
+	_record("收起工具后手里是野莓",
+		tm.is_using_hotbar_item() and Inventory.get_selected_item_id() == "wild_berry")
+	player._use_tool_on_target()
+	_record("空格吃野莓：体力 40→48，数量 2→1",
+		is_equal_approx(StaminaManager.current_stamina, 48.0)
+			and Inventory.get_item_count("wild_berry") == 1)
+
+	Inventory.set_selected_hotbar_index(1)
+	var seed_stamina := StaminaManager.current_stamina
+	_record("手持种子不是食物",
+		player.try_eat_held_item() == Inventory.EAT_NOT_EDIBLE
+			and Inventory.get_item_count("turnip_seed") == 4
+			and is_equal_approx(StaminaManager.current_stamina, seed_stamina))
+	Inventory.set_selected_hotbar_index(2)
+	_record("手持石头不是食物",
+		player.try_eat_held_item() == Inventory.EAT_NOT_EDIBLE
+			and Inventory.get_item_count("stone") == 5
+			and is_equal_approx(StaminaManager.current_stamina, seed_stamina))
+
+	Inventory.set_selected_hotbar_index(0)
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	player._use_tool_on_target()
+	_record("体力已满时按空格不吃野莓",
+		Inventory.get_item_count("wild_berry") == 1
+			and is_equal_approx(StaminaManager.current_stamina, StaminaManager.max_stamina))
+
+	farm.queue_free()
+	await get_tree().process_frame
+	Inventory.load_state(inv_snapshot)
+	FarmState.load_save_state(farm_snapshot)
+	StaminaManager.set_stamina(saved_stamina)
+
+
+func _exercise_tool_selection_across_scenes() -> void:
+	print("------------------------------------------------------------")
+	print("BUG-15 切换场景后保留手上的工具 / 手持物品")
+	Inventory.reset_with_starter_items()
+	FarmState.reset()
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	_record("BUG-15 用例有玩家", player != null)
+	if player == null:
+		farm.queue_free()
+		return
+	_record("新游戏默认拿锄头", player.tool_manager.get_current_tool_type() == ToolManager.ToolType.HOE)
+	player.tool_manager.equip_tool(ToolManager.ToolType.WATERING_CAN)
+
+	farm.queue_free()
+	await get_tree().process_frame
+	farm = await _spawn_farm()
+	player = farm.find_child("Player", true, false) as Player
+	var tm: ToolManager = player.tool_manager
+	_record("切场景后仍拿着水壶", tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN)
+	_record("切场景后只显示水壶节点", (func():
+		for tool_type in tm.tools.keys():
+			if tm.tools[tool_type].visible != (tool_type == ToolManager.ToolType.WATERING_CAN):
+				return false
+		return true).call())
+
+	var hotbar := _find_hotkey_bar(farm)
+	if hotbar:
+		hotbar._select(0)
+	else:
+		Inventory.set_selected_hotbar_index(0)
+		tm.put_away_tool()
+	_record("选种子后手持物品", tm.get_current_tool_type() == ToolManager.ToolType.NONE)
+
+	farm.queue_free()
+	await get_tree().process_frame
+	farm = await _spawn_farm()
+	player = farm.find_child("Player", true, false) as Player
+	tm = player.tool_manager
+	_record("切场景后仍手持快捷栏物品(种子)",
+		tm.get_current_tool_type() == ToolManager.ToolType.NONE and Inventory.get_selected_item_id() == "turnip_seed")
+	tm.next_tool()
+	_record("切场景后按 R 回到上次的工具(水壶)", tm.get_current_tool_type() == ToolManager.ToolType.WATERING_CAN)
+
+	tm.equip_tool(ToolManager.ToolType.AXE)
+	var inventory_snapshot := Inventory.save_state()
+	Inventory.reset_with_starter_items()
+	_record("新游戏重置回锄头", Inventory.get_equipped_tool() == ToolManager.ToolType.HOE)
+	Inventory.load_state(_json_round_trip(inventory_snapshot))
+	_record("手上工具随存档恢复", Inventory.get_equipped_tool() == ToolManager.ToolType.AXE
+		and Inventory.get_last_tool() == ToolManager.ToolType.AXE)
+
+	farm.queue_free()
+	await get_tree().process_frame
+	FarmState.reset()
+	Inventory.reset_with_starter_items()
 
 
 func _exercise_json_save_compatibility() -> void:
@@ -735,6 +1447,1680 @@ func _is_valid_json(path: String) -> bool:
 		return false
 	var json := JSON.new()
 	return json.parse(file.get_as_text()) == OK
+
+
+func _press_action(action: StringName, frames := 3) -> void:
+	var down := InputEventAction.new()
+	down.action = action
+	down.pressed = true
+	Input.parse_input_event(down)
+	for i in frames:
+		await get_tree().physics_frame
+	var up := InputEventAction.new()
+	up.action = action
+	up.pressed = false
+	Input.parse_input_event(up)
+	for i in 2:
+		await get_tree().physics_frame
+
+
+## BUG-20: talking to the mayor recursed start_dialogue <-> EventBus.dialogue_started
+## until the stack overflowed (the dialogue box cleared the NPC's shared line array).
+func _exercise_npc_dialogue_reentrancy() -> void:
+	print("------------------------------------------------------------")
+	print("BUG-20 村长对话不递归、能正常结束、结束后不重开、Esc/J 可用")
+	DialogueManager.reset()
+	TimeManager.reset()
+	TimeManager.current_time = 10.0
+	var started := [0]
+	var bus_started := [0]
+	var on_started := func(_id: String): started[0] += 1
+	var on_bus := func(_id: String): bus_started[0] += 1
+	DialogueManager.dialogue_started.connect(on_started)
+	EventBus.social.dialogue_started.connect(on_bus)
+
+	# Direct guard checks: an empty dialogue is refused, an echo while talking is ignored.
+	DialogueManager._dialogue_data["bug20_empty"] = {"only": {"id": "bug20_empty", "priority": 0, "conditions": [], "lines": []}}
+	_record("空对话不会开始（不递归）", DialogueManager.start_dialogue("bug20_empty") == false and not DialogueManager.is_in_dialogue() and started[0] == 0)
+	DialogueManager._dialogue_data.erase("bug20_empty")
+
+	var village := (load("res://src/world/maps/Village.tscn") as PackedScene).instantiate()
+	add_child(village)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	var player := village.find_child("Player", true, false) as Player
+	var mayor := village.get_node_or_null("NPCs/MayorThomas") as NPC
+	var box: DialogueBox = DialogueManager._dialogue_box
+	_record("对话用例有玩家、村长和对话框", player != null and mayor != null and box != null)
+	if player == null or mayor == null or box == null:
+		village.queue_free()
+		return
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	if mayor.schedule:
+		mayor.schedule.update(10.0, TimeManager.current_day, TimeManager.current_season)
+	var mayor_lines: Array = DialogueManager._dialogue_data["mayor"]["first_meeting"]["lines"]
+	var line_count := mayor_lines.size()
+	player.global_position = mayor.global_position + Vector2(0, 36)
+	player.register_nearby_npc(mayor)
+
+	await _press_action(&"interact")
+	_record("按交互键开始村长对话一次", DialogueManager.is_in_dialogue() and started[0] == 1 and bus_started[0] <= 2)
+	EventBus.social.dialogue_started.emit(mayor.npc_id)
+	_record("对话中重复的开始事件被忽略", started[0] == 1 and DialogueManager.is_in_dialogue())
+
+	var blank_pages := 0
+	var steps := 0
+	while box.visible and steps < 30:
+		steps += 1
+		box._finish_typewriter()
+		if box.text_label.text.strip_edges().is_empty():
+			blank_pages += 1
+		await _press_action(&"interact")
+	_record("村长对话能正常结束", not box.visible and not DialogueManager.is_in_dialogue() and steps < 30)
+	_record("对话里没有空白页", blank_pages == 0)
+	_record("对话数据没有被清空", mayor_lines.size() == line_count and line_count > 0)
+	_record("选项分支生效（已认识村长）", bool(DialogueManager._player_flags.get("met_mayor", false)))
+	_record("对话结束后恢复玩家控制", GameManager.current_state == GameManager.GameState.PLAYING)
+	for i in 4:
+		await get_tree().physics_frame
+	_record("结束对话的那次按键不会重新开始对话/打开商店", started[0] == 1 and not DialogueManager.is_in_dialogue() and not UIManager.is_screen_open("shop"))
+
+	# BUG-26 residual: one more press right after closing is still "closing", not "talk again".
+	await _press_action(&"interact")
+	_record("刚关闭对话马上再按 E 不会重新开始对话", started[0] == 1 and not DialogueManager.is_in_dialogue())
+	await _wait_retalk_cooldown()
+	await _press_action(&"interact")
+	_record("再次交互能开始新对话且有内容", DialogueManager.is_in_dialogue() and started[0] == 2 and box.visible and not box.dialogue_lines.is_empty())
+	DialogueManager.force_end_dialogue()
+	await get_tree().physics_frame
+
+	await _press_action(&"pause")
+	var village_pause := village.get("pause_menu") as Control
+	_record("对话后 Esc 能打开暂停菜单", GameManager.is_paused() and village_pause != null and village_pause.visible)
+	await _press_action(&"pause")
+	_record("再按 Esc 关闭暂停菜单", not GameManager.is_paused() and not get_tree().paused)
+	await _press_action(&"journal")
+	_record("对话后 J 能打开手册", UIManager.is_screen_open("journal"))
+	UIManager.close_all()
+	await get_tree().process_frame
+
+	DialogueManager.dialogue_started.disconnect(on_started)
+	EventBus.social.dialogue_started.disconnect(on_bus)
+	player.unregister_nearby_npc(mayor)
+	village.queue_free()
+	await get_tree().process_frame
+	DialogueManager.reset()
+	GameManager.is_game_active = false
+
+
+## BUG-31: from the 6:00 day start until ~9:00 the schedules said "sleep" while the NPCs
+## stand in the village, so E did nothing (no dialogue, no shop).
+func _exercise_morning_npcs() -> void:
+	print("------------------------------------------------------------")
+	print("BUG-31 早上 6:00-9:00 NPC 可以对话、商人可以开店；夜里按 E 有提示")
+	DialogueManager.reset()
+	TimeManager.reset()
+	var village := (load("res://src/world/maps/Village.tscn") as PackedScene).instantiate()
+	add_child(village)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	var player := village.find_child("Player", true, false) as Player
+	var npcs: Array = village.get_node("NPCs").get_children().filter(func(n): return n is NPC)
+	for hour in [6.0, 6.5, 7.25, 8.5]:
+		var blocked: Array[String] = []
+		for npc in npcs:
+			if npc.schedule:
+				npc.schedule.update(hour, TimeManager.current_day, TimeManager.current_season)
+			if not npc.can_interact():
+				blocked.append(npc.npc_name)
+		_record("%.2f 点村里 %d 个 NPC 都能交互%s" % [hour, npcs.size(), "" if blocked.is_empty() else "（不能：%s）" % ", ".join(blocked)], blocked.is_empty() and npcs.size() >= 5)
+
+	TimeManager.current_time = 6.5
+	var mayor := village.get_node("NPCs/MayorThomas") as NPC
+	var shop := village.get_node("NPCs/Maria") as NPC
+	var started := [0]
+	var on_started := func(_id: String): started[0] += 1
+	DialogueManager.dialogue_started.connect(on_started)
+	player.global_position = mayor.global_position + Vector2(0, 36)
+	player.register_nearby_npc(mayor)
+	await _press_action(&"interact")
+	_record("6:30 按 E 和村长对话", DialogueManager.is_in_dialogue() and started[0] == 1)
+	DialogueManager.force_end_dialogue()
+	player.unregister_nearby_npc(mayor)
+	for i in 4:
+		await get_tree().physics_frame
+	player.global_position = shop.global_position + Vector2(0, 36)
+	player.register_nearby_npc(shop)
+	await _wait_retalk_cooldown()
+	await _press_action(&"interact")
+	_record("6:30 按 E 商人打开商店", UIManager.is_screen_open("shop"))
+	UIManager.close_all()
+	shop.end_interaction()
+	player.unregister_nearby_npc(shop)
+	for i in 4:
+		await get_tree().physics_frame
+
+	# Night: still asleep by schedule, but E now explains instead of doing nothing.
+	TimeManager.current_time = 23.0
+	mayor.schedule.update(23.0, TimeManager.current_day, TimeManager.current_season)
+	player.global_position = mayor.global_position + Vector2(0, 36)
+	player.register_nearby_npc(mayor)
+	await _wait_retalk_cooldown()
+	await _press_action(&"interact")
+	var rest_toast := false
+	if UIManager._toast_root:
+		for toast in UIManager._toast_root.get_children():
+			rest_toast = rest_toast or str(toast.get_meta("toast_text", "")).contains("正在休息")
+	_record("23:00 村长在休息：按 E 不开对话但有提示", not DialogueManager.is_in_dialogue() and started[0] == 1 and rest_toast)
+	player.unregister_nearby_npc(mayor)
+	DialogueManager.dialogue_started.disconnect(on_started)
+	village.queue_free()
+	await get_tree().process_frame
+	DialogueManager.reset()
+	TimeManager.reset()
+	GameManager.is_game_active = false
+
+
+## Evening sleep: walk to the own door, then rest hidden (no collision / interaction /
+## prompt); entering during sleep time spawns them hidden; at wake-up they reappear at the door.
+func _exercise_npc_go_home() -> void:
+	print("------------------------------------------------------------")
+	print("NPC 晚上回家：走到自家门口后隐藏，进村时已在睡觉则直接隐藏，起床在门口出现")
+	DialogueManager.reset()
+	TimeManager.reset()
+	TimeManager.current_time = 19.9
+	var village := (load("res://src/world/maps/Village.tscn") as PackedScene).instantiate()
+	add_child(village)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	var player := village.find_child("Player", true, false) as Player
+	player.global_position = Vector2(1100, 800)  # out of the way
+	var walkers := {
+		"Iron": Vector2(600, 350),   # blacksmith_tom, tavern until 20:00
+		"John": Vector2(600, 350),   # farmer_joe, tavern until 20:00
+		"Lily": Vector2(180, 520),   # doctor_mary, west side until 20:00
+	}
+	var npcs := {}
+	for node_name in walkers:
+		var npc := village.get_node("NPCs/%s" % node_name) as NPC
+		npc.global_position = walkers[node_name]
+		npcs[node_name] = npc
+	await get_tree().physics_frame
+	_record("19:54 三人都在村里、可见、未休息", npcs.values().all(func(n): return n.visible and not n.is_resting and not n.is_going_home))
+
+	TimeManager.current_time = 20.0
+	var start_distance := {}
+	for node_name in npcs:
+		var door: Dictionary = npcs[node_name]._door_here()
+		start_distance[node_name] = npcs[node_name].global_position.distance_to(door["position"])
+	for i in 30:
+		await get_tree().physics_frame
+	var walking_home := true
+	for node_name in npcs:
+		var npc: NPC = npcs[node_name]
+		walking_home = walking_home and npc.is_going_home and npc.visible and npc.is_walking
+	_record("20:00 汤姆、乔、玛丽开始走回家（仍可见）", walking_home)
+
+	# The walk home is a slow stroll (~15-30 s, round 8): run the clock 4x for it.
+	Engine.time_scale = 4.0
+	var frames := 0
+	while frames < 1200 and not npcs.values().all(func(n): return n.is_resting):
+		frames += 1
+		await get_tree().physics_frame
+	await get_tree().physics_frame
+	Engine.time_scale = 1.0
+	for node_name in npcs:
+		var npc: NPC = npcs[node_name]
+		var door: Vector2 = npc._door_here()["position"]
+		var at_door := npc.global_position.distance_to(door) < 8.0
+		_record("%s 走到门口 %s 后休息：隐藏、无碰撞、不检测玩家（%.1f 秒）" % [npc.npc_name, door, frames * 4.0 / Engine.physics_ticks_per_second],
+			npc.is_resting and at_door and not npc.visible and npc.collision_shape.disabled and not npc.interaction_area.monitoring)
+
+	# E does nothing on a resting NPC (even if the player still had it registered)
+	var tom: NPC = npcs["Iron"]
+	var started := [0]
+	var on_started := func(_id: String): started[0] += 1
+	DialogueManager.dialogue_started.connect(on_started)
+	player.global_position = tom.global_position + Vector2(40, 0)  # beside the door (below it is the mine exit)
+	player.register_nearby_npc(tom)
+	await _press_action(&"interact")
+	var toast := false
+	if UIManager._toast_root:
+		for t in UIManager._toast_root.get_children():
+			toast = toast or str(t.get_meta("toast_text", "")).contains(tom.npc_name)
+	var prompt = tom.get_node("InteractPrompt")
+	_record("休息中的 NPC：按 E 没反应（无对话、无提示），气泡不显示", started[0] == 0 and not DialogueManager.is_in_dialogue() and not toast and InteractPrompt.current() != prompt and not prompt.is_visible_in_tree())
+	player.unregister_nearby_npc(tom)
+	DialogueManager.dialogue_started.disconnect(on_started)
+
+	# Wake up at 6:00 next morning: back at the door, solid and talkable again.
+	player.global_position = Vector2(1100, 800)
+	TimeManager.current_time = 6.0
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var woke := true
+	for node_name in npcs:
+		var npc: NPC = npcs[node_name]
+		var door: Vector2 = npc._door_here()["position"]
+		woke = woke and not npc.is_resting and npc.visible and npc.global_position.distance_to(door) < 6.0 and not npc.collision_shape.disabled and npc.interaction_area.monitoring and npc.can_interact()
+	_record("6:00 起床：在自家门口重新出现，可碰撞、可交互", woke)
+	village.queue_free()
+	await get_tree().process_frame
+
+	# Entering the village while everyone is asleep: hidden from the first frame.
+	TimeManager.current_time = 23.0
+	var night := (load("res://src/world/maps/Village.tscn") as PackedScene).instantiate()
+	add_child(night)
+	await get_tree().process_frame
+	var all_npcs: Array = night.get_node("NPCs").get_children().filter(func(n): return n is NPC)
+	var hidden := all_npcs.filter(func(n): return n.is_resting and not n.visible)
+	var at_doors := all_npcs.filter(func(n): return n._door_here().is_empty() or n.global_position.distance_to(n._door_here()["position"]) < 1.0)
+	_record("23:00 进村：%d/%d 个 NPC 直接在家休息（隐藏，位置在门口）" % [hidden.size(), all_npcs.size()], all_npcs.size() >= 5 and hidden.size() == all_npcs.size() and at_doors.size() == all_npcs.size())
+	night.queue_free()
+	await get_tree().process_frame
+	TimeManager.reset()
+	GameManager.is_game_active = false
+
+
+## BUG-26: the real E/Space key press that closes a dialogue restarted it. xdotool-style
+## taps deliver press and release in the same frame, so "wait until released" never saw
+## the key held and the player still got is_action_just_pressed. Drive real key events.
+func _exercise_dialogue_close_real_keys() -> void:
+	print("------------------------------------------------------------")
+	print("BUG-26 真实按键（E / Space，按下松开同帧/隔帧/长按）结束对话不会重新开始对话")
+	DialogueManager.reset()
+	TimeManager.reset()
+	TimeManager.current_time = 10.0
+	var village := (load("res://src/world/maps/Village.tscn") as PackedScene).instantiate()
+	add_child(village)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	var player := village.find_child("Player", true, false) as Player
+	var mayor := village.get_node_or_null("NPCs/MayorThomas") as NPC
+	var box: DialogueBox = DialogueManager._dialogue_box
+	_record("真实按键用例有玩家、村长和对话框", player != null and mayor != null and box != null)
+	if player == null or mayor == null or box == null:
+		village.queue_free()
+		return
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	if mayor.schedule:
+		mayor.schedule.update(10.0, TimeManager.current_day, TimeManager.current_season)
+	# Only the mayor takes part: park the other villagers (the shopkeeper wandering by
+	# would otherwise open the shop and pause the game).
+	for npc in village.get_node("NPCs").get_children():
+		if npc != mayor and npc is Node2D:
+			npc.process_mode = Node.PROCESS_MODE_DISABLED
+			(npc as Node2D).global_position += Vector2(4000, 4000)
+	var started := [0]
+	var on_started := func(_id: String): started[0] += 1
+	DialogueManager.dialogue_started.connect(on_started)
+	for key in [KEY_E, KEY_SPACE]:
+		for hold in [0, 1, 6]:  # 0 = press and release in the same frame
+			player.global_position = mayor.global_position + Vector2(0, 36)
+			player.register_nearby_npc(mayor)
+			UIManager.close_all()
+			get_tree().paused = false
+			GameManager.current_state = GameManager.GameState.PLAYING
+			started[0] = 0
+			await _wait_retalk_cooldown()
+			await _tap_key(key, hold)
+			var opened := DialogueManager.is_in_dialogue()
+			var presses := 0
+			while (box.visible or DialogueManager.is_in_dialogue()) and presses < 40:
+				presses += 1
+				box._finish_typewriter()
+				await get_tree().process_frame
+				await _tap_key(key, hold)
+			for i in 8:
+				await get_tree().physics_frame
+			var label := "%s 按住 %d 帧" % [OS.get_keycode_string(key), hold]
+			_record("%s：对话开始且关闭一次，只开始 1 次（实际 %d 次）" % [label, started[0]],
+				opened and started[0] == 1 and not DialogueManager.is_in_dialogue() and not box.visible
+				and GameManager.current_state == GameManager.GameState.PLAYING)
+			DialogueManager.force_end_dialogue()
+			await get_tree().physics_frame
+	DialogueManager.dialogue_started.disconnect(on_started)
+	# BUG-27: the dialogue box speaker must match the NPC's own name (data/npcs.json).
+	var mismatched: Array[String] = []
+	for npc in village.get_node("NPCs").get_children():
+		if npc is NPC:
+			var dialogue_id: String = DialogueManager.DIALOGUE_ID_ALIASES.get(npc.npc_id, npc.npc_id)
+			if DialogueManager._npc_data.has(dialogue_id) and DialogueManager._get_npc_name(dialogue_id) != npc.npc_name:
+				mismatched.append("%s≠%s" % [npc.npc_name, DialogueManager._get_npc_name(dialogue_id)])
+	_record("对话框里的 NPC 名字和 NPC 本身一致 %s" % [mismatched], mismatched.is_empty())
+	player.unregister_nearby_npc(mayor)
+	village.queue_free()
+	await get_tree().process_frame
+	DialogueManager.reset()
+	GameManager.is_game_active = false
+
+
+## Esc / J did nothing outside Farm and Village (tester round 3 follow-up).
+func _exercise_map_menu_keys() -> void:
+	print("------------------------------------------------------------")
+	print("森林/海滩/矿洞/玩家房屋：Esc 打开/关闭暂停菜单，J 打开手册")
+	for path in ["res://src/world/maps/Forest.tscn", "res://src/world/maps/Beach.tscn", "res://src/world/maps/Mine.tscn", "res://src/world/maps/PlayerHouse.tscn"]:
+		var map := (load(path) as PackedScene).instantiate()
+		add_child(map)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		GameManager.is_game_active = true
+		GameManager.current_state = GameManager.GameState.PLAYING
+		get_tree().paused = false
+		var label: String = (path as String).get_file().get_basename()
+		var handler := map.find_child("MapMenuInput", true, false)
+		var menu: Control = handler.get("pause_menu") if handler else null
+		await _press_action(&"pause")
+		_record("%s：Esc 打开暂停菜单" % label, GameManager.is_paused() and menu != null and menu.visible)
+		await _press_action(&"pause")
+		_record("%s：再按 Esc 关闭暂停菜单" % label, not GameManager.is_paused() and not get_tree().paused and menu != null and not menu.visible)
+		await _press_action(&"journal")
+		_record("%s：J 打开手册" % label, UIManager.is_screen_open("journal"))
+		UIManager.close_all()
+		await get_tree().process_frame
+		map.queue_free()
+		await get_tree().process_frame
+	GameManager.is_game_active = false
+
+
+## Idle breathing is visual only: feet stay anchored, body/collision don't move,
+## and it stops cleanly when walking, swinging a tool or in a dialogue.
+func _exercise_idle_breathing() -> void:
+	print("------------------------------------------------------------")
+	print("玩家站立呼吸动画：只动贴图、脚不离地，走路/挥工具/对话时停止复原")
+	TimeManager.reset()
+	Inventory.reset_with_starter_items()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	UserSettings.set_value("accessibility", "reduce_motion", false)
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	_record("呼吸用例有玩家", player != null)
+	if player == null:
+		farm.queue_free()
+		return
+	GameManager.current_state = GameManager.GameState.PLAYING
+	var body_pos := player.global_position
+	var shape := player.get_node("CollisionShape2D") as CollisionShape2D
+	var shape_pos := shape.position
+	var max_k := 0.0
+	var feet_ok := true
+	var t_end := Time.get_ticks_msec() + 1300
+	while Time.get_ticks_msec() < t_end:
+		await get_tree().process_frame
+		var k := player.sprite.scale.y / Player.SPRITE_BASE_SCALE.y - 1.0
+		max_k = maxf(max_k, k)
+		var feet := player.sprite.position.y + Player.SPRITE_FEET_Y * player.sprite.scale.y
+		feet_ok = feet_ok and absf(feet - Player.SPRITE_FEET_Y * Player.SPRITE_BASE_SCALE.y) < 0.01 and player.sprite.scale.x == Player.SPRITE_BASE_SCALE.x
+	_record("站着不动时有呼吸（最大拉伸 %.3f）" % max_k, player.is_breathing() and max_k > 0.015 and max_k <= Player.BREATH_AMOUNT + 0.0001)
+	_record("呼吸时脚底位置不变、只拉高不变宽", feet_ok)
+	_record("呼吸不移动角色本体和碰撞体", player.global_position.distance_to(body_pos) < 0.01 and shape.position == shape_pos)
+	await _hold_action(&"move_right", 1)
+	Input.action_press(&"move_right")
+	for i in 4:
+		await get_tree().physics_frame
+	await get_tree().process_frame
+	_record("走路时呼吸停止并复原", not player.is_breathing() and player.sprite.scale == Player.SPRITE_BASE_SCALE and player.sprite.position == Vector2.ZERO)
+	Input.action_release(&"move_right")
+	for i in 4:
+		await get_tree().physics_frame
+	await get_tree().create_timer(0.4).timeout
+	_record("停下后呼吸恢复", player.is_breathing())
+	player.tool_manager.equip_tool(ToolManager.ToolType.HOE)
+	Inventory.set_selected_hotbar_index(Inventory.HOTBAR_SIZE - 1)
+	await _press_action(&"interact", 1)
+	_record("挥工具时不呼吸（挥动动画接管贴图）", not player.is_breathing())
+	await _wait_swing_over(player)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_record("挥完贴图回到原样再继续呼吸", absf(player.sprite.position.x) < 0.01 and player.sprite.scale.x == Player.SPRITE_BASE_SCALE.x)
+	GameManager.current_state = GameManager.GameState.DIALOGUE
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_record("对话时呼吸停止并复原", not player.is_breathing() and player.sprite.scale == Player.SPRITE_BASE_SCALE and player.sprite.position == Vector2.ZERO)
+	GameManager.current_state = GameManager.GameState.PLAYING
+	UserSettings.set_value("accessibility", "reduce_motion", true)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_record("减少动态时不呼吸", not player.is_breathing() and player.sprite.scale == Player.SPRITE_BASE_SCALE)
+	UserSettings.set_value("accessibility", "reduce_motion", false)
+	FarmState.reset()
+	farm.queue_free()
+	await get_tree().process_frame
+
+
+func _visible_prompts() -> Array:
+	var out := []
+	for prompt in get_tree().root.find_children("InteractPrompt", "Node2D", true, false):
+		if (prompt as Node2D).is_visible_in_tree():
+			out.append(prompt)
+	return out
+
+
+## Interaction prompt bubble: shows above the one target E would act on, hides on
+## leave / dialogue / pause, follows the theme and the current key binding.
+func _exercise_interact_prompt() -> void:
+	print("------------------------------------------------------------")
+	print("交互提示气泡：进入范围显示、离开隐藏、对话/暂停时隐藏、只显示一个、跟随主题和按键")
+	DialogueManager.reset()
+	TimeManager.reset()
+	TimeManager.current_time = 10.0
+	var village := (load("res://src/world/maps/Village.tscn") as PackedScene).instantiate()
+	add_child(village)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	var player := village.find_child("Player", true, false) as Player
+	var mayor := village.get_node_or_null("NPCs/MayorThomas") as NPC
+	var farmer := village.get_node_or_null("NPCs/John") as NPC
+	_record("气泡用例有玩家、村长、农夫", player != null and mayor != null and farmer != null)
+	if player == null or mayor == null or farmer == null:
+		village.queue_free()
+		return
+	for npc in village.get_node("NPCs").get_children():
+		if npc is Node2D:
+			npc.process_mode = Node.PROCESS_MODE_DISABLED
+			if npc != mayor and npc != farmer:
+				(npc as Node2D).global_position += Vector2(4000, 4000)
+	mayor.process_mode = Node.PROCESS_MODE_INHERIT
+	mayor.set_physics_process(false)
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	var prompt := mayor.get_node_or_null("InteractPrompt") as InteractPrompt
+	_record("村长身上的 E 标签换成了交互气泡", prompt != null and mayor.get_node_or_null("InteractionLabel") == null)
+	if prompt == null:
+		village.queue_free()
+		return
+	# Out of the 128 px interaction box but clear of the village exits (one sits 380 px below).
+	var far := mayor.global_position + Vector2(180, 0)
+	farmer.global_position = mayor.global_position + Vector2(2000, 0)
+	player.global_position = far
+	for i in 4:
+		await get_tree().physics_frame
+	await get_tree().process_frame
+	_record("不在范围内时不显示气泡", not prompt.visible and _visible_prompts().is_empty())
+	player.global_position = mayor.global_position + Vector2(0, 40)
+	for i in 4:
+		await get_tree().physics_frame
+	await get_tree().process_frame
+	_record("走进村长交互范围显示气泡", prompt.visible and player.npc_in_range == mayor)
+	_record("气泡显示当前交互键（Space）", prompt.key_label.text == InputManager.get_action_short_prompt(&"interact") and prompt.key_label.text == "Space")
+	_record("气泡在村长头顶上方", prompt.global_position.y < mayor.global_position.y - 30.0 and absf(prompt.global_position.x - mayor.global_position.x) < 1.0)
+	# Two NPCs in range: only the one E would talk to (the nearest) shows its bubble.
+	farmer.global_position = player.global_position + Vector2(56, 0)
+	for i in 4:
+		await get_tree().physics_frame
+	await get_tree().process_frame
+	player._refresh_nearest_npc()
+	var farmer_prompt := farmer.get_node("InteractPrompt") as InteractPrompt
+	var shown := _visible_prompts()
+	_record("两个 NPC 都在范围内时只显示一个气泡（%d 个）" % shown.size(), shown.size() == 1)
+	_record("显示的气泡属于按 E 会交谈的那个 NPC", shown.size() == 1 and (shown[0] as Node).get_parent() == player.npc_in_range)
+	farmer.global_position = mayor.global_position + Vector2(2000, 0)
+	for i in 4:
+		await get_tree().physics_frame
+	await get_tree().process_frame
+	# Theme follow
+	_record("气泡使用当前主题", prompt.bubble.theme == UIStyles.active_theme())
+	UserSettings.set_value("accessibility", "high_contrast", true)
+	await get_tree().process_frame
+	_record("切到高对比时气泡跟随主题", prompt.bubble.theme == UIStyles.active_theme() and prompt.bubble.theme != load("res://src/ui/theme/GameTheme.tres"))
+	UserSettings.set_value("accessibility", "high_contrast", false)
+	await get_tree().process_frame
+	_record("切回普通主题时气泡跟随", prompt.bubble.theme == load("res://src/ui/theme/GameTheme.tres"))
+	# Remapped key
+	var saved_bindings := InputManager.serialize_bindings()
+	var f_key := InputEventKey.new()
+	f_key.physical_keycode = KEY_F
+	var remapped := InputManager.remap_action(&"interact", f_key)
+	await get_tree().process_frame
+	_record("改键后气泡显示新按键（%s）" % prompt.key_label.text, remapped and prompt.key_label.text == "F")
+	InputManager.apply_serialized_bindings(saved_bindings)
+	prompt._refresh_key()
+	_record("恢复按键后气泡回到 Space", prompt.key_label.text == "Space")
+	# Dialogue hides it; it comes back afterwards.
+	var box: DialogueBox = DialogueManager._dialogue_box
+	await _press_action(&"interact")
+	await get_tree().process_frame
+	_record("对话中隐藏气泡", DialogueManager.is_in_dialogue() and not prompt.visible and _visible_prompts().is_empty())
+	var steps := 0
+	while box.visible and steps < 30:
+		steps += 1
+		box._finish_typewriter()
+		await _press_action(&"interact")
+	for i in 4:
+		await get_tree().physics_frame
+	await get_tree().process_frame
+	_record("对话结束后气泡重新出现", not DialogueManager.is_in_dialogue() and prompt.visible)
+	GameManager.pause_game()
+	await get_tree().process_frame
+	_record("暂停时隐藏气泡", not prompt.visible or not prompt.is_visible_in_tree() or InteractPrompt.current() == null)
+	GameManager.resume_game()
+	UIManager.open_screen("journal", {})
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_record("打开手册时隐藏气泡", InteractPrompt.current() == null)
+	UIManager.close_all()
+	await get_tree().process_frame
+	await get_tree().process_frame
+	player.global_position = far
+	for i in 4:
+		await get_tree().physics_frame
+	await get_tree().process_frame
+	_record("离开范围后隐藏气泡", not prompt.visible)
+	village.queue_free()
+	await get_tree().process_frame
+	DialogueManager.reset()
+
+	# Farm objects get the same bubble (shipping bin, workbench, coop, barn).
+	var farm = await _spawn_farm()
+	var farm_player := farm.find_child("Player", true, false) as Player
+	GameManager.current_state = GameManager.GameState.PLAYING
+	for target_name in ["ShippingBin", "Workbench", "Coop", "Barn"]:
+		var target := farm.find_child(target_name, true, false) as Node2D
+		var target_prompt := target.get_node_or_null("InteractPrompt") as InteractPrompt if target else null
+		var area_shape: CollisionShape2D = null
+		var area: Area2D = target if target is Area2D else target.get_node_or_null("InteractionArea") as Area2D if target else null
+		if area:
+			for child in area.get_children():
+				if child is CollisionShape2D:
+					area_shape = child
+					break
+		var ok := target_prompt != null and area_shape != null
+		if ok:
+			farm_player.global_position = area_shape.global_position
+			for i in 4:
+				await get_tree().physics_frame
+			await get_tree().process_frame
+			ok = target_prompt.visible and _visible_prompts().size() == 1 and target_prompt.global_position.y < target.global_position.y + 8.0
+			farm_player.global_position = area_shape.global_position + Vector2(0, 600)
+			for i in 4:
+				await get_tree().physics_frame
+			await get_tree().process_frame
+			ok = ok and not target_prompt.visible
+		_record("%s 走近显示气泡（%s）、离开隐藏" % [target_name, target_prompt.text_label.text if target_prompt else "-"], ok)
+	# Fishing spot: the bubble is always there (BUG-38); its verb follows the tool
+	# ("装水" with the watering can, "钓鱼" otherwise; E explains the rod).
+	var spot := farm.find_child("FishingSpot", true, false) as Node2D
+	var spot_prompt := spot.get_node_or_null("InteractPrompt") as InteractPrompt if spot else null
+	if spot_prompt:
+		farm_player.global_position = spot.global_position
+		farm_player.tool_manager.equip_tool(ToolManager.ToolType.WATERING_CAN)
+		for i in 4:
+			await get_tree().physics_frame
+		await get_tree().process_frame
+		var with_can := spot_prompt.visible and spot_prompt.text_label.text == "装水"
+		farm_player.tool_manager.equip_tool(ToolManager.ToolType.HOE)
+		await get_tree().process_frame
+		await get_tree().process_frame
+		_record("钓鱼点：拿水壶显示“装水”气泡，拿锄头显示“钓鱼”", with_can and spot_prompt.visible and spot_prompt.text_label.text == "钓鱼")
+		farm_player.global_position = spot.global_position + Vector2(0, 600)
+	else:
+		_record("钓鱼点有交互气泡", false)
+	FarmState.reset()
+	farm.queue_free()
+	await get_tree().process_frame
+	# Player house kitchen
+	var house := (load("res://src/world/maps/PlayerHouse.tscn") as PackedScene).instantiate()
+	add_child(house)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	GameManager.current_state = GameManager.GameState.PLAYING
+	var house_player := house.find_child("Player", true, false) as Player
+	var kitchen: Node2D = null
+	for node in house.find_children("*", "Area2D", true, false):
+		if node is Kitchen:
+			kitchen = node
+			break
+	var kitchen_prompt := kitchen.get_node_or_null("InteractPrompt") as InteractPrompt if kitchen else null
+	var kitchen_ok := kitchen_prompt != null and house_player != null
+	if kitchen_ok:
+		house_player.global_position = kitchen.global_position
+		for i in 4:
+			await get_tree().physics_frame
+		await get_tree().process_frame
+		kitchen_ok = kitchen_prompt.visible and kitchen_prompt.text_label.text == "烹饪"
+	_record("厨房走近显示“烹饪”气泡", kitchen_ok)
+	house.queue_free()
+	await get_tree().process_frame
+	GameManager.is_game_active = false
+
+
+func _tap_key(keycode: Key, hold_frames: int) -> void:
+	var down := InputEventKey.new()
+	down.keycode = keycode
+	down.physical_keycode = keycode
+	down.pressed = true
+	Input.parse_input_event(down)
+	for i in hold_frames:
+		await get_tree().process_frame
+	var up := down.duplicate() as InputEventKey
+	up.pressed = false
+	Input.parse_input_event(up)
+	for i in 6:
+		await get_tree().physics_frame
+
+
+## A new talk right after a dialogue closed is ignored for a moment (Player.DIALOGUE_RETALK_COOLDOWN_MS).
+func _wait_retalk_cooldown() -> void:
+	await get_tree().create_timer(0.65).timeout
+
+
+func _hold_action(action: StringName, frames: int) -> void:
+	var down := InputEventAction.new()
+	down.action = action
+	down.pressed = true
+	Input.parse_input_event(down)
+	for i in frames:
+		await get_tree().physics_frame
+	var up := InputEventAction.new()
+	up.action = action
+	up.pressed = false
+	Input.parse_input_event(up)
+	for i in 2:
+		await get_tree().physics_frame
+
+
+## BUG-21: villagers crowding the player by the fountain made WASD look dead.
+## A villager still blocks a single step, but pushing into one lets the player squeeze past.
+func _exercise_npc_crowd_squeeze() -> void:
+	print("------------------------------------------------------------")
+	print("BUG-21 村民挡路：一步撞上会挡住，持续推挤能挤过去，分开后恢复碰撞；村民按 Y 排序")
+	TimeManager.reset()
+	TimeManager.current_time = 10.0
+	var village := (load("res://src/world/maps/Village.tscn") as PackedScene).instantiate()
+	add_child(village)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	var player := village.find_child("Player", true, false) as Player
+	var mayor := village.get_node_or_null("NPCs/MayorThomas") as NPC
+	_record("挤过村民用例有玩家和村长", player != null and mayor != null)
+	if player == null or mayor == null:
+		village.queue_free()
+		return
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	var npcs := village.get_node("NPCs") as Node2D
+	_record("村民和玩家同层按 Y 排序（村民 z=%d，玩家 z=%d）" % [mayor.z_index, player.z_index],
+		npcs.y_sort_enabled and village.y_sort_enabled and mayor.z_index == player.z_index)
+	mayor.set_physics_process(false)  # hold the mayor still so only the player moves
+	player.global_position = mayor.global_position + Vector2(40, 4)
+	player.velocity = Vector2.ZERO
+	await get_tree().physics_frame
+	await _hold_action(&"move_left", 6)
+	_record("短按 A 撞上村长会被挡住（x 差 %.0f）" % (player.global_position.x - mayor.global_position.x),
+		player.global_position.x - mayor.global_position.x > 15.0)
+	await _hold_action(&"move_left", 50)
+	_record("持续按 A 能从村长身边挤过去（x 差 %.0f）" % (player.global_position.x - mayor.global_position.x),
+		player.global_position.x < mayor.global_position.x - 20.0)
+	await _hold_action(&"move_left", 20)
+	var far_ok := player.global_position.distance_to(mayor.global_position) > Player.NPC_SQUEEZE_CLEAR_DISTANCE
+	_record("走开后恢复对村长的碰撞", far_ok and not player.get_collision_exceptions().has(mayor))
+	player.velocity = Vector2.ZERO
+	player.global_position = mayor.global_position + Vector2(-60, 4)
+	var npc_collision := player.move_and_collide(Vector2(100, 0))
+	_record("恢复后再撞村长仍被挡住", npc_collision != null and npc_collision.get_collider() == mayor)
+	village.queue_free()
+	await get_tree().process_frame
+
+
+func _tilled_coords() -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for y in FarmState.GRID_HEIGHT:
+		for x in FarmState.GRID_WIDTH:
+			var c := Vector2i(x, y)
+			if int(FarmState.get_cell(c).get("state", FarmState.UNTILLED)) != FarmState.UNTILLED:
+				out.append(c)
+	return out
+
+
+func _wait_swing_over(player: Player) -> void:
+	var guard := 0
+	while player.is_tool_locked() and guard < 120:
+		await get_tree().physics_frame
+		guard += 1
+
+
+## Hoe target tile: one press per direction must till the 4 neighbouring plots
+## (it used to till the player's own plot twice from a plot's top-left area, and
+## nothing from a plot centre). Then: no walking during the swing, walking right after.
+func _exercise_hoe_facing_and_swing_lock() -> void:
+	print("------------------------------------------------------------")
+	print("锄头四个方向各锄一次 = 四块相邻的地；挥锄时站定，挥完能走")
+	TimeManager.reset()
+	Inventory.reset_with_starter_items()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	_record("锄地场景有玩家", player != null)
+	if player == null:
+		farm.queue_free()
+		return
+	player.tool_manager.equip_tool(ToolManager.ToolType.HOE)
+	Inventory.set_selected_hotbar_index(Inventory.HOTBAR_SIZE - 1)
+	var centre := Vector2i(4, 3)
+	var expected: Array[Vector2i] = [centre + Vector2i.UP, centre + Vector2i.DOWN, centre + Vector2i.LEFT, centre + Vector2i.RIGHT]
+	var plot_centre: Vector2 = farm.global_position + farm.PLOT_ORIGIN + Vector2(centre) * farm.PLOT_SPACING
+	var dirs := [Player.Direction.UP, Player.Direction.RIGHT, Player.Direction.DOWN, Player.Direction.LEFT]
+	for offset in [Vector2(-10, -10), Vector2.ZERO, Vector2(12, 14), Vector2(-20, 18)]:
+		FarmState.reset()
+		StaminaManager.set_stamina(StaminaManager.max_stamina)
+		player.global_position = plot_centre + offset
+		player.velocity = Vector2.ZERO
+		await get_tree().physics_frame
+		for d in dirs:
+			player.current_direction = d
+			await _press_action(&"interact", 2)
+			await _wait_swing_over(player)
+		var tilled := _tilled_coords()
+		var ok := tilled.size() == 4
+		for c in expected:
+			ok = ok and tilled.has(c)
+		_record("站在地块 %s 偏移 %s：四向各锄一次锄出四块相邻地（实际 %s）" % [centre, offset, tilled], ok)
+
+	# Swing lock: hold right, press interact; no movement during the swing, then walks on.
+	FarmState.reset()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	player.global_position = plot_centre
+	player.current_direction = Player.Direction.RIGHT
+	await get_tree().physics_frame
+	var hold := InputEventAction.new()
+	hold.action = &"move_right"
+	hold.pressed = true
+	var tap := InputEventAction.new()
+	tap.action = &"interact"
+	tap.pressed = true
+	Input.parse_input_event(tap)
+	Input.parse_input_event(hold)
+	var wait := 0
+	while not player.is_tool_locked() and wait < 5:
+		await get_tree().physics_frame
+		wait += 1
+	var locked_at := player.global_position
+	_record("按下锄头后进入挥动锁定", player.is_tool_locked())
+	var tap_up := InputEventAction.new()
+	tap_up.action = &"interact"
+	tap_up.pressed = false
+	Input.parse_input_event(tap_up)
+	for i in 8:
+		await get_tree().physics_frame
+	_record("挥锄期间按住 D 不移动（%.1fpx）" % player.global_position.distance_to(locked_at),
+		player.is_tool_locked() and player.global_position.distance_to(locked_at) < 0.5)
+	await _wait_swing_over(player)
+	var after_lock := player.global_position
+	for i in 15:
+		await get_tree().physics_frame
+	_record("挥完锄头继续按住 D 立刻能走（%.1fpx）" % (player.global_position.x - after_lock.x),
+		player.global_position.x - after_lock.x > 20.0)
+	var hold_up := InputEventAction.new()
+	hold_up.action = &"move_right"
+	hold_up.pressed = false
+	Input.parse_input_event(hold_up)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var stop_at := player.global_position
+	await _press_action(&"move_up", 12)
+	_record("挥锄后其它方向键正常（上移 %.1fpx）" % (stop_at.y - player.global_position.y),
+		stop_at.y - player.global_position.y > 15.0)
+	await _wait_swing_over(player)
+	var tilled_count := _tilled_coords().size()
+	await _press_action(&"interact", 2)
+	_record("挥完再按 E 还能锄地", _tilled_coords().size() == tilled_count + 1)
+	await _wait_swing_over(player)
+	FarmState.reset()
+	farm.queue_free()
+	await get_tree().process_frame
+
+
+## Opening field debris: new game scatters weed/stone/twig/stump, tools drop
+## fiber/stone/wood, and a save with no debris field stays clear.
+## Saves only under a temporary save_dir. Never reads or writes user://saves/.
+func _exercise_opening_debris() -> void:
+	print("------------------------------------------------------------")
+	print("开局清田：新档杂物、对的工具才掉落、旧档没有杂物字段")
+	var enabled := DebugLaunchScript.parse(PackedStringArray(["--new-game"]), true)
+	var release := DebugLaunchScript.parse(PackedStringArray(["--new-game"]), false)
+	var plain := DebugLaunchScript.parse(PackedStringArray(), true)
+	_record(
+		"debug 的 --new-game 会开新档且不指定读档槽",
+		bool(enabled.get("new_game", false)) and int(enabled.get("slot", 0)) == -1
+	)
+	_record("正式版忽略 --new-game", not bool(release.get("new_game", false)))
+	_record("没有 --new-game 不会开新档", not bool(plain.get("new_game", false)))
+	var legacy_dir := DebugLaunchScript.DEBUG_NEW_GAME_SAVE_DIR
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(legacy_dir))
+	var planted := FileAccess.open(legacy_dir + "save_0.json", FileAccess.WRITE)
+	var planted_ok := planted != null
+	if planted != null:
+		planted.store_string("{\"day\":7}")
+		planted.close()
+	var dir_before_flag := SaveManager.save_dir
+	DebugLaunchScript.apply_debug_new_game_save_dir()
+	var first_dir := str(SaveManager.save_dir)
+	DebugLaunchScript.apply_debug_new_game_save_dir()
+	var second_dir := str(SaveManager.save_dir)
+	_record(
+		"--new-game 每次使用独立调试目录，并清掉固定目录里的旧档",
+		planted_ok
+			and first_dir != second_dir
+			and first_dir.begins_with("user://debug_tmp_saves_")
+			and second_dir.begins_with("user://debug_tmp_saves_")
+			and first_dir != "user://saves/"
+			and second_dir != "user://saves/"
+			and first_dir != legacy_dir
+			and second_dir != legacy_dir
+			and not FileAccess.file_exists(legacy_dir + "save_0.json")
+			and not FileAccess.file_exists(second_dir + "save_0.json")
+	)
+	SaveManager.save_dir = dir_before_flag
+
+	var prev_dir := SaveManager.save_dir
+	var prev_slot := SaveManager.get_current_slot()
+	var tmp_dir := "user://debris_test_saves_%d/" % Time.get_ticks_usec()
+	SaveManager.save_dir = tmp_dir
+	_record(
+		"清田测试只用临时 save_dir",
+		SaveManager.save_dir.begins_with("user://debris_test_saves_")
+			and not SaveManager.save_dir.begins_with("user://saves")
+	)
+
+	TimeManager.reset()
+	Inventory.reset_with_starter_items()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	FarmState.reset()
+
+	var counts := {"weed": 0, "stone": 0, "twig": 0, "stump": 0}
+	var debris_cells := 0
+	var edge_only := true
+	for y in FarmState.GRID_HEIGHT:
+		for x in FarmState.GRID_WIDTH:
+			var coord := Vector2i(x, y)
+			var kind := FarmState.get_debris(coord)
+			if kind.is_empty():
+				continue
+			debris_cells += 1
+			counts[kind] = int(counts.get(kind, 0)) + 1
+			if not FarmState.is_field_edge(coord):
+				edge_only = false
+	_record("新档有 %d 格杂物" % debris_cells, debris_cells == FarmState.OPENING_DEBRIS_COUNT)
+	_record("杂物都在田外圈", edge_only and debris_cells > 0)
+	var path_clear := true
+	for path_y in FarmState.GRID_HEIGHT:
+		for path_x in FarmState.GRID_WIDTH:
+			var blocked := Vector2i(path_x, path_y)
+			if FarmState.is_opening_blocked_cell(blocked) and not FarmState.get_debris(blocked).is_empty():
+				path_clear = false
+	_record("出口和小路的格子上没有杂物", path_clear)
+	_record(
+		"杂草、石头、树枝、树桩都有",
+		int(counts["weed"]) > 0 and int(counts["stone"]) > 0 and int(counts["twig"]) > 0 and int(counts["stump"]) > 0
+	)
+	var weed := _find_debris_cell("weed")
+	var stone := _find_debris_cell("stone")
+	var twig := _find_debris_cell("twig")
+	var stump := _find_debris_cell("stump")
+	_record("四种杂物都能找到格子", weed.x >= 0 and stone.x >= 0 and twig.x >= 0 and stump.x >= 0)
+	_record("有杂草时翻地失败", not FarmState.till(weed))
+	_record("有杂草时播种失败且不扣种子", not FarmState.plant(weed, "turnip_seed") and Inventory.get_item_count("turnip_seed") == 15)
+
+	for kind in ["weed", "stone", "twig", "stump"]:
+		var variant := int(FarmState.get_cell(_find_debris_cell(kind)).get("debris_variant", 0))
+		var art := FarmPlot.resolve_debris_texture_path(kind, variant)
+		var private_on := art.begins_with("res://assets/private/")
+		var fallback_ok := art.ends_with("fiber.png") or art.ends_with("stone.png") or art.ends_with("wood.png")
+		var art_label := "私有" if private_on else "物品图"
+		_record(
+			"%s 贴图可用（%s）" % [kind, art_label],
+			art != "" and ResourceLoader.exists(art) and (private_on or fallback_ok)
+		)
+
+	var farm_node := await _spawn_farm()
+	var farm := farm_node as Farm
+	_record("清田场景有农场", farm != null)
+	if farm == null:
+		_wipe_debris_test_saves(tmp_dir)
+		SaveManager.save_dir = prev_dir
+		SaveManager.reset_session(prev_slot)
+		return
+
+	var weed_plot := farm.farm_plots.get(weed) as FarmPlot
+	var stump_plot := farm.farm_plots.get(stump) as FarmPlot
+	var weed_sprite: Sprite2D = null
+	if weed_plot != null:
+		weed_sprite = weed_plot.get_node_or_null("DebrisSprite") as Sprite2D
+	var stump_sprite: Sprite2D = null
+	if stump_plot != null:
+		stump_sprite = stump_plot.get_node_or_null("DebrisSprite") as Sprite2D
+	var stump_shape := _debris_shape(stump_plot)
+	var weed_shape := _debris_shape(weed_plot)
+	var stump_rect: RectangleShape2D = null
+	if stump_shape != null:
+		stump_rect = stump_shape.shape as RectangleShape2D
+	var stump_art := ""
+	if stump_sprite != null and stump_sprite.texture != null:
+		stump_art = FarmPlot.resolve_debris_texture_path("stump", int(FarmState.get_cell(stump).get("debris_variant", 0)))
+	_record("杂草画在格子上", weed_sprite != null and weed_sprite.visible and weed_sprite.texture != null)
+	var stump_place := {}
+	if stump_sprite != null and stump_sprite.texture != null:
+		stump_place = FarmPlot.debris_sprite_placement(stump_sprite.texture, stump_sprite.scale.y, FarmPlot.SIZE * 0.5)
+	var stump_tex_bottom := 0.0
+	if stump_sprite != null and stump_sprite.texture != null:
+		stump_tex_bottom = stump_sprite.position.y + (stump_sprite.offset.y + stump_sprite.texture.get_height() * 0.5) * stump_sprite.scale.y
+	var stump_foot := 0.0
+	if stump_sprite != null:
+		stump_foot = stump_sprite.position.y
+	var sort_player := farm.find_child("Player", true, false) as CanvasItem
+	_record(
+		"树桩脚底是排序原点，贴图底边仍贴着格子底边",
+		stump_sprite != null and stump_sprite.visible and stump_sprite.texture != null
+			and not stump_place.is_empty()
+			and is_equal_approx(stump_sprite.position.y, float(stump_place.position_y))
+			and is_equal_approx(stump_sprite.offset.y, float(stump_place.offset_y))
+			and is_equal_approx(stump_tex_bottom, FarmPlot.SIZE * 0.5)
+			and (not stump_art.begins_with("res://assets/private/") or (
+				float(stump_place.inset_px) > 0.0 and stump_sprite.position.y < FarmPlot.SIZE * 0.5
+			))
+			and (not stump_art.begins_with("res://assets/private/") or stump_sprite.scale == Vector2.ONE)
+	)
+	_record(
+		"树桩和玩家同 z，南侧人在前、北侧桩仍挡住",
+		stump_sprite != null and sort_player != null
+			and not stump_sprite.z_as_relative
+			and stump_sprite.z_index == sort_player.z_index
+			and farm.y_sort_enabled
+			and farm.tilled_area.y_sort_enabled
+			and stump_plot.y_sort_enabled
+			and FarmPlot.actor_draws_in_front_of_debris(stump_foot + 8.0, stump_foot)
+			and not FarmPlot.actor_draws_in_front_of_debris(stump_foot - 8.0, stump_foot)
+			and FarmPlot.actor_draws_in_front_of_debris(2.0, 1.0) == Farm.actor_draws_in_front_of_house(2.0, 1.0)
+	)
+	var weed_place := {}
+	if weed_sprite != null and weed_sprite.texture != null:
+		weed_place = FarmPlot.debris_sprite_placement(weed_sprite.texture, weed_sprite.scale.y, FarmPlot.SIZE * 0.5)
+	_record(
+		"杂草石枝和树桩用同一套脚底排序",
+		weed_sprite != null and not weed_place.is_empty()
+			and is_equal_approx(weed_sprite.position.y, float(weed_place.position_y))
+			and is_equal_approx(weed_sprite.offset.y, float(weed_place.offset_y))
+			and weed_sprite.z_index == stump_sprite.z_index
+			and weed_sprite.z_as_relative == stump_sprite.z_as_relative
+	)
+	_record(
+		"树桩碰撞是一格",
+		stump_shape != null and not stump_shape.disabled and stump_rect != null
+			and stump_rect.size == Vector2(FarmPlot.SIZE, FarmPlot.SIZE)
+			and stump_shape.position == FarmPlot.STUMP_BLOCK_OFFSET
+	)
+	_record("杂草不挡路", weed_shape != null and weed_shape.disabled)
+
+	var seeds := Inventory.get_item_count("turnip_seed")
+	farm.perform_farm_action(weed, ToolManager.ToolType.NONE)
+	_record(
+		"手里拿种子清不掉杂草",
+		FarmState.get_debris(weed) == "weed" and Inventory.get_item_count("turnip_seed") == seeds
+	)
+	var stamina := StaminaManager.current_stamina
+	var hoe_weed := farm.perform_farm_action(weed, ToolManager.ToolType.HOE)
+	_record(
+		"锄头清不了杂草，也不扣体力",
+		not bool(hoe_weed.get("success", true))
+			and str(hoe_weed.get("message", "")) == "杂草要用镰刀清除"
+			and FarmState.get_debris(weed) == "weed"
+			and StaminaManager.current_stamina == stamina
+	)
+	var axe_stone := farm.perform_farm_action(stone, ToolManager.ToolType.AXE)
+	_record(
+		"斧头清不了石头",
+		not bool(axe_stone.get("success", true))
+			and str(axe_stone.get("message", "")) == "石头要用镐子清除"
+			and FarmState.get_debris(stone) == "stone"
+			and StaminaManager.current_stamina == stamina
+	)
+	var pick_twig := farm.perform_farm_action(twig, ToolManager.ToolType.PICKAXE)
+	_record(
+		"镐子清不了树枝",
+		not bool(pick_twig.get("success", true))
+			and str(pick_twig.get("message", "")) == "树枝要用斧头清除"
+			and FarmState.get_debris(twig) == "twig"
+			and StaminaManager.current_stamina == stamina
+	)
+	var sickle_stump := farm.perform_farm_action(stump, ToolManager.ToolType.SICKLE)
+	_record(
+		"镰刀清不了树桩",
+		not bool(sickle_stump.get("success", true))
+			and str(sickle_stump.get("message", "")) == "树桩要用斧头清除"
+			and FarmState.get_debris(stump) == "stump"
+			and StaminaManager.current_stamina == stamina
+	)
+
+	var player := farm.find_child("Player", true, false) as Player
+	_record("清田场景有玩家", player != null)
+	if player != null:
+		var wrong_swings := [
+			{"coord": weed, "tool": ToolManager.ToolType.AXE, "message": "杂草要用镰刀清除"},
+			{"coord": weed, "tool": ToolManager.ToolType.PICKAXE, "message": "杂草要用镰刀清除"},
+			{"coord": weed, "tool": ToolManager.ToolType.HOE, "message": "杂草要用镰刀清除"},
+			{"coord": stone, "tool": ToolManager.ToolType.HOE, "message": "石头要用镐子清除"},
+			{"coord": stone, "tool": ToolManager.ToolType.AXE, "message": "石头要用镐子清除"},
+			{"coord": stone, "tool": ToolManager.ToolType.WATERING_CAN, "message": "石头要用镐子清除"},
+			{"coord": twig, "tool": ToolManager.ToolType.HOE, "message": "树枝要用斧头清除"},
+			{"coord": stump, "tool": ToolManager.ToolType.SICKLE, "message": "树桩要用斧头清除"},
+		]
+		for swing in wrong_swings:
+			var coord: Vector2i = swing["coord"]
+			var kind_before := FarmState.get_debris(coord)
+			var state_before := int(FarmState.get_cell(coord).get("state", -1))
+			_clear_toasts()
+			player.tool_manager.equip_tool(int(swing["tool"]))
+			player.global_position = farm.global_position + farm.PLOT_ORIGIN + Vector2(coord) * farm.PLOT_SPACING
+			player.current_direction = _debris_outward_direction(coord)
+			player.velocity = Vector2.ZERO
+			var stam_before := StaminaManager.current_stamina
+			player._use_tool_on_target()
+			_record(
+				"站在%s上朝田外：%s" % [kind_before, str(swing["message"])],
+				_toast_contains(str(swing["message"]))
+					and not _toast_contains("这里不能耕地")
+					and FarmState.get_debris(coord) == kind_before
+					and int(FarmState.get_cell(coord).get("state", -1)) == state_before
+					and is_equal_approx(StaminaManager.current_stamina, stam_before)
+			)
+		_clear_toasts()
+		player.tool_manager.equip_tool(ToolManager.ToolType.HOE)
+		var stone_from: Vector2i = stone + _debris_inward_step(stone)
+		player.global_position = farm.global_position + farm.PLOT_ORIGIN + Vector2(stone_from) * farm.PLOT_SPACING
+		player.current_direction = _direction_of_step(stone - stone_from)
+		player.velocity = Vector2.ZERO
+		var face_stam := StaminaManager.current_stamina
+		player._use_tool_on_target()
+		_record(
+			"面朝田内石头用锄头是石头要用镐子清除",
+			_toast_contains("石头要用镐子清除")
+				and not _toast_contains("这里不能耕地")
+				and FarmState.get_debris(stone) == "stone"
+				and is_equal_approx(StaminaManager.current_stamina, face_stam)
+		)
+		_clear_toasts()
+		player.tool_manager.equip_tool(ToolManager.ToolType.SICKLE)
+		var stump_from: Vector2i = stump + _debris_inward_step(stump)
+		player.global_position = farm.global_position + farm.PLOT_ORIGIN + Vector2(stump_from) * farm.PLOT_SPACING
+		player.current_direction = _direction_of_step(stump - stump_from)
+		player.velocity = Vector2.ZERO
+		face_stam = StaminaManager.current_stamina
+		player._use_tool_on_target()
+		_record(
+			"面朝树桩用镰刀仍是树桩要用斧头清除",
+			_toast_contains("树桩要用斧头清除")
+				and FarmState.get_debris(stump) == "stump"
+				and is_equal_approx(StaminaManager.current_stamina, face_stam)
+		)
+		_clear_toasts()
+		player.tool_manager.equip_tool(ToolManager.ToolType.HOE)
+		player.global_position = farm.global_position + farm.PLOT_ORIGIN + Vector2(-2.4, 3) * farm.PLOT_SPACING
+		player.current_direction = Player.Direction.LEFT
+		player.velocity = Vector2.ZERO
+		var off_stam := StaminaManager.current_stamina
+		player._use_tool_on_target()
+		_record(
+			"田外草地锄头仍提示这里不能耕地",
+			_toast_contains("这里不能耕地")
+				and not _toast_contains("要用")
+				and is_equal_approx(StaminaManager.current_stamina, off_stam)
+		)
+		_clear_toasts()
+		player.tool_manager.equip_tool(ToolManager.ToolType.AXE)
+		player._use_tool_on_target()
+		_record(
+			"田外草地斧头不冒杂物专属提示",
+			not _toast_contains("要用") and not _toast_contains("这里不能耕地")
+		)
+		_clear_toasts()
+		var ridge := Vector2i(3, 0)
+		player.tool_manager.equip_tool(ToolManager.ToolType.HOE)
+		player.global_position = farm.global_position + farm.PLOT_ORIGIN + Vector2(ridge) * farm.PLOT_SPACING
+		player.current_direction = Player.Direction.UP
+		player.velocity = Vector2.ZERO
+		var ridge_state := int(FarmState.get_cell(ridge).get("state", -1))
+		var ridge_stam := StaminaManager.current_stamina
+		player._use_tool_on_target()
+		_record(
+			"空地朝田外锄头不翻脚下那格",
+			FarmState.get_debris(ridge).is_empty()
+				and _toast_contains("这里不能耕地")
+				and int(FarmState.get_cell(ridge).get("state", -1)) == ridge_state
+				and is_equal_approx(StaminaManager.current_stamina, ridge_stam)
+		)
+		_clear_toasts()
+
+	var fiber_before := Inventory.get_item_count("fiber")
+	farm.perform_farm_action(weed, ToolManager.ToolType.SICKLE)
+	_record(
+		"镰刀清草得到纤维",
+		FarmState.get_debris(weed).is_empty() and Inventory.get_item_count("fiber") == fiber_before + 1
+			and is_equal_approx(StaminaManager.current_stamina, stamina - 2.0)
+	)
+	_record("清掉后杂草贴图隐藏", weed_sprite != null and not weed_sprite.visible)
+	stamina = StaminaManager.current_stamina
+	var stone_before := Inventory.get_item_count("stone")
+	farm.perform_farm_action(stone, ToolManager.ToolType.PICKAXE)
+	_record(
+		"镐子清石头得到石头",
+		FarmState.get_debris(stone).is_empty() and Inventory.get_item_count("stone") == stone_before + 1
+			and is_equal_approx(StaminaManager.current_stamina, stamina - 2.0)
+	)
+	stamina = StaminaManager.current_stamina
+	var wood_before := Inventory.get_item_count("wood")
+	farm.perform_farm_action(twig, ToolManager.ToolType.AXE)
+	_record(
+		"斧头清树枝得到木材",
+		FarmState.get_debris(twig).is_empty() and Inventory.get_item_count("wood") == wood_before + 1
+			and is_equal_approx(StaminaManager.current_stamina, stamina - 2.0)
+	)
+	stamina = StaminaManager.current_stamina
+	wood_before = Inventory.get_item_count("wood")
+	farm.perform_farm_action(stump, ToolManager.ToolType.AXE)
+	farm.perform_farm_action(stump, ToolManager.ToolType.AXE)
+	_record(
+		"树桩砍两下还在，不掉木头",
+		FarmState.get_debris(stump) == "stump"
+			and int(FarmState.get_cell(stump).get("debris_hits", 0)) == 2
+			and Inventory.get_item_count("wood") == wood_before
+			and is_equal_approx(StaminaManager.current_stamina, stamina - 4.0)
+			and stump_sprite != null and stump_sprite.visible
+	)
+	farm.perform_farm_action(stump, ToolManager.ToolType.AXE)
+	_record(
+		"树桩第三下得到木材并消失",
+		FarmState.get_debris(stump).is_empty() and Inventory.get_item_count("wood") == wood_before + 1
+			and is_equal_approx(StaminaManager.current_stamina, stamina - 6.0)
+			and stump_sprite != null and not stump_sprite.visible
+			and stump_shape != null and stump_shape.disabled
+	)
+
+	var cleared_snapshot := FarmState.get_save_state()
+	FarmState.reset()
+	_record("杂物随存档恢复", FarmState.load_save_state(_json_round_trip(cleared_snapshot))
+		and FarmState.get_debris(weed).is_empty() and FarmState.get_debris(stone).is_empty()
+		and FarmState.count_debris() == debris_cells - 4)
+
+	FarmState.reset()
+	var fresh := FarmState.get_save_state()
+	SaveManager.reset_session(0)
+	var saved := SaveManager.save_game(0)
+	var save_path := SaveManager.get_save_path(0)
+	_record(
+		"新档杂物写进临时存档",
+		saved and save_path.begins_with(tmp_dir) and FileAccess.file_exists(save_path)
+	)
+	var loaded := {}
+	var applied := false
+	if saved:
+		loaded = SaveManager.load_snapshot(0)
+		FarmState.reset()
+		applied = not loaded.is_empty() and SaveManager.apply_global_snapshot(loaded)
+	var same_layout := applied
+	if applied:
+		for raw in fresh.get("cells", []):
+			var coord := Vector2i(int(raw.get("x", -1)), int(raw.get("y", -1)))
+			if FarmState.get_debris(coord) != str(raw.get("debris", "")):
+				same_layout = false
+				break
+			if str(raw.get("debris", "")) == "stump" and int(FarmState.get_cell(coord).get("debris_hits", -1)) != int(raw.get("debris_hits", 0)):
+				same_layout = false
+				break
+	_record("临时存档读回杂物布局", same_layout)
+
+	var legacy: Dictionary = fresh.duplicate(true)
+	var legacy_cells: Array = []
+	for raw in fresh.get("cells", []):
+		var copy: Dictionary = (raw as Dictionary).duplicate(true)
+		copy.erase("debris")
+		copy.erase("debris_hits")
+		copy.erase("debris_variant")
+		legacy_cells.append(copy)
+	legacy["cells"] = legacy_cells
+	var legacy_loaded := FarmState.load_save_state(_json_round_trip(legacy))
+	var inner := Vector2i(3, 3)
+	_record(
+		"旧档没有 debris 字段时视为无杂物，可以翻地",
+		legacy_loaded and FarmState.count_debris() == 0 and FarmState.till(inner)
+	)
+
+	farm.queue_free()
+	await get_tree().process_frame
+	_wipe_debris_test_saves(tmp_dir)
+	SaveManager.save_dir = prev_dir
+	SaveManager.reset_session(prev_slot)
+	FarmState.reset()
+	Inventory.reset_with_starter_items()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+
+
+
+func _debris_outward_direction(coord: Vector2i) -> int:
+	if coord.x == 0:
+		return Player.Direction.LEFT
+	if coord.x == FarmState.GRID_WIDTH - 1:
+		return Player.Direction.RIGHT
+	if coord.y == 0:
+		return Player.Direction.UP
+	return Player.Direction.DOWN
+
+
+func _debris_inward_step(coord: Vector2i) -> Vector2i:
+	if coord.x == 0:
+		return Vector2i.RIGHT
+	if coord.x == FarmState.GRID_WIDTH - 1:
+		return Vector2i.LEFT
+	if coord.y == 0:
+		return Vector2i.DOWN
+	return Vector2i.UP
+
+
+func _direction_of_step(step: Vector2i) -> int:
+	if step.x < 0:
+		return Player.Direction.LEFT
+	if step.x > 0:
+		return Player.Direction.RIGHT
+	if step.y < 0:
+		return Player.Direction.UP
+	return Player.Direction.DOWN
+
+
+func _find_debris_cell(kind: String) -> Vector2i:
+	for y in FarmState.GRID_HEIGHT:
+		for x in FarmState.GRID_WIDTH:
+			var coord := Vector2i(x, y)
+			if FarmState.get_debris(coord) == kind:
+				return coord
+	return Vector2i(-1, -1)
+
+
+func _debris_shape(plot: FarmPlot) -> CollisionShape2D:
+	if plot == null:
+		return null
+	var block := plot.get_node_or_null("DebrisBlock")
+	if block == null:
+		return null
+	return block.get_node_or_null("CollisionShape2D") as CollisionShape2D
+
+
+func _wipe_debris_test_saves(dir_path: String) -> void:
+	if not dir_path.begins_with("user://debris_test_saves_"):
+		return
+	var absolute := ProjectSettings.globalize_path(dir_path.trim_suffix("/"))
+	var listing := DirAccess.open(absolute)
+	if listing:
+		for file_name in listing.get_files():
+			listing.remove(file_name)
+	DirAccess.remove_absolute(absolute)
+
+
+## BUG-D1: the food shelf must leave a walk from the door to the bed, and must
+## not cover the player. Debug F sleeps into the next day; F is not an InputMap action.
+func _exercise_house_bed_path() -> void:
+	print("------------------------------------------------------------")
+	print("BUG-D1 门口到床、食物架 Y 排序、调试 F 睡觉")
+	var house := (load("res://src/world/maps/PlayerHouse.tscn") as PackedScene).instantiate() as PlayerHouse
+	add_child(house)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	var player := house.find_child("Player", true, false) as Player
+	_record("农舍有玩家", player != null)
+	if player == null:
+		house.queue_free()
+		return
+	player.set_physics_process(false)
+	player.velocity = Vector2.ZERO
+	var door: Vector2 = house.exit_area.global_position
+	var bed_zone := house.interaction_zones.get_node("BedZone") as Area2D
+	var bed: Vector2 = bed_zone.global_position
+	var atlas_ok := ResourceLoader.exists("res://assets/private/topdown_farm/interior/x4/hero_home/Interior_x4.png")
+	var shelf := house.furniture_container.get_node_or_null("FoodShelfSprite") as Node2D
+	if not atlas_ok:
+		_record("没有室内图集时不摆食物架", shelf == null)
+	else:
+		var shelf_sprite: Sprite2D = null
+		if shelf != null:
+			shelf_sprite = shelf.get_node_or_null("Sprite2D") as Sprite2D
+		_record("食物架已摆上", shelf != null and shelf_sprite != null and shelf_sprite.texture != null)
+		if shelf_sprite != null and shelf_sprite.texture != null:
+			var shelf_rect := _sprite_frame_rect(shelf_sprite)
+			var player_sprite := player.get_node("Sprite2D") as Sprite2D
+			var frame := _sprite_frame_rect(player_sprite).size
+			_record(
+				"食物架在门和床的东边",
+				shelf_rect.position.x > door.x + 40.0 and shelf_rect.position.x > bed.x + 80.0
+			)
+			_record(
+				"架子按脚底做 Y 排序",
+				house.y_sort_enabled
+					and house.furniture_container.y_sort_enabled
+					and not shelf.y_sort_enabled
+					and is_equal_approx(shelf.global_position.y, shelf_rect.end.y)
+			)
+			var zone_shape := (bed_zone.get_node("CollisionShape2D") as CollisionShape2D).shape as RectangleShape2D
+			var zone_rect := Rect2(bed - zone_shape.size * 0.5, zone_shape.size)
+			_record("睡觉判定区不和食物架重叠", not zone_rect.intersects(shelf_rect))
+			var kitchen := house.get_node("InteractionZones/Kitchen") as Node2D
+			var upgrade := house.get_node("InteractionZones/UpgradeStation") as Node2D
+			_record(
+				"灶台、门口、升级点都不在架子里",
+				not shelf_rect.has_point(kitchen.global_position)
+					and not shelf_rect.has_point(door)
+					and not shelf_rect.has_point(upgrade.global_position)
+			)
+			var start := Vector2(door.x, door.y - 10.0)
+			var mid_y := bed.y + 55.0
+			# The bed solid covers the north of the zone. Stand on the south edge, where the body fits.
+			var sleep_spot := Vector2(bed.x, zone_rect.end.y - 14.0)
+			var lane: Array[Vector2] = [start, Vector2(door.x, mid_y), Vector2(bed.x, mid_y), sleep_spot]
+			var lane_blocked := not _lane_clears_rect(lane, shelf_rect, 14.0)
+			var lane_covered := false
+			for i in range(lane.size() - 1):
+				var span := lane[i].distance_to(lane[i + 1])
+				var steps := maxi(ceili(span / 8.0), 1)
+				for s in range(steps + 1):
+					var point := lane[i].lerp(lane[i + 1], float(s) / float(steps))
+					var body_rect := Rect2(point - frame * 0.5, frame)
+					if body_rect.intersects(shelf_rect):
+						lane_covered = true
+			_record("门口到床的碰撞圆不撞上架子", not lane_blocked)
+			_record("门口到床的路上人不会和架子重叠", not lane_covered)
+			var shelf_body := shelf.get_node_or_null("ShelfCollision") as StaticBody2D
+			_record("食物架有实心碰撞且玩家会撞到世界层", shelf_body != null and (player.collision_mask & 1) != 0)
+			player.global_position = Vector2(shelf_rect.position.x - 30.0, shelf_rect.get_center().y)
+			await get_tree().physics_frame
+			var into := player.move_and_collide(Vector2(80, 0))
+			_record(
+				"不能走进食物架",
+				into != null and into.get_collider() == shelf_body
+			)
+			var front := Vector2(shelf_rect.position.x + 24.0, shelf_rect.end.y + 16.0)
+			player.global_position = front
+			await get_tree().physics_frame
+			var front_rect := _sprite_frame_rect(player_sprite)
+			var front_area := front_rect.size.x * front_rect.size.y
+			_record(
+				"站在架前时人的 Y 更大，画在架子前面",
+				player.global_position.y > shelf.global_position.y + 8.0
+			)
+			_record(
+				"站在架前不会被整个人盖住",
+				_overlap_area(front_rect, shelf_rect) < front_area * 0.5
+			)
+			# The doorway trigger loads the farm. Drop it so the walk can start on the threshold.
+			if house.exit_area.body_entered.is_connected(house._on_exit_area_entered):
+				house.exit_area.body_entered.disconnect(house._on_exit_area_entered)
+			player.global_position = start
+			player.velocity = Vector2.ZERO
+			await get_tree().physics_frame
+			var blocked_by := ""
+			for point in lane:
+				if point.distance_to(player.global_position) <= 3.0:
+					continue
+				blocked_by = _slide_clear(player, point)
+				if blocked_by != "":
+					break
+			_record("从门口走到床没有撞上（%s）" % blocked_by, blocked_by == "")
+			for i in 4:
+				await get_tree().physics_frame
+			var in_zone := house._in_bed_zone
+			if not in_zone:
+				for body in bed_zone.get_overlapping_bodies():
+					if body == player:
+						in_zone = true
+			var at_bed := _sprite_frame_rect(player_sprite)
+			_record("走到床边能触发睡觉区", in_zone and player.global_position.distance_to(bed) < 8.0)
+			_record("床边的人没有被食物架盖住", not at_bed.intersects(shelf_rect))
+	var f_mapped := false
+	for action in InputMap.get_actions():
+		for event in InputMap.action_get_events(action):
+			if event is InputEventKey:
+				var key := event as InputEventKey
+				var code := key.physical_keycode if key.physical_keycode != 0 else key.keycode
+				# Ctrl+F is the engine file-dialog find shortcut, not a bare F binding.
+				if code == KEY_F and not key.ctrl_pressed and not key.alt_pressed and not key.meta_pressed and not key.shift_pressed:
+					f_mapped = true
+	_record("裸按 F 没有绑到任何输入动作", not f_mapped)
+	_record("调试睡觉键用空闲的 F，不是 F9", GameManager.DEBUG_SLEEP_KEY == KEY_F and Farm.DEBUG_SPAWN_ANIMALS_KEY == KEY_F9)
+	var f_down := InputEventKey.new()
+	f_down.keycode = KEY_F
+	f_down.physical_keycode = KEY_F
+	f_down.pressed = true
+	_record("发行版不把 F 当睡觉键", not GameManager.wants_debug_sleep(f_down, false))
+	_record("调试版把 F 当睡觉键", GameManager.wants_debug_sleep(f_down, true))
+	var echoed := f_down.duplicate() as InputEventKey
+	echoed.echo = true
+	_record("按住 F 不重复睡觉", not GameManager.wants_debug_sleep(echoed, true))
+	var shifted := f_down.duplicate() as InputEventKey
+	shifted.shift_pressed = true
+	_record("Shift+F 不是调试睡觉键", not GameManager.wants_debug_sleep(shifted, true))
+	UIManager.close_all()
+	var slot := SaveManager.get_current_slot()
+	if slot >= 0:
+		SaveManager.reset_session(-1)
+	var saved_day := TimeManager.current_day
+	var saved_season := TimeManager.current_season
+	var saved_year := TimeManager.current_year
+	var saved_time := TimeManager.current_time
+	var saved_pause := TimeManager._pause_count
+	var saved_money := MoneySystem.get_money()
+	var saved_stamina := StaminaManager.current_stamina
+	var saved_active := GameManager.is_game_active
+	var saved_state := GameManager.current_state
+	var farm_snapshot := FarmState.get_save_state()
+	_debug_sleep_reasons.clear()
+	if not GameManager.day_advanced.is_connected(_on_debug_sleep_day):
+		GameManager.day_advanced.connect(_on_debug_sleep_day)
+	GameManager.is_game_active = false
+	GameManager.current_state = GameManager.GameState.PLAYING
+	await _tap_key(KEY_F, 1)
+	_record("未开局时 F 不睡觉", _debug_sleep_reasons.is_empty() and TimeManager.current_day == saved_day)
+	GameManager.is_game_active = true
+	await _tap_key(KEY_F, 1)
+	var moved_day := (
+		TimeManager.current_day != saved_day
+		or TimeManager.current_season != saved_season
+		or TimeManager.current_year != saved_year
+	)
+	_record(
+		"调试版按 F 等同睡觉并进入下一天",
+		_debug_sleep_reasons.size() == 1
+			and _debug_sleep_reasons[0] == "sleep"
+			and moved_day
+			and is_equal_approx(TimeManager.current_time, 6.0)
+			and is_equal_approx(StaminaManager.current_stamina, StaminaManager.max_stamina)
+	)
+	if GameManager.day_advanced.is_connected(_on_debug_sleep_day):
+		GameManager.day_advanced.disconnect(_on_debug_sleep_day)
+	TimeManager.current_day = saved_day
+	TimeManager.current_season = saved_season
+	TimeManager.current_year = saved_year
+	TimeManager.current_time = saved_time
+	TimeManager._pause_count = saved_pause
+	TimeManager.is_paused = saved_pause > 0
+	FarmState.load_save_state(farm_snapshot)
+	StaminaManager.set_stamina(saved_stamina)
+	MoneySystem.set_money(saved_money)
+	GameManager.is_game_active = saved_active
+	GameManager.current_state = saved_state
+	if slot >= 0:
+		SaveManager.reset_session(slot)
+	house.queue_free()
+	await get_tree().process_frame
+
+
+func _exercise_overnight_settlement() -> void:
+	var slot := SaveManager.get_current_slot()
+	if slot >= 0:
+		SaveManager.reset_session(-1)
+	var saved_day := TimeManager.current_day
+	var saved_season := TimeManager.current_season
+	var saved_year := TimeManager.current_year
+	var saved_time := TimeManager.current_time
+	var saved_pause := TimeManager._pause_count
+	var saved_paused := TimeManager.is_paused
+	var saved_money := MoneySystem.get_money()
+	var saved_stamina := StaminaManager.current_stamina
+	var saved_active := GameManager.is_game_active
+	var saved_state := GameManager.current_state
+	var saved_spawn := GameManager.current_spawn_point
+	var farm_snapshot := FarmState.get_save_state()
+	var shipping_snapshot := ShippingSystem.save_state()
+	var scene_before := get_tree().current_scene
+	TimeManager.current_day = 4
+	TimeManager.current_time = 12.0
+	GameManager.is_game_active = true
+	GameManager.current_state = GameManager.GameState.PLAYING
+	GameManager.current_spawn_point = "farm_start"
+
+	_clear_toasts()
+	MoneySystem.set_money(1000)
+	ShippingSystem.clear_bin()
+	var filled := ShippingSystem.add_item("turnip", 4, 0)
+	var sleep_sale := int(ShippingSystem.calculate_total_value().get("total_value", 0))
+	StaminaManager.set_stamina(11.0)
+	await GameManager.advance_day("sleep")
+	_record("睡觉出货箱能装上作物", filled and sleep_sale > 0)
+	_record("睡觉结算出货且不扣持有金", MoneySystem.get_money() == 1000 + sleep_sale)
+	_record("睡觉回满体力", is_equal_approx(StaminaManager.current_stamina, StaminaManager.max_stamina))
+	_record("睡觉不改农舍出生点", GameManager.current_spawn_point == "farm_start")
+	_record("睡觉不切走测试场景", get_tree().current_scene == scene_before)
+	_record(
+		"次日提示写出货到账金额",
+		_toast_contains("出货到账 %d 金" % sleep_sale) and not _toast_contains("扣除")
+	)
+
+	_clear_toasts()
+	MoneySystem.set_money(200)
+	ShippingSystem.clear_bin()
+	StaminaManager.set_stamina(6.0)
+	await GameManager.advance_day("forced_2am")
+	_record("凌晨2点空箱扣下限50且不为负", MoneySystem.get_money() == 150)
+	_record("凌晨2点仍回满体力", is_equal_approx(StaminaManager.current_stamina, StaminaManager.max_stamina))
+	_record("凌晨2点记下农舍出生点", GameManager.current_spawn_point == GameManager.PLAYER_HOUSE_SPAWN)
+	_record("测试场景里强制过夜不卸载自己", get_tree().current_scene == scene_before)
+	_record("空箱提示写扣除金额", _toast_contains("凌晨倒地，扣除 50 金") and not _toast_contains("出货到账"))
+
+	_clear_toasts()
+	MoneySystem.set_money(1000)
+	ShippingSystem.clear_bin()
+	ShippingSystem.add_item("turnip", 4, 0)
+	var collapse_sale := int(ShippingSystem.calculate_total_value().get("total_value", 0))
+	await GameManager.advance_day("forced_2am")
+	_record(
+		"凌晨2点先扣10%再全额入账",
+		collapse_sale > 0 and MoneySystem.get_money() == 1000 - 100 + collapse_sale
+	)
+	_record(
+		"凌晨提示同时带出货与扣除",
+		_toast_contains("出货到账 %d 金" % collapse_sale) and _toast_contains("扣除 100 金")
+	)
+
+	_clear_toasts()
+	MoneySystem.set_money(30)
+	ShippingSystem.clear_bin()
+	await GameManager.advance_day("forced_2am")
+	_record("持有金不足50时扣光且不为负", MoneySystem.get_money() == 0)
+	_record("不足50的提示写实际扣除", _toast_contains("扣除 30 金"))
+
+	TimeManager.current_day = saved_day
+	TimeManager.current_season = saved_season
+	TimeManager.current_year = saved_year
+	TimeManager.current_time = saved_time
+	TimeManager._pause_count = saved_pause
+	TimeManager.is_paused = saved_paused
+	FarmState.load_save_state(farm_snapshot)
+	ShippingSystem.load_state(shipping_snapshot)
+	StaminaManager.set_stamina(saved_stamina)
+	MoneySystem.set_money(saved_money)
+	GameManager.is_game_active = saved_active
+	GameManager.current_state = saved_state
+	GameManager.current_spawn_point = saved_spawn
+	GameManager._advancing_day = false
+	if slot >= 0:
+		SaveManager.reset_session(slot)
+	else:
+		SaveManager.reset_session(-1)
+	_clear_toasts()
+
+
+func _clear_toasts() -> void:
+	var root := UIManager.get_node_or_null("UIOverlay/ToastRoot")
+	if root == null:
+		return
+	for child in root.get_children():
+		child.free()
+
+
+func _toast_contains(fragment: String) -> bool:
+	var root := UIManager.get_node_or_null("UIOverlay/ToastRoot")
+	if root == null:
+		return false
+	for child in root.get_children():
+		if child.is_queued_for_deletion():
+			continue
+		if str(child.get_meta("toast_text", "")).find(fragment) >= 0:
+			return true
+	return false
+
+
+func _on_debug_sleep_day(reason: String, _shipment: Dictionary) -> void:
+	_debug_sleep_reasons.append(reason)
+
+
+func _sprite_frame_rect(sprite: Sprite2D) -> Rect2:
+	var tex_size := sprite.texture.get_size()
+	var size := Vector2(
+		tex_size.x * absf(sprite.scale.x) / float(maxi(sprite.hframes, 1)),
+		tex_size.y * absf(sprite.scale.y) / float(maxi(sprite.vframes, 1))
+	)
+	return Rect2(sprite.global_position - size * 0.5, size)
+
+
+func _overlap_area(a: Rect2, b: Rect2) -> float:
+	if not a.intersects(b):
+		return 0.0
+	var inter := a.intersection(b)
+	return inter.size.x * inter.size.y
+
+
+func _point_rect_distance(point: Vector2, rect: Rect2) -> float:
+	var closest := Vector2(
+		clampf(point.x, rect.position.x, rect.end.x),
+		clampf(point.y, rect.position.y, rect.end.y)
+	)
+	return point.distance_to(closest)
+
+
+func _lane_clears_rect(points: Array[Vector2], rect: Rect2, gap: float) -> bool:
+	for i in range(points.size() - 1):
+		var span := points[i].distance_to(points[i + 1])
+		var steps := maxi(ceili(span / 8.0), 1)
+		for s in range(steps + 1):
+			var point := points[i].lerp(points[i + 1], float(s) / float(steps))
+			if _point_rect_distance(point, rect) <= gap:
+				return false
+	return true
+
+
+func _slide_clear(player: Player, target: Vector2) -> String:
+	var guard := 0
+	while player.global_position.distance_to(target) > 3.0 and guard < 250:
+		guard += 1
+		var motion := (target - player.global_position).limit_length(6.0)
+		var hit := player.move_and_collide(motion)
+		if hit != null:
+			var collider := hit.get_collider()
+			return str(collider.name) if collider != null else "unknown"
+	if player.global_position.distance_to(target) > 3.0:
+		return "stuck"
+	return ""
 
 
 func _record(name: String, condition: bool) -> void:

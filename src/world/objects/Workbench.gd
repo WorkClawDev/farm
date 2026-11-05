@@ -1,5 +1,6 @@
 extends Area2D
 class_name Workbench
+const InteractPromptScript = preload("res://src/ui/components/InteractPrompt.gd")  # preload: works before the class cache knows the class_name
 
 const PHYSICS_LAYERS = preload("res://src/core/constants/PhysicsLayers.gd")
 
@@ -34,6 +35,7 @@ const WORKBENCH_DISPLAY_SIZE := Vector2(72, 72)
 
 # 玩家是否在范围内
 var _player_in_range: bool = false
+var _ranged_player: Player = null
 var _depth_anchor_offset := 0.0
 
 func _ready() -> void:
@@ -41,6 +43,7 @@ func _ready() -> void:
 	_setup_solid_collision()
 	_apply_depth_anchor()
 	_connect_signals()
+	InteractPromptScript.attach(self, "制作", InteractPromptScript.sprite_top(self), func(): return _player_in_range and is_interactable)
 	print("[Workbench] %s initialized at position: %s" % [workbench_name, global_position])
 
 
@@ -159,6 +162,7 @@ func _connect_signals() -> void:
 func _on_body_entered(body: Node2D) -> void:
 	if body is Player:
 		_player_in_range = true
+		_ranged_player = body
 		_show_prompt()
 		print("[Workbench] Player entered interaction range")
 
@@ -166,14 +170,16 @@ func _on_body_entered(body: Node2D) -> void:
 func _on_body_exited(body: Node2D) -> void:
 	if body is Player:
 		_player_in_range = false
+		if _ranged_player == body:
+			_ranged_player = null
 		_hide_prompt()
 		print("[Workbench] Player left interaction range")
 
 
+## The shared InteractPrompt bubble replaced this label; keep it hidden.
 func _show_prompt() -> void:
 	if prompt_label:
-		prompt_label.text = interaction_prompt
-		prompt_label.visible = true
+		prompt_label.visible = false
 
 
 func _hide_prompt() -> void:
@@ -185,8 +191,10 @@ func _input(event: InputEvent) -> void:
 	if not _player_in_range or not is_interactable:
 		return
 
-	# 检测交互按键（E键）
+	# 检测交互按键（E键 / Space）。面前格子可耕且手里是地块工具时，不打开制作界面。
 	if event.is_action_pressed("ui_accept") or (event is InputEventKey and event.pressed and event.keycode == KEY_E):
+		if _ranged_player != null and _ranged_player.station_interact_yields_to_tool(self):
+			return
 		_interact()
 		get_viewport().set_input_as_handled()
 

@@ -147,7 +147,7 @@
     },
     {
       "id": "turnip_seed",
-      "name": "芜菁种子",
+      "name": "防风草种子",
       "type": "seed",
       "seasons": [
         "spring"
@@ -170,6 +170,19 @@
       "buy_price": 50,
       "sell_price": 25,
       "description": "春天播种，6天成熟。适合做各种料理。"
+    },
+    {
+      "id": "green_bean_seed",
+      "name": "青豆种子",
+      "type": "seed",
+      "seasons": [
+        "spring"
+      ],
+      "growth_days": 8,
+      "crop_id": "green_bean",
+      "buy_price": 60,
+      "sell_price": 30,
+      "description": "春天播种，成熟后还可以再收几次。"
     },
     {
       "id": "tomato_seed",
@@ -212,7 +225,7 @@
     },
     {
       "id": "turnip",
-      "name": "芜菁",
+      "name": "防风草",
       "type": "crop",
       "buy_price": 0,
       "sell_price": 35,
@@ -220,7 +233,15 @@
       "use_effect": {
         "energy": 10
       },
-      "description": "新鲜的芜菁，可以生吃或烹饪。"
+      "description": "新鲜的防风草，可以生吃或烹饪。"
+    },
+    {
+      "id": "green_bean",
+      "name": "青豆",
+      "type": "crop",
+      "buy_price": 0,
+      "sell_price": 40,
+      "description": "春季可重复收获的豆类。"
     },
     {
       "id": "potato",

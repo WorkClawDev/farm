@@ -125,43 +125,43 @@ size = Vector2(250, 175)
 size = Vector2(275, 175)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_6mev6"]
-radius = 48.0
+radius = 28.0
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_5teai"]
-size = Vector2(28, 62)
+size = Vector2(40, 90)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wds8l"]
-size = Vector2(28, 62)
+size = Vector2(40, 90)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_qcntd"]
-size = Vector2(28, 62)
+size = Vector2(40, 90)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_v5anh"]
-size = Vector2(28, 62)
+size = Vector2(40, 90)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_ro15e"]
-size = Vector2(28, 62)
+size = Vector2(40, 90)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_440q6"]
-size = Vector2(28, 62)
+size = Vector2(40, 90)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_8mnif"]
-size = Vector2(28, 62)
+size = Vector2(40, 90)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_okx0c"]
-size = Vector2(28, 62)
+size = Vector2(40, 90)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_a4sej"]
-size = Vector2(28, 62)
+size = Vector2(40, 90)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_u5vsf"]
-size = Vector2(28, 62)
+size = Vector2(40, 90)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_amis4"]
-size = Vector2(28, 62)
+size = Vector2(40, 90)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_av0sh"]
-size = Vector2(28, 62)
+size = Vector2(40, 90)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_4en17"]
 size = Vector2(1344, 48)
@@ -230,6 +230,9 @@ preset = SubResource("Resource_c8hvq")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Collision/BuildingNorthWest" unique_id=569380016]
 shape = SubResource("RectangleShape2D_3e0vv")
 
+[node name="RoofCollision" type="CollisionPolygon2D" parent="Collision/BuildingNorthWest" unique_id=771203311]
+polygon = PackedVector2Array(-147, -49.5, 0, -122.5, 147, -49.5, 121, -15.5, -121, -15.5)
+
 [node name="BuildingNorthEast" type="StaticBody2D" parent="Collision" unique_id=1068413417]
 position = Vector2(775, 217.5)
 collision_mask = 0
@@ -238,6 +241,9 @@ preset = SubResource("Resource_c8hvq")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Collision/BuildingNorthEast" unique_id=426295976]
 shape = SubResource("RectangleShape2D_wvq1x")
+
+[node name="RoofCollision" type="CollisionPolygon2D" parent="Collision/BuildingNorthEast" unique_id=771203312]
+polygon = PackedVector2Array(-157, -54.5, 0, -127.5, 157, -54.5, 131, -20.5, -131, -20.5)
 
 [node name="BuildingSouthEast" type="StaticBody2D" parent="Collision" unique_id=1546144762]
 position = Vector2(1005, 612.5)
@@ -248,6 +254,9 @@ preset = SubResource("Resource_c8hvq")
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Collision/BuildingSouthEast" unique_id=1265457454]
 shape = SubResource("RectangleShape2D_fw431")
 
+[node name="RoofCollision" type="CollisionPolygon2D" parent="Collision/BuildingSouthEast" unique_id=771203313]
+polygon = PackedVector2Array(-147, -49.5, 0, -122.5, 147, -49.5, 121, -15.5, -121, -15.5)
+
 [node name="BuildingSouthWest" type="StaticBody2D" parent="Collision" unique_id=994241963]
 position = Vector2(292.5, 847.5)
 collision_mask = 0
@@ -256,6 +265,9 @@ preset = SubResource("Resource_c8hvq")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Collision/BuildingSouthWest" unique_id=1384686121]
 shape = SubResource("RectangleShape2D_uau2r")
+
+[node name="RoofCollision" type="CollisionPolygon2D" parent="Collision/BuildingSouthWest" unique_id=771203314]
+polygon = PackedVector2Array(-159.5, -49.5, 0, -122.5, 159.5, -49.5, 133.5, -15.5, -133.5, -15.5)
 
 [node name="VillageWell" type="StaticBody2D" parent="Collision" unique_id=248331125]
 position = Vector2(540, 440)
@@ -267,7 +279,7 @@ preset = SubResource("Resource_c8hvq")
 shape = SubResource("CircleShape2D_6mev6")
 
 [node name="VillageTree00" type="StaticBody2D" parent="Collision" unique_id=1324651893]
-position = Vector2(80, 191)
+position = Vector2(80, 175)
 collision_mask = 0
 script = ExtResource("11_24qou")
 preset = SubResource("Resource_c8hvq")
@@ -276,7 +288,7 @@ preset = SubResource("Resource_c8hvq")
 shape = SubResource("RectangleShape2D_5teai")
 
 [node name="VillageTree01" type="StaticBody2D" parent="Collision" unique_id=1971492164]
-position = Vector2(90, 396)
+position = Vector2(90, 380)
 collision_mask = 0
 script = ExtResource("11_24qou")
 preset = SubResource("Resource_c8hvq")
@@ -285,7 +297,7 @@ preset = SubResource("Resource_c8hvq")
 shape = SubResource("RectangleShape2D_wds8l")
 
 [node name="VillageTree02" type="StaticBody2D" parent="Collision" unique_id=1618032517]
-position = Vector2(100, 671)
+position = Vector2(100, 655)
 collision_mask = 0
 script = ExtResource("11_24qou")
 preset = SubResource("Resource_c8hvq")
@@ -294,7 +306,7 @@ preset = SubResource("Resource_c8hvq")
 shape = SubResource("RectangleShape2D_qcntd")
 
 [node name="VillageTree03" type="StaticBody2D" parent="Collision" unique_id=599248964]
-position = Vector2(80, 951)
+position = Vector2(80, 935)
 collision_mask = 0
 script = ExtResource("11_24qou")
 preset = SubResource("Resource_c8hvq")
@@ -303,7 +315,7 @@ preset = SubResource("Resource_c8hvq")
 shape = SubResource("RectangleShape2D_v5anh")
 
 [node name="VillageTree04" type="StaticBody2D" parent="Collision" unique_id=854612103]
-position = Vector2(1200, 191)
+position = Vector2(1200, 175)
 collision_mask = 0
 script = ExtResource("11_24qou")
 preset = SubResource("Resource_c8hvq")
@@ -312,7 +324,7 @@ preset = SubResource("Resource_c8hvq")
 shape = SubResource("RectangleShape2D_ro15e")
 
 [node name="VillageTree05" type="StaticBody2D" parent="Collision" unique_id=1408511941]
-position = Vector2(1220, 396)
+position = Vector2(1220, 380)
 collision_mask = 0
 script = ExtResource("11_24qou")
 preset = SubResource("Resource_c8hvq")
@@ -321,7 +333,7 @@ preset = SubResource("Resource_c8hvq")
 shape = SubResource("RectangleShape2D_440q6")
 
 [node name="VillageTree06" type="StaticBody2D" parent="Collision" unique_id=1744485321]
-position = Vector2(1210, 671)
+position = Vector2(1210, 655)
 collision_mask = 0
 script = ExtResource("11_24qou")
 preset = SubResource("Resource_c8hvq")
@@ -330,7 +342,7 @@ preset = SubResource("Resource_c8hvq")
 shape = SubResource("RectangleShape2D_8mnif")
 
 [node name="VillageTree07" type="StaticBody2D" parent="Collision" unique_id=849378688]
-position = Vector2(1230, 951)
+position = Vector2(1230, 935)
 collision_mask = 0
 script = ExtResource("11_24qou")
 preset = SubResource("Resource_c8hvq")
@@ -339,7 +351,7 @@ preset = SubResource("Resource_c8hvq")
 shape = SubResource("RectangleShape2D_okx0c")
 
 [node name="VillageTree08" type="StaticBody2D" parent="Collision" unique_id=1664814846]
-position = Vector2(300, 71)
+position = Vector2(312, 86)
 collision_mask = 0
 script = ExtResource("11_24qou")
 preset = SubResource("Resource_c8hvq")
@@ -348,7 +360,7 @@ preset = SubResource("Resource_c8hvq")
 shape = SubResource("RectangleShape2D_a4sej")
 
 [node name="VillageTree09" type="StaticBody2D" parent="Collision" unique_id=932440145]
-position = Vector2(1020, 81)
+position = Vector2(1020, 65)
 collision_mask = 0
 script = ExtResource("11_24qou")
 preset = SubResource("Resource_c8hvq")
@@ -357,7 +369,7 @@ preset = SubResource("Resource_c8hvq")
 shape = SubResource("RectangleShape2D_u5vsf")
 
 [node name="VillageTree10" type="StaticBody2D" parent="Collision" unique_id=1709719423]
-position = Vector2(540, 1001)
+position = Vector2(760, 822)
 collision_mask = 0
 script = ExtResource("11_24qou")
 preset = SubResource("Resource_c8hvq")
@@ -366,7 +378,7 @@ preset = SubResource("Resource_c8hvq")
 shape = SubResource("RectangleShape2D_amis4")
 
 [node name="VillageTree11" type="StaticBody2D" parent="Collision" unique_id=1621264645]
-position = Vector2(880, 1001)
+position = Vector2(880, 985)
 collision_mask = 0
 script = ExtResource("11_24qou")
 preset = SubResource("Resource_c8hvq")

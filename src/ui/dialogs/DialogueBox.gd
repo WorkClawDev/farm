@@ -47,7 +47,9 @@ func refresh_theme() -> void:
 
 func show_dialogue(character_name: String, lines: Array) -> void:
 	current_character = character_name
-	dialogue_lines = lines
+	# Own copy: hide_dialogue() empties dialogue_lines, and the caller's array is
+	# the one stored in DialogueManager's data (BUG-20 wiped NPC dialogue lines).
+	dialogue_lines = lines.duplicate(true)
 	current_line_index = 0
 	current_choices.clear()
 	has_choices = false
@@ -59,7 +61,7 @@ func show_dialogue(character_name: String, lines: Array) -> void:
 
 func show_dialogue_advanced(dialogue_data: Dictionary) -> void:
 	current_character = str(dialogue_data.get("speaker", "???"))
-	dialogue_lines = dialogue_data.get("lines", [])
+	dialogue_lines = (dialogue_data.get("lines", []) as Array).duplicate(true)  # see show_dialogue
 	current_line_index = 0
 	current_choices.clear()
 	has_choices = false
@@ -80,7 +82,7 @@ func hide_dialogue() -> void:
 	visible = false
 	history_panel.visible = false
 	is_typing = false
-	dialogue_lines.clear()
+	dialogue_lines = []  # reassign, never clear(): never mutate an array we might share
 	current_line_index = 0
 	_hide_choices()
 
@@ -133,13 +135,26 @@ func _display_current_line() -> void:
 	text_label.text = ""
 	_visible_characters = 0
 	_typewriter_timer = 0.0
-	var speed_setting := float(UserSettings.get_value("accessibility", "text_speed", 1.0))
+	var speed_setting := _text_speed_setting()
 	if speed_setting <= 0.0:
 		_finish_typewriter()
 	else:
 		typewriter_speed = 0.03 / speed_setting
 		is_typing = true
-		continue_indicator.visible = false
+		# One hint that matches what the key does right now (BUG-34).
+		_update_continue_prompt(0)
+		continue_indicator.visible = true
+
+
+## accessibility.text_speed as a float; anything unexpected (null, bad string) falls back to 1.0
+## instead of erroring with "Nonexistent 'float' constructor" (BUG-20).
+func _text_speed_setting() -> float:
+	var raw: Variant = UserSettings.get_value("accessibility", "text_speed", 1.0) if UserSettings else 1.0
+	if raw is float or raw is int:
+		return float(raw)
+	if raw is String and (raw as String).is_valid_float():
+		return (raw as String).to_float()
+	return 1.0
 
 
 func _process(delta: float) -> void:
@@ -160,6 +175,7 @@ func _finish_typewriter() -> void:
 	if not current_choices.is_empty():
 		show_choices(current_choices)
 	else:
+		_update_continue_prompt(0)
 		continue_indicator.visible = true
 
 
@@ -204,10 +220,9 @@ func _refresh_history() -> void:
 
 
 func _update_continue_prompt(_device: int) -> void:
-	continue_indicator.text = "%s 继续   ·   %s 显示全文" % [
-		InputManager.get_action_prompt(&"interact"),
-		InputManager.get_action_prompt(&"interact"),
-	]
+	# The same key shows the full line while typing and continues once it is shown.
+	var key := InputManager.get_action_prompt(&"interact")
+	continue_indicator.text = ("%s 显示全文" if is_typing else "%s 继续") % key
 
 
 func set_typewriter_speed(speed: float) -> void:

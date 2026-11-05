@@ -5,13 +5,13 @@ var _info_panel: PanelContainer
 var _date_label: Label
 var _weather_label: Label
 var _money_label: Label
+var _water_label: Label
 var _stamina_panel: PanelContainer
 var _stamina_bar: ProgressBar
 var _stamina_label: Label
 var _hint_panel: PanelContainer
 var _hint_label: Label
 var _hint_tween: Tween
-var _stamina_hide_at := 0.0
 
 
 func _ready() -> void:
@@ -21,15 +21,9 @@ func _ready() -> void:
 	_update_time()
 	_update_money(MoneySystem.get_money() if MoneySystem else 0, 0)
 	_update_stamina(StaminaManager.current_stamina, StaminaManager.max_stamina)
+	_update_watering_can()
 	_update_input_hint(InputManager.get_current_device())
 	_apply_hud_visibility()
-
-
-func _process(_delta: float) -> void:
-	if _stamina_panel and _stamina_panel.visible and Time.get_ticks_msec() / 1000.0 > _stamina_hide_at:
-		var ratio: float = float(StaminaManager.get_stamina_percentage()) if StaminaManager else 1.0
-		if ratio > 0.3:
-			_stamina_panel.visible = false
 
 
 func _build_ui() -> void:
@@ -37,8 +31,8 @@ func _build_ui() -> void:
 	_root.name = "HUDRoot"
 	_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_root.theme = UIStyles.active_theme()
-	_root.add_to_group("themed_ui_root")
+	# Only swap the theme on high-contrast toggles; the bridge's full restyle pass is for menus.
+	UIStyles.follow_theme(_root)
 	add_child(_root)
 
 	_info_panel = UIFactory.hud_panel()
@@ -46,34 +40,41 @@ func _build_ui() -> void:
 	_info_panel.offset_left = -292
 	_info_panel.offset_top = 20
 	_info_panel.offset_right = -20
-	_info_panel.offset_bottom = 132
+	_info_panel.offset_bottom = 20  # height hugs the two text rows (was a fixed, half-empty 112px)
+	_info_panel.grow_vertical = Control.GROW_DIRECTION_END
+	# Long dates widen the panel leftwards instead of past the screen edge.
+	_info_panel.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_info_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_info_panel)
 	var info := VBoxContainer.new()
 	info.add_theme_constant_override("separation", 3)
 	_info_panel.add_child(info)
-	_date_label = _hud_label(20)
+	_date_label = _hud_label(&"HUDTitle")
 	info.add_child(_date_label)
 	var weather_money := HBoxContainer.new()
 	info.add_child(weather_money)
-	_weather_label = _hud_label(15)
+	_weather_label = _hud_label(&"HUDText")
 	_weather_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	weather_money.add_child(_weather_label)
-	_money_label = _hud_label(18)
+	_money_label = _hud_label(&"HUDAccent")
 	_money_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	weather_money.add_child(_money_label)
+	_water_label = _hud_label(&"HUDText")
+	_water_label.name = "WaterLabel"
+	_water_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	info.add_child(_water_label)
 
 	_stamina_panel = UIFactory.hud_panel()
 	_stamina_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	_stamina_panel.offset_left = 20
-	_stamina_panel.offset_top = -116
+	_stamina_panel.offset_top = -124  # content is 60px tall; -116 grew 2px into the hint panel below
 	_stamina_panel.offset_right = 292
 	_stamina_panel.offset_bottom = -64
 	_stamina_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_stamina_panel)
 	var stamina_content := VBoxContainer.new()
 	_stamina_panel.add_child(stamina_content)
-	_stamina_label = _hud_label(14)
+	_stamina_label = _hud_label(&"HUDSmall")
 	stamina_content.add_child(_stamina_label)
 	_stamina_bar = ProgressBar.new()
 	_stamina_bar.custom_minimum_size = Vector2(236, 14)
@@ -84,18 +85,18 @@ func _build_ui() -> void:
 	_hint_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	_hint_panel.offset_left = 20
 	_hint_panel.offset_top = -58
-	_hint_panel.offset_right = 510
+	_hint_panel.offset_right = 310
 	_hint_panel.offset_bottom = -18
 	_hint_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_hint_panel)
-	_hint_label = _hud_label(14)
+	_hint_label = _hud_label(&"HUDSmall")
 	_hint_panel.add_child(_hint_label)
 
 
-func _hud_label(size: int) -> Label:
+## Sizes/colours come from GameTheme.tres: HUDTitle 18, HUDText 16, HUDSmall 14, HUDAccent = gold HUDTitle.
+func _hud_label(variation: StringName) -> Label:
 	var label := Label.new()
-	label.theme_type_variation = &"HUDText"
-	label.add_theme_font_size_override("font_size", size)
+	label.theme_type_variation = variation
 	return label
 
 
@@ -111,6 +112,8 @@ func _connect_signals() -> void:
 		MoneySystem.money_changed.connect(_update_money)
 	if StaminaManager:
 		StaminaManager.stamina_changed.connect(_update_stamina)
+	if FarmState and FarmState.has_signal("watering_can_changed"):
+		FarmState.watering_can_changed.connect(_update_watering_can)
 	if InputManager:
 		InputManager.input_device_changed.connect(_update_input_hint)
 	if UserSettings:
@@ -132,6 +135,15 @@ func _update_time() -> void:
 	_weather_label.text = weather.get_weather_name_cn() if weather and weather.has_method("get_weather_name_cn") else "晴朗"
 
 
+func _update_watering_can(_current: int = 0, _maximum: int = 0) -> void:
+	if _water_label == null or FarmState == null:
+		return
+	_water_label.text = "水壶 %d/%d" % [
+		FarmState.get_watering_can_uses_left(),
+		FarmState.get_watering_can_max_uses(),
+	]
+
+
 func _update_money(amount: int, _delta: int) -> void:
 	if _money_label:
 		_money_label.text = "%d 金" % amount
@@ -143,8 +155,9 @@ func _update_stamina(current: float, maximum: float) -> void:
 	var ratio := clampf(current / maximum if maximum > 0 else 0.0, 0.0, 1.0)
 	_stamina_bar.value = ratio * 100.0
 	_stamina_label.text = "体力  %d / %d" % [int(current), int(maximum)]
-	_stamina_panel.visible = ratio < 0.78
-	_stamina_hide_at = Time.get_ticks_msec() / 1000.0 + 2.6
+	# Always on (including full stamina). Panel mouse_filter is IGNORE.
+	_stamina_panel.visible = true
+	_stamina_panel.modulate.a = 1.0
 	if ratio <= 0.2:
 		_stamina_bar.modulate = Color("#E5634F")
 	elif ratio <= 0.45:

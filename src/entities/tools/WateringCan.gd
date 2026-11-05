@@ -13,12 +13,21 @@ signal watering_finished
 @export var max_water: int = 100
 @export var water_per_use: int = 5
 
-# 当前水量
+# 当前水量：权威数据在 FarmState（跨场景、进存档）；没有 FarmState 时（单独测试）用本地值。
+var _local_water: int = 100
 var current_water: int:
+	get:
+		var state = _farm_state()
+		return state.get_watering_can_water() if state else _local_water
 	set(value):
-		current_water = clampi(value, 0, max_water)
-		water_changed.emit(current_water, max_water)
-		if current_water == 0:
+		var clamped := clampi(value, 0, max_water)
+		var state = _farm_state()
+		if state:
+			state.set_watering_can_water(clamped)
+		else:
+			_local_water = clamped
+		water_changed.emit(clamped, max_water)
+		if clamped == 0:
 			water_depleted.emit()
 
 # 是否正在浇水
@@ -36,8 +45,25 @@ var is_watering: bool = false
 @onready var audio_stream: AudioStreamPlayer2D = $AudioStreamPlayer2D if has_node("AudioStreamPlayer2D") else null
 
 func _ready() -> void:
-	current_water = max_water
-	print("[WateringCan] Initialized with ", max_water, " water capacity")
+	var state = _farm_state()
+	if state:
+		# 容量和单次用水以 FarmState 为准，不在新场景里把水壶重新灌满。
+		max_water = state.get_watering_can_max_water()
+		water_per_use = state.WATERING_CAN_WATER_PER_USE
+		if not state.watering_can_changed.is_connected(_on_farm_can_changed):
+			state.watering_can_changed.connect(_on_farm_can_changed)
+	else:
+		_local_water = max_water
+	print("[WateringCan] Initialized: ", current_water, "/", max_water, " water")
+
+
+func _on_farm_can_changed(_current: int, maximum: int) -> void:
+	max_water = maximum
+
+
+func _farm_state() -> Node:
+	var tree := Engine.get_main_loop() as SceneTree
+	return tree.root.get_node_or_null("FarmState") if tree else null
 
 ## 使用水壶浇水
 func use(target_position: Vector2) -> bool:
@@ -112,6 +138,7 @@ func save_state() -> Dictionary:
 
 ## 加载状态
 func load_state(data: Dictionary) -> void:
+	if _farm_state() == null:
+		max_water = data.get("max_water", 100)
+		water_per_use = data.get("water_per_use", 5)
 	current_water = data.get("current_water", max_water)
-	max_water = data.get("max_water", 100)
-	water_per_use = data.get("water_per_use", 5)

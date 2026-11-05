@@ -53,6 +53,14 @@
 - **I**: 打开背包
 - **ESC**: 暂停菜单
 
+### 调试键（仅 debug 构建）
+
+- `F9`（在农场）：在池塘、田地和谷仓之间的空地上生成鸡、猪、牛、羊、马各 1 只（BUG-55，用于验收动物动画 / y-sort / 体型）。每按一次再生成一组；不写存档，正式导出（release）构建里无效。
+
+- 调试启动（仅 debug 构建，跳过主菜单读档）：`godot --path . -- --load-slot=3 --spawn=village_west`（界面槽 1..3，`--spawn=village_west` 把玩家放到村子西路靠西出口）。
+- 调试新档（仅 debug 构建，跳过主菜单）：`godot --path . -- --new-game`。每次启动使用新的 `user://debug_tmp_saves_<随机>/`（赋值给 SaveManager.save_dir），并清空旧的固定目录 `user://debug_tmp_saves/`。不读写真实 `user://saves/`。
+- 新档调试参数（必须和 `--new-game` 一起用，否则忽略）：`--start-day=N`（1-28，时间 9:00）、`--season=spring|summer|fall|winter`、`--debug-crops`（北侧田垄种一株已浇水、距成熟 1 天的番茄和一株青豆，不带参数）。不写真实 `user://saves/`。
+
 ### 工具切换
 - **1-6**: 快速选择工具
 - **Q**: 切换到上一个工具

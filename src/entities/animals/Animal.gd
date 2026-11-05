@@ -41,6 +41,28 @@ var home_position: Vector2 = Vector2.ZERO
 @onready var interaction_area: Area2D = $InteractionArea if has_node("InteractionArea") else null
 @onready var product_spawn_point: Marker2D = $ProductSpawnPoint if has_node("ProductSpawnPoint") else null
 
+# CraftPix private sheet (submodule). Empty path = never try animated art (sheep/horse).
+const PRIVATE_ROOT := "res://assets/private/topdown_farm/"
+@export var private_sheet_path: String = ""
+@export var frame_px: int = 128
+@export var idle_frames: int = 6
+@export var walk_frames: int = 6
+## Feet must end up SORT_FEET_Y (32px, like Player.SPRITE_FEET_Y) below the origin
+## after private_sprite_scale, so Y-sort compares feet with the player and villagers.
+@export var sprite_offset: Vector2 = Vector2(0, -34)
+@export var private_body_radius: float = 0.0
+@export var private_interaction_radius: float = 0.0
+## Uniform size of the CraftPix sprite (baked foot shadow included). Body and
+## interaction radii and the cow product point are multiplied by it too.
+@export var private_sprite_scale: float = 1.0
+const PRIVATE_FPS := 10.0
+const PRIVATE_ROWS := [
+	"idle_down", "idle_up", "idle_left", "idle_right",
+	"walk_down", "walk_up", "walk_left", "walk_right",
+]
+var anim_sprite: AnimatedSprite2D = null
+var facing: String = "down"
+
 # 信号
 signal friendship_changed(animal: Animal, new_value: int)
 signal fed(animal: Animal)
@@ -56,6 +78,7 @@ func _ready() -> void:
 	_setup_interaction()
 	home_position = global_position
 	_reset_production_timer()
+	_try_setup_animated_sprite()
 	print("[Animal] %s initialized with ID: %s" % [animal_name, animal_id])
 
 func _physics_process(delta: float) -> void:
@@ -115,6 +138,17 @@ func _process_eating(_delta: float) -> void:
 
 ## 更新动画
 func _update_animation() -> void:
+	if anim_sprite != null and anim_sprite.sprite_frames != null:
+		_update_facing_from_velocity()
+		var state_name := "idle"
+		if current_state == AnimalState.WALKING and velocity.length() >= 1.0:
+			state_name = "walk"
+		var anim_name := "%s_%s" % [state_name, facing]
+		if anim_sprite.sprite_frames.has_animation(anim_name):
+			if anim_sprite.animation != anim_name or not anim_sprite.is_playing():
+				anim_sprite.play(anim_name)
+		return
+
 	if not animation_player:
 		return
 
@@ -131,6 +165,69 @@ func _update_animation() -> void:
 
 	if animation_player.has_animation(anim_name):
 		animation_player.play(anim_name)
+
+
+func _update_facing_from_velocity() -> void:
+	if velocity.length() < 1.0:
+		return
+	if absf(velocity.x) > absf(velocity.y):
+		facing = "right" if velocity.x > 0.0 else "left"
+	else:
+		facing = "down" if velocity.y > 0.0 else "up"
+
+
+func _try_setup_animated_sprite() -> void:
+	if private_sheet_path.is_empty():
+		return
+	var path := PRIVATE_ROOT + private_sheet_path
+	if not ResourceLoader.exists(path):
+		print("[Animal] private sheet missing, using Sprite2D fallback: %s" % path)
+		return
+	var tex := load(path) as Texture2D
+	if tex == null:
+		push_warning("[Animal] private sheet failed to load: " + path)
+		return
+
+	var frames := SpriteFrames.new()
+	if frames.has_animation("default"):
+		frames.remove_animation("default")
+	for r in PRIVATE_ROWS.size():
+		var name: String = PRIVATE_ROWS[r]
+		var count := idle_frames if name.begins_with("idle") else walk_frames
+		frames.add_animation(name)
+		frames.set_animation_speed(name, PRIVATE_FPS)
+		frames.set_animation_loop(name, true)
+		for c in count:
+			var at := AtlasTexture.new()
+			at.atlas = tex
+			at.region = Rect2(c * frame_px, r * frame_px, frame_px, frame_px)
+			frames.add_frame(name, at)
+
+	anim_sprite = AnimatedSprite2D.new()
+	anim_sprite.name = "AnimatedSprite2D"
+	anim_sprite.sprite_frames = frames
+	anim_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	anim_sprite.offset = sprite_offset
+	anim_sprite.scale = Vector2.ONE * private_sprite_scale
+	anim_sprite.centered = true
+	add_child(anim_sprite)
+	if sprite:
+		sprite.visible = false
+	anim_sprite.play("idle_down")
+	_apply_private_collision_sizes()
+
+
+func _apply_private_collision_sizes() -> void:
+	if private_body_radius > 0.0 and has_node("CollisionShape2D"):
+		var body_cs := $CollisionShape2D as CollisionShape2D
+		if body_cs and body_cs.shape is CircleShape2D:
+			(body_cs.shape as CircleShape2D).radius = private_body_radius * private_sprite_scale
+	if private_interaction_radius > 0.0 and has_node("InteractionArea/CollisionShape2D"):
+		var ia_cs := get_node("InteractionArea/CollisionShape2D") as CollisionShape2D
+		if ia_cs and ia_cs.shape is CircleShape2D:
+			(ia_cs.shape as CircleShape2D).radius = private_interaction_radius * private_sprite_scale
+	if product_spawn_point and animal_type == "cow":
+		product_spawn_point.position = Vector2(0, 24) * private_sprite_scale
 
 ## 喂养动物
 func feed(food_item_id: String = "") -> bool:

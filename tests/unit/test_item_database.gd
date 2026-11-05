@@ -53,7 +53,7 @@ func _ready() -> void:
 func _test_item_database(db: ItemDatabase, results: Dictionary) -> Dictionary:
 	var tests = [
 		{"name": "test_item_count", "func": func(): return db.items.size() > 0},
-		{"name": "test_get_item", "func": func(): var item = db.get_item("turnip"); return item != null and item.name == "芜菁"},
+		{"name": "test_get_item", "func": func(): var item = db.get_item("turnip"); return item != null and item.name == "防风草"},
 		{"name": "test_get_item_types", "func": func(): var item = db.get_item("turnip"); return item != null and item.type == ItemDatabase.ItemType.CROP},
 		{"name": "test_get_icon_path", "func": func(): var path = db.get_icon_path("turnip"); return path != ""},
 	]

@@ -101,7 +101,7 @@ func _create_default_crop_database() -> void:
 		"crops": [
 			{
 				"id": "turnip",
-				"name": "芜菁",
+				"name": "防风草",
 				"seed_id": "turnip_seed",
 				"growth_days": [1, 1, 1, 1],
 				"season": ["Spring"],
@@ -262,11 +262,17 @@ func _on_season_changed(_new_season: int, _season_name: String) -> void:
 ## 更新所有作物
 func update_all_crops() -> int:
 	var updated_count: int = 0
-
+	# 画面里的作物在 FarmState.advance_day 里已经长过。这里只取那一次的数量，
+	# 不再推进格子，避免同一夜长两次。没有过夜结算时，仍只更新注册的 Crop 节点。
+	var field_count: int = -1
+	if FarmState != null and FarmState.has_method("consume_overnight_crop_count"):
+		field_count = int(FarmState.consume_overnight_crop_count())
+	var node_count: int = 0
 	for crop in _registered_crops:
 		if crop and not crop.is_dead():
 			crop.on_day_passed()
-			updated_count += 1
+			node_count += 1
+	updated_count = field_count if field_count >= 0 else node_count
 
 	day_updated.emit(updated_count)
 	print("[GrowthSystem] Updated ", updated_count, " crops")

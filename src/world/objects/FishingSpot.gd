@@ -1,5 +1,6 @@
 extends Area2D
 class_name FishingSpot
+const InteractPromptScript = preload("res://src/ui/components/InteractPrompt.gd")  # preload: works before the class cache knows the class_name
 
 signal fishing_started(spot: FishingSpot)
 signal fishing_ended(spot: FishingSpot, success: bool, fish_id: String)
@@ -15,6 +16,7 @@ var current_player: Player = null
 
 # 钓鱼UI
 var fishing_ui: Control = null
+var _prompt = null  # InteractPrompt
 
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
@@ -25,6 +27,7 @@ func _ready() -> void:
 	
 	# 钓鱼竿场景通过 @export editor 配置
 	
+	_prompt = InteractPromptScript.attach(self, "", Vector2(0, -20), _prompt_available)
 	print("[FishingSpot] Fishing spot initialized: ", location_type)
 
 func _on_body_entered(body: Node2D) -> void:
@@ -39,19 +42,21 @@ func _on_body_exited(body: Node2D) -> void:
 		current_player = null
 		_hide_fishing_prompt()
 
+## Always shown at the water (BUG-38): "钓鱼" with the rod, "装水" with the
+## watering can; with any other tool E explains that a rod is needed.
+func _prompt_available() -> bool:
+	if not is_player_in_range or current_player == null or current_player.tool_manager == null:
+		return false
+	var current_tool = current_player.tool_manager.get_current_tool()
+	var text := "装水" if current_tool is WateringCan else "钓鱼"
+	if _prompt:
+		_prompt.set_action_text(text)
+	return true
+
 func _show_fishing_prompt() -> void:
-	print("[FishingSpot] Press F to fish here")
-	if get_node_or_null("FishingPrompt"):
-		return
-	var prompt := Label.new()
-	prompt.name = "FishingPrompt"
-	prompt.text = "[E] 钓鱼"
-	prompt.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	prompt.z_index = 10
-	# 显示在钓鱼点上方
-	prompt.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	prompt.position = Vector2(0, -40)
-	add_child(prompt)
+	# The shared InteractPrompt bubble (see _prompt_available) replaced the
+	# old "[E] 钓鱼 / 水壶装水" label that used to be created here.
+	print("[FishingSpot] Player at fishing spot")
 
 func _hide_fishing_prompt() -> void:
 	print("[FishingSpot] Left fishing spot")
@@ -79,6 +84,19 @@ func _start_fishing() -> void:
 				rod.use(global_position, location_type)
 				fishing_started.emit(self)
 				print("[FishingSpot] Started fishing at ", location_type)
+		elif current_tool is WateringCan:
+			_refill_watering_can()
 		else:
 			print("[FishingSpot] Need to equip fishing rod first!")
-			# 可以在这里显示提示UI
+			UIManager.show_toast("先换上鱼竿再钓鱼（按 6 或 Q/R）", {}, "info")
+
+
+## 拿着水壶在水边按空格/E：把水壶装满（水量存在 FarmState）。
+static func _refill_watering_can() -> void:
+	var refilled := FarmState.refill_watering_can()
+	var message := (
+		"水壶已装满（%d/%d）" % [FarmState.get_watering_can_uses_left(), FarmState.get_watering_can_max_uses()]
+		if refilled else "水壶已经是满的"
+	)
+	UIManager.show_toast(message, {}, "info")
+	print("[FishingSpot] ", message)

@@ -6,7 +6,7 @@ class_name FarmTilesetBuilder
 ## visible and left paths almost indistinguishable from grass.
 
 const TILESET_NAME := "farm_tiles"
-const ATLAS_PATH := "res://assets/tiles/farm_ground_atlas.svg"
+const ATLAS_PATH := "res://assets/tiles/kenney/farm_ground_atlas_64.png"  # Stage C: Kenney Tiny Town + Roguelike water
 const TextureLoader := preload("res://src/core/utils/RuntimeTextureLoader.gd")
 const TILE_SIZE := Vector2i(64, 64)
 const COLUMNS := 26

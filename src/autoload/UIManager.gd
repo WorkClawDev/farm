@@ -22,11 +22,40 @@ var _stack: Array[Dictionary] = []
 var _confirmation: Control
 var _confirmation_owns_pause := false
 var _pause_owned := false
+var _clock_paused := false
+var _held_bright_toasts := false
+
+const MAX_VISIBLE_TOASTS := 4
+const TOAST_DURATION := 3.0
 
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_build_overlay()
+	get_tree().root.window_input.connect(_on_root_window_input)
+
+
+func _process(_delta: float) -> void:
+	if not _held_bright_toasts or not _screen_is_bright():
+		return
+	_release_held_toasts()
+
+
+## Godot's GUI treats Esc as "hide the tooltip" and marks the event handled while a
+## tooltip popup exists, so with the mouse resting on a slot the first Esc only hid the
+## tooltip and the journal/pause menu needed a second press. Free the tooltip before
+## the GUI sees the key (freeing clears the viewport's tooltip pointer) so one Esc does both.
+func _on_root_window_input(event: InputEvent) -> void:
+	if not (event is InputEventKey and event.pressed and not event.echo):
+		return
+	if not (event.is_action("ui_cancel") or event.is_action("pause")):
+		return
+	var hovered := get_viewport().gui_get_hovered_control()
+	if hovered == null:
+		return
+	for child in hovered.get_children(true):
+		if child is Popup:
+			child.free()
 
 
 func open_screen(screen_id: String, context := {}) -> Control:
@@ -72,6 +101,14 @@ func open_screen(screen_id: String, context := {}) -> Control:
 	elif screen_id == "inventory" and instance.has_method("open_tab"):
 		instance.open_tab("inventory")
 	await get_tree().process_frame
+	# The screen may have been closed (close_all / close_top_screen / another
+	# open_screen) while we waited; it is then freed or about to be.
+	if (
+		not is_instance_valid(instance)
+		or instance.is_queued_for_deletion()
+		or _find_entry(screen_id).get("node") != instance
+	):
+		return null
 	UIFactory.focus_first(instance)
 	screen_opened.emit(screen_id, instance)
 	modal_stack_changed.emit(_stack.size())
@@ -113,12 +150,43 @@ func close_all() -> void:
 	modal_stack_changed.emit(0)
 
 
-func show_toast(message_key: String, args := {}, variant := "info") -> void:
+func show_toast(message_key: String, args := {}, variant := "info", hold_until_bright := false) -> void:
 	if _toast_root == null:
 		return
+	var text := _format_message(message_key, args)
+	# BUG-10: merge identical live toasts instead of stacking duplicates.
+	for child in _toast_root.get_children():
+		if child.is_queued_for_deletion() or bool(child.get_meta("toast_dismissing", false)):
+			continue
+		if str(child.get_meta("toast_text", "")) == text and str(child.get_meta("toast_variant", "")) == variant:
+			var count := int(child.get_meta("toast_count", 1)) + 1
+			child.set_meta("toast_count", count)
+			var existing_label := child.get_meta("toast_label") as Label
+			if is_instance_valid(existing_label):
+				existing_label.text = UIFactory.no_orphan("%s ×%d" % [text, count])
+			if bool(child.get_meta("toast_hold_bright", false)):
+				child.modulate.a = 0.0
+				return
+			child.modulate.a = 1.0
+			_schedule_toast_dismiss(child)
+			return
+	# BUG-10: cap visible toasts, dropping the oldest.
+	var live: Array[Node] = []
+	for child in _toast_root.get_children():
+		if not child.is_queued_for_deletion():
+			live.append(child)
+	while live.size() >= MAX_VISIBLE_TOASTS:
+		var oldest: Node = live.pop_front()
+		_toast_root.remove_child(oldest)
+		oldest.queue_free()
 	var panel := UIFactory.hud_panel()
 	panel.theme_type_variation = &"ToastPanel"
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.clip_contents = true
+	# Floor stays inside the 320px ToastRoot. A larger minimum grows the
+	# center anchor (GROW_DIRECTION_BOTH) and the right edge crosses into
+	# the date/gold panel. Clip anything that still paints past the slot.
+	panel.custom_minimum_size.x = 300
 	panel.modulate.a = 0.0
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 10)
@@ -134,20 +202,70 @@ func show_toast(message_key: String, args := {}, variant := "info") -> void:
 	row.add_child(marker)
 	var label := Label.new()
 	label.theme_type_variation = &"HUDText"
-	label.text = _format_message(message_key, args)
+	label.text = UIFactory.no_orphan(text)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.custom_minimum_size.x = 260
+	# 240 + marker + margins stays under the 320px slot, so the label's
+	# minimum cannot widen ToastRoot past viewport_width - 300.
+	label.custom_minimum_size.x = 240
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL  # use the whole toast width before wrapping
 	row.add_child(label)
+	panel.set_meta("toast_text", text)
+	panel.set_meta("toast_variant", variant)
+	panel.set_meta("toast_count", 1)
+	panel.set_meta("toast_label", label)
+	panel.process_mode = Node.PROCESS_MODE_ALWAYS
 	_toast_root.add_child(panel)
 
 	var reduce_motion: bool = bool(UserSettings.get_value("accessibility", "reduce_motion", false))
-	if reduce_motion:
+	var hold := hold_until_bright and not _screen_is_bright()
+	if hold:
+		# Keep the node (tests and merges can see the text) but do not start
+		# the 3s clock until the morning fade has let the picture come up.
+		panel.modulate.a = 0.0
+		panel.set_meta("toast_hold_bright", true)
+		_held_bright_toasts = true
+		return
+	panel.set_meta("toast_hold_bright", false)
+	var tree := get_tree()
+	var paused := tree != null and tree.paused
+	# A paused modal (shipping bin) never ticks a bound tween, so the panel
+	# stayed at alpha 0 and the 3s timer dismissed it unseen.
+	if reduce_motion or paused:
 		panel.modulate.a = 1.0
 	else:
 		var intro := panel.create_tween()
+		intro.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 		intro.tween_property(panel, "modulate:a", 1.0, 0.12)
-	var timer := get_tree().create_timer(3.0, true, false, true)
-	timer.timeout.connect(_dismiss_toast.bind(panel, reduce_motion))
+	_schedule_toast_dismiss(panel)
+
+
+func get_visible_toast_count() -> int:
+	if _toast_root == null:
+		return 0
+	var n := 0
+	for child in _toast_root.get_children():
+		if not child.is_queued_for_deletion():
+			n += 1
+	return n
+
+
+func _schedule_toast_dismiss(panel: Control) -> void:
+	var gen := int(panel.get_meta("toast_gen", 0)) + 1
+	panel.set_meta("toast_gen", gen)
+	var reduce_motion: bool = bool(UserSettings.get_value("accessibility", "reduce_motion", false))
+	# process_always: shipping UI pauses the tree. ignore_time_scale: 3 real
+	# seconds, not a sped-up clock. Not a physics timer: a catch-up hitch
+	# used to expire the toast in one burst.
+	var timer := get_tree().create_timer(TOAST_DURATION, true, true, false)
+	timer.timeout.connect(_on_toast_timeout.bind(panel, gen, reduce_motion))
+
+
+func _on_toast_timeout(panel: Variant, gen: int, reduce_motion: bool) -> void:
+	# panel 不能写成 Control 类型：被挤掉（BUG-10 上限）的旧 Toast 已经释放，计时器到点时
+	# 绑定参数是个已释放的对象，带类型的参数会在进函数前报 "Cannot convert argument 1"。
+	if not is_instance_valid(panel) or int((panel as Control).get_meta("toast_gen", 0)) != gen:
+		return
+	_dismiss_toast(panel as Control, reduce_motion)
 
 
 func show_confirmation(config: Dictionary) -> Control:
@@ -164,6 +282,7 @@ func show_confirmation(config: Dictionary) -> Control:
 	shade.theme = UIStyles.active_theme()
 	_screen_root.add_child(shade)
 	_confirmation = shade
+	shade.set_meta("confirm_config", config)
 
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -194,8 +313,33 @@ func show_confirmation(config: Dictionary) -> Control:
 	buttons.add_child(confirm)
 	cancel.pressed.connect(_on_confirmation_result.bind(false, config))
 	confirm.pressed.connect(_on_confirmation_result.bind(true, config))
-	cancel.grab_focus()
+	# focus_confirm: sleep dialog lands on 确认, not 取消 (BUG-8).
+	if bool(config.get("focus_confirm", false)):
+		confirm.grab_focus()
+	else:
+		cancel.grab_focus()
 	return shade
+
+
+## True while a UIManager screen (save/load, settings, journal...) or a
+## confirmation dialog is on top. Scene-level Esc handlers (Farm, PauseMenu)
+## must yield to it: they run before this autoload in _unhandled_input order,
+## so without this check they would swallow the Esc meant for the sub-screen.
+func has_open_modal() -> bool:
+	if is_instance_valid(_confirmation):
+		return true
+	for entry in _stack:
+		if is_instance_valid(entry.get("node")):
+			return true
+	return false
+
+
+## True while a confirmation dialog is open. It is the topmost layer, so screens
+## (save/load, settings) must leave Esc to it: being children of the overlay they
+## see _unhandled_input before this autoload and would otherwise close themselves
+## underneath the dialog (BUG-19).
+func has_open_confirmation() -> bool:
+	return is_instance_valid(_confirmation)
 
 
 func is_screen_open(screen_id: String) -> bool:
@@ -204,6 +348,14 @@ func is_screen_open(screen_id: String) -> bool:
 
 func get_screen(screen_id: String) -> Control:
 	return _find_entry(screen_id).get("node") as Control
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	# Esc on a confirmation dialog means "cancel" (screens handle their own Esc).
+	if is_instance_valid(_confirmation) and (event.is_action_pressed("ui_cancel") or event.is_action_pressed("pause")):
+		get_viewport().set_input_as_handled()
+		var config: Dictionary = _confirmation.get_meta("confirm_config", {})
+		_on_confirmation_result(false, config)
 
 
 func _build_overlay() -> void:
@@ -219,13 +371,25 @@ func _build_overlay() -> void:
 	_overlay_layer.add_child(_screen_root)
 	_toast_root = VBoxContainer.new()
 	_toast_root.name = "ToastRoot"
-	_toast_root.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	_toast_root.offset_left = -380
-	_toast_root.offset_top = 24
-	_toast_root.offset_right = -24
-	_toast_root.offset_bottom = 500
+	# Top-center, dropped below the date/gold panel (that panel starts at y=20
+	# and hugs two text rows). Width is 320px (±160): at 1280 the right edge
+	# is 800, left of viewport_width-300, and the left edge stays clear of the
+	# quest tracker (BUG-4).
+	_toast_root.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_toast_root.offset_left = -160
+	_toast_root.offset_top = 88
+	_toast_root.offset_right = 160
+	_toast_root.offset_bottom = 400
+	# PRESET_CENTER_TOP grows both ways. Pin extra width to the left so the
+	# right edge stays at viewport/2+160 (800 at 1280, under viewport-300).
+	_toast_root.grow_horizontal = Control.GROW_DIRECTION_BEGIN
 	_toast_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Screens are siblings underneath. A full-screen shade used to cover the
+	# toast for the whole time the shipping panel was open.
+	_toast_root.z_as_relative = false
+	_toast_root.z_index = 30
 	_toast_root.add_theme_constant_override("separation", 10)
+	UIStyles.follow_theme(_toast_root)
 	_overlay_layer.add_child(_toast_root)
 
 
@@ -270,12 +434,29 @@ func _acquire_pause() -> void:
 	if GameManager.current_state == GameManager.GameState.PLAYING:
 		GameManager.pause_game()
 		_pause_owned = true
+		_pause_clock()
 
 
 func _release_pause() -> void:
 	if _pause_owned and GameManager.current_state == GameManager.GameState.PAUSED:
 		GameManager.resume_game()
+	if _pause_owned:
+		_resume_clock()
 	_pause_owned = false
+
+
+func _pause_clock() -> void:
+	if _clock_paused:
+		return
+	_clock_paused = true
+	TimeManager.pause_time()
+
+
+func _resume_clock() -> void:
+	if not _clock_paused:
+		return
+	_clock_paused = false
+	TimeManager.resume_time()
 
 
 func _on_confirmation_result(confirmed: bool, config: Dictionary) -> void:
@@ -297,12 +478,35 @@ func _close_confirmation() -> void:
 func _dismiss_toast(panel: Control, reduce_motion: bool) -> void:
 	if not is_instance_valid(panel):
 		return
+	panel.set_meta("toast_dismissing", true)
 	if reduce_motion:
 		panel.queue_free()
 		return
 	var tween := panel.create_tween()
+	tween.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
 	tween.tween_property(panel, "modulate:a", 0.0, 0.16)
 	tween.finished.connect(panel.queue_free)
+
+
+func _screen_is_bright() -> bool:
+	var transition := get_node_or_null("/root/SceneTransition")
+	if transition != null and transition.has_method("screen_is_bright"):
+		return bool(transition.screen_is_bright())
+	return true
+
+
+func _release_held_toasts() -> void:
+	_held_bright_toasts = false
+	if _toast_root == null:
+		return
+	for child in _toast_root.get_children():
+		if not is_instance_valid(child) or child.is_queued_for_deletion():
+			continue
+		if not bool(child.get_meta("toast_hold_bright", false)):
+			continue
+		child.set_meta("toast_hold_bright", false)
+		child.modulate.a = 1.0
+		_schedule_toast_dismiss(child)
 
 
 func _format_message(key: String, args: Dictionary) -> String:

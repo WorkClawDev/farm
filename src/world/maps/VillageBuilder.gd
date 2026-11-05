@@ -272,7 +272,8 @@ func _clean_placeholder_layer() -> void:
 	for layer_name in old_layers:
 		var layer = village.get_node_or_null(layer_name)
 		if layer != null:
-			village.remove_child(layer)
+			# Village.add_child(self) is still on the stack, so this parent is busy.
+			village.call_deferred("remove_child", layer)
 			layer.queue_free()
 			print("[VillageBuilder] Removed legacy layer: ", layer_name)
 

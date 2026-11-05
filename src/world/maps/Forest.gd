@@ -9,9 +9,18 @@ const HUDScene = preload("res://src/ui/hud/HUD.tscn")
 const HotkeyBarScene = preload("res://src/ui/hud/HotkeyBar.tscn")
 const ToolDisplayScene = preload("res://src/ui/hud/ToolDisplay.tscn")
 const QuestTrackerScene = preload("res://src/ui/hud/QuestTracker.tscn")
+const MapMenuInput = preload("res://src/world/maps/MapMenuInput.gd")
 const ForageItemScene = preload("res://src/entities/items/ForageItem.tscn")
 const PlayerScene = preload("res://src/entities/player/Player.tscn")
 const VILLAGE_SCENE := "res://src/world/maps/Village.tscn"
+const ExitSign = preload("res://src/world/maps/ExitSign.gd")
+const DayNightTint = preload("res://src/world/maps/DayNightTint.gd")
+const FROM_VILLAGE_SPAWN := Vector2(440, 790)
+const EXIT_SIGNS := {
+	"ToFarmArea": ["← 村庄", Vector2(40, -48)],
+	# Raised and beside the road so the hotbar does not cover it at the bottom edge.
+	"ToVillageSouthArea": ["↓ 村庄", Vector2(80, -105)],
+}
 @onready var map_root: EditableMap2D = $ForestMap
 @onready var player_spawn: MapMarker2D = map_root.get_marker(&"player_spawn")
 @onready var forage_points: Node2D = $ForagePoints
@@ -25,6 +34,7 @@ func _ready() -> void:
 	print("[Forest] Scene loaded")
 	_setup_map()
 	_setup_ui()
+	add_child(DayNightTint.new())  # outdoor night tint (round 8)
 	_setup_forage_points()
 	_connect_signals()
 	_generate_random_forage()
@@ -32,7 +42,11 @@ func _ready() -> void:
 
 	var player := get_tree().get_first_node_in_group("player") as Node2D
 	if player:
-		player.global_position = player_spawn.global_position
+		# Coming up the village's north road you arrive at the forest's south road.
+		if GameManager.current_spawn_point == "from_village":
+			player.global_position = FROM_VILLAGE_SPAWN
+		else:
+			player.global_position = player_spawn.global_position
 	AudioManager.update_location_bgm("forest")
 
 func _setup_map() -> void:
@@ -53,6 +67,7 @@ func _setup_ui() -> void:
 	var quest_tracker := QuestTrackerScene.instantiate()
 	quest_tracker.position = Vector2(16, 70)
 	hud.add_child(quest_tracker)
+	hud.add_child(MapMenuInput.new())  # Esc / J, same as Village
 	print("[Forest] Unified HUD added")
 
 
@@ -117,9 +132,12 @@ func _connect_signals() -> void:
 	if TimeManager:
 		TimeManager.day_changed.connect(_on_day_changed)
 		TimeManager.season_changed.connect(_on_season_changed)
-	var exit_area := get_node_or_null("TransitionAreas/ToFarmArea") as Area2D
-	if exit_area:
-		exit_area.body_entered.connect(_on_exit_to_village)
+	# Both the west road and the south road lead back to the village (BUG-35).
+	for exit_name in EXIT_SIGNS:
+		var exit_area := get_node_or_null("TransitionAreas/%s" % exit_name) as Area2D
+		if exit_area:
+			exit_area.body_entered.connect(_on_exit_to_village)
+			ExitSign.attach(exit_area, EXIT_SIGNS[exit_name][0], EXIT_SIGNS[exit_name][1])
 	print("[Forest] Connected to signals")
 
 

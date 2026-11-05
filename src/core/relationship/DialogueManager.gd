@@ -33,6 +33,11 @@ var _dialogue_box: DialogueBox = null
 # 数据路径
 const DIALOGUE_DATA_PATH: String = "res://data/dialogues.json"
 const DIALOGUE_BOX_SCENE := preload("res://src/ui/dialogs/DialogueBox.tscn")
+## BUG-20 re-entrancy guards (see start_dialogue / _on_event_dialogue_started).
+var _emitting_started := false
+var _starting := false
+var _dialogue_clock_paused := false
+
 const DIALOGUE_ID_ALIASES := {
 	"farmer_joe": "farmer",
 	"shopkeeper_lily": "merchant",
@@ -120,6 +125,11 @@ func start_dialogue(npc_id: String, dialogue_key: String = "") -> bool:
 	if dialogue.is_empty():
 		push_warning("[DialogueManager] No valid dialogue found for: " + npc_id)
 		return false
+	if (dialogue.get("lines", []) as Array).is_empty():
+		# An empty dialogue would end inside show_dialogue_advanced(), before we
+		# even announce it started (BUG-20 loop). Refuse it instead.
+		push_warning("[DialogueManager] Dialogue has no lines: " + str(dialogue.get("id", "")))
+		return false
 
 	# 设置当前对话状态
 	_current_npc_id = npc_id
@@ -138,9 +148,17 @@ func start_dialogue(npc_id: String, dialogue_key: String = "") -> bool:
 			"lines": dialogue.get("lines", [])
 		})
 
+	if not _is_in_dialogue:
+		# The box already finished (and dialogue_ended was emitted) synchronously.
+		return false
+	_pause_dialogue_clock()
 	dialogue_started.emit(npc_id)
 	if EventBus:
+		# This emit comes back to _on_event_dialogue_started; the guard there stops
+		# it from starting the dialogue again (BUG-20 infinite recursion).
+		_emitting_started = true
 		get_node("/root/EventBus").social.dialogue_started.emit(npc_id)
+		_emitting_started = false
 
 	print("[DialogueManager] Started dialogue: ", _current_dialogue_id)
 	GameManager.current_state = GameManager.GameState.DIALOGUE
@@ -247,6 +265,7 @@ func _get_npc_name(npc_id: String) -> String:
 func _on_dialogue_finished() -> void:
 	if not _is_in_dialogue:
 		return
+	_resume_dialogue_clock()
 
 	var npc_id = _current_npc_id
 	_is_in_dialogue = false
@@ -271,13 +290,20 @@ func _on_choice_selected(choice_index: int) -> void:
 		return
 
 	var lines = current_dialogue.get("lines", [])
+	# The box tracks which line is on screen; _current_line_index is never advanced,
+	# so reading it here looked at line 0 (no choices) and the choice was dropped,
+	# leaving a blank page with no continue prompt (BUG-20).
+	if _dialogue_box:
+		_current_line_index = _dialogue_box.current_line_index
 	if _current_line_index >= lines.size():
+		_advance_box_after_choice()
 		return
 
 	var current_line = lines[_current_line_index]
-	var choices = current_line.get("choices", [])
+	var choices = current_line.get("choices", []) if current_line is Dictionary else []
 
 	if choice_index >= choices.size():
+		_advance_box_after_choice()
 		return
 
 	var choice_data = choices[choice_index]
@@ -286,19 +312,26 @@ func _on_choice_selected(choice_index: int) -> void:
 	choice_made.emit(choice_index, choice_data)
 
 	# 处理分支
-	if choice_data.has("next"):
-		_show_branch(choice_data["next"])
+	if choice_data.has("next") and _show_branch(choice_data["next"]):
+		return
+	_advance_box_after_choice()
+
+
+## No branch to show after a choice: move on (or end) instead of leaving the box empty.
+func _advance_box_after_choice() -> void:
+	if _dialogue_box and _dialogue_box.visible:
+		_dialogue_box._advance_dialogue()
 
 ## 显示分支对话
-func _show_branch(branch_id: String) -> void:
+func _show_branch(branch_id: String) -> bool:
 	var current_dialogue = _get_current_dialogue()
 	if current_dialogue.is_empty():
-		return
+		return false
 
 	var branches = current_dialogue.get("branches", {})
 	if not branches.has(branch_id):
 		push_warning("[DialogueManager] Branch not found: " + branch_id)
-		return
+		return false
 
 	var branch_data = branches[branch_id]
 
@@ -308,10 +341,13 @@ func _show_branch(branch_id: String) -> void:
 	# 显示分支对话
 	if _dialogue_box and branch_data.has("lines"):
 		var npc_name = _get_npc_name(_current_npc_id)
+		_current_branch = branch_id
 		_dialogue_box.show_dialogue_advanced({
 			"speaker": npc_name,
 			"lines": branch_data["lines"]
 		})
+		return true
+	return false
 
 ## 获取当前对话数据
 func _get_current_dialogue() -> Dictionary:
@@ -369,6 +405,9 @@ func _trigger_single_effect(effect: Dictionary) -> void:
 			var shop_id = effect.get("shop", "")
 			# ShopSystem 未实现，记录日志
 			print("[DialogueManager] Unlock shop (no system): ", shop_id)
+
+		"open_tool_upgrade":
+			ToolUpgradeUI.present()
 
 		"trigger_dialogue":
 			var npc = effect.get("npc", "")
@@ -442,7 +481,22 @@ func load_state(data: Dictionary) -> void:
 	print("[DialogueManager] State loaded")
 
 
+func _pause_dialogue_clock() -> void:
+	if _dialogue_clock_paused:
+		return
+	_dialogue_clock_paused = true
+	TimeManager.pause_time()
+
+
+func _resume_dialogue_clock() -> void:
+	if not _dialogue_clock_paused:
+		return
+	_dialogue_clock_paused = false
+	TimeManager.resume_time()
+
+
 func reset() -> void:
+	_resume_dialogue_clock()
 	_player_flags.clear()
 	_friendship_data.clear()
 	_current_npc_id = ""
@@ -455,8 +509,12 @@ func reset() -> void:
 
 ## 事件总线回调
 func _on_event_dialogue_started(npc_id: String) -> void:
-	if not _is_in_dialogue:
-		start_dialogue(npc_id)
+	# Ignore our own re-broadcast and any event that arrives while a start is in progress.
+	if _emitting_started or _starting or _is_in_dialogue:
+		return
+	_starting = true
+	start_dialogue(npc_id)
+	_starting = false
 
 func _on_event_dialogue_ended(npc_id: String) -> void:
 	# 由 DialogueManager 自身触发，这里不需要额外处理

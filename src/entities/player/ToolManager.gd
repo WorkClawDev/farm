@@ -1,4 +1,4 @@
-extends Node
+extends Node2D
 class_name ToolManager
 
 ## ToolManager - 玩家工具管理器
@@ -15,8 +15,11 @@ enum ToolType {
 	FISHING_ROD    # 鱼竿
 }
 
-# 当前工具类型
+# 当前工具类型。NONE 表示“收起工具、手里拿的是快捷栏选中的物品”（如种子）。
 var current_tool_type: ToolType = ToolType.NONE
+
+# 最近一次拿的工具：从“手持物品”按 Q/R 时先回到它。
+var last_tool_type: ToolType = ToolType.HOE
 
 # 工具实例
 var tools: Dictionary = {}
@@ -30,6 +33,16 @@ const TOOL_SCENES = {
 	ToolType.SICKLE: "res://src/entities/tools/Sickle.tscn",
 	ToolType.FISHING_ROD: "res://src/entities/tools/FishingRod.tscn"
 }
+
+## 数字键 1–6 与 Q/R 共用的顺序。下标 0 = 键 1。
+const TOOL_HOTKEY_ORDER := [
+	ToolType.HOE,
+	ToolType.WATERING_CAN,
+	ToolType.AXE,
+	ToolType.PICKAXE,
+	ToolType.SICKLE,
+	ToolType.FISHING_ROD,
+]
 
 # 信号
 signal tool_changed(new_tool: ToolType, tool_name: String)
@@ -45,8 +58,19 @@ func _ready() -> void:
 func initialize(player_ref: CharacterBody2D) -> void:
 	player = player_ref
 	_load_tools()
-	# 默认选择锄头
-	equip_tool(ToolType.HOE)
+	# 恢复切换场景前手上的东西（BUG-15）：工具 / 手持快捷栏物品，以及 Q/R 要回到的工具。
+	# 选中的快捷栏格子本来就存在 Inventory 里。新游戏默认是锄头。
+	var saved_last: int = Inventory.get_last_tool() if Inventory else ToolType.HOE
+	if TOOL_SCENES.has(saved_last):
+		last_tool_type = saved_last as ToolType
+	var saved_tool: int = Inventory.get_equipped_tool() if Inventory else ToolType.HOE
+	if saved_tool != ToolType.NONE and not TOOL_SCENES.has(saved_tool):
+		saved_tool = ToolType.HOE
+	if saved_tool == ToolType.NONE:
+		# current_tool_type 初始就是 NONE，equip_tool 会提前 return，这里直接广播一次。
+		tool_changed.emit(ToolType.NONE, _get_tool_name(ToolType.NONE))
+	else:
+		equip_tool(saved_tool as ToolType)
 
 ## 加载所有工具
 func _load_tools() -> void:
@@ -57,6 +81,8 @@ func _load_tools() -> void:
 			var tool_instance = scene.instantiate()
 			tools[tool_type] = tool_instance
 			add_child(tool_instance)
+			# 只显示装备中的那一把，其余先藏起来（equip_tool 会把选中的显示出来）。
+			tool_instance.visible = false
 			print("[ToolManager] Loaded tool: ", _get_tool_name(tool_type))
 		else:
 			push_warning("[ToolManager] Tool scene not found: " + scene_path)
@@ -71,26 +97,51 @@ func equip_tool(tool_type: ToolType) -> void:
 		tools[current_tool_type].visible = false
 	
 	current_tool_type = tool_type
+	if tool_type != ToolType.NONE:
+		last_tool_type = tool_type
+	if Inventory:
+		Inventory.set_equipped_tool(current_tool_type, last_tool_type)
 	
 	# 显示新工具
 	if tool_type != ToolType.NONE and tools.has(tool_type):
 		tools[tool_type].visible = true
 		
-		# 根据玩家方向调整工具位置
-		var tool_offset = Vector2(16, 0)
-		if player and player.has_method("get"):
-			var current_direction = player.get("current_direction")
-			if current_direction != null:
-				match current_direction:
-					0: tool_offset = Vector2(0, 16)   # DOWN
-					1: tool_offset = Vector2(0, -16)  # UP
-					2: tool_offset = Vector2(-16, 0)  # LEFT
-					3: tool_offset = Vector2(16, 0)   # RIGHT
-		
-		tools[tool_type].position = tool_offset
+		update_pose()
 	
 	tool_changed.emit(tool_type, _get_tool_name(tool_type))
 	print("[ToolManager] Equipped: ", _get_tool_name(tool_type))
+
+## 手持工具的姿态：放在角色手边，跟着朝向翻转；朝上时画在身体后面。
+## ToolManager 是 Player 的子节点（Node2D），工具会跟着玩家移动。
+## 偏移是 Player 本地坐标（角色 Sprite 以原点为中心、64×64）。
+const HOLD_SCALE := 0.35  # 64px ninja tools read huge next to 64px body (BUG-50)
+const HOLD_OFFSETS = {
+	0: Vector2(14, -2),   # DOWN：右手在画面右侧
+	1: Vector2(-14, -4),  # UP：背对镜头，右手在画面左侧（画在身后）
+	2: Vector2(-12, -2),  # LEFT
+	3: Vector2(12, -2),   # RIGHT
+}
+
+func update_pose() -> void:
+	var direction := 0
+	if player:
+		var d = player.get("current_direction")
+		if d != null:
+			direction = int(d)
+	var tool := get_current_tool() as Node2D
+	if tool:
+		tool.position = HOLD_OFFSETS.get(direction, HOLD_OFFSETS[0])
+		var mirror := -1.0 if direction == 2 else 1.0
+		tool.scale = Vector2(HOLD_SCALE * mirror, HOLD_SCALE)
+	# 朝上时把工具挪到角色 Sprite 前面（先画 = 在身后），其他方向画在身前。
+	var parent := get_parent()
+	var body_sprite: Node = parent.get_node_or_null("Sprite2D") if parent else null
+	if parent and body_sprite:
+		var behind := direction == 1
+		if behind and get_index() > body_sprite.get_index():
+			parent.move_child(self, body_sprite.get_index())
+		elif not behind and get_index() < body_sprite.get_index():
+			parent.move_child(self, body_sprite.get_index())
 
 ## 获取工具名称
 func _get_tool_name(tool_type: ToolType) -> String:
@@ -130,12 +181,11 @@ func use_tool(target: Node = null) -> bool:
 				success = tool.use(target)
 		
 		ToolType.WATERING_CAN:
-			if tool.has_method("use"):
-				# 水壶需要目标位置
-				var target_pos = _get_target_position()
-				success = tool.use(target_pos)
-				# 同时尝试给土壤浇水
-				if target is Soil:
+			# 只有真的对着可浇水的土壤才用水；对着空地/草地按空格不再白白扣水。
+			# 农场地块走 Farm.perform_farm_action -> FarmState.water_with_can。
+			if tool.has_method("use") and target is Soil and target.can_water():
+				success = tool.use(_get_target_position())
+				if success:
 					target.water()
 		
 		ToolType.AXE, ToolType.PICKAXE, ToolType.SICKLE:
@@ -164,21 +214,43 @@ func _get_target_position() -> Vector2:
 	
 	return player.global_position + direction * 32.0
 
+## 收起工具，改用快捷栏选中的物品（点击快捷栏或按 Tab 时调用）
+func put_away_tool() -> void:
+	equip_tool(ToolType.NONE)
+
+## 数字键直选。已是该工具，或下标越界，则保持现状。
+func equip_tool_by_hotkey(slot: int) -> void:
+	if slot < 0 or slot >= TOOL_HOTKEY_ORDER.size():
+		return
+	equip_tool(TOOL_HOTKEY_ORDER[slot])
+
+## 是否收起了工具（手持快捷栏物品）
+func is_using_hotbar_item() -> bool:
+	return current_tool_type == ToolType.NONE
+
 ## 切换到下一个工具
 func next_tool() -> void:
-	var tool_list = [ToolType.HOE, ToolType.WATERING_CAN, ToolType.AXE, 
-					 ToolType.PICKAXE, ToolType.SICKLE, ToolType.FISHING_ROD]
-	var current_index = tool_list.find(current_tool_type)
-	var next_index = (current_index + 1) % tool_list.size()
-	equip_tool(tool_list[next_index])
+	if current_tool_type == ToolType.NONE:
+		equip_tool(last_tool_type)
+		return
+	var current_index: int = TOOL_HOTKEY_ORDER.find(current_tool_type)
+	if current_index < 0:
+		equip_tool(TOOL_HOTKEY_ORDER[0])
+		return
+	var next_index := (current_index + 1) % TOOL_HOTKEY_ORDER.size()
+	equip_tool(TOOL_HOTKEY_ORDER[next_index])
 
 ## 切换到上一个工具
 func previous_tool() -> void:
-	var tool_list = [ToolType.HOE, ToolType.WATERING_CAN, ToolType.AXE, 
-					 ToolType.PICKAXE, ToolType.SICKLE, ToolType.FISHING_ROD]
-	var current_index = tool_list.find(current_tool_type)
-	var prev_index = (current_index - 1 + tool_list.size()) % tool_list.size()
-	equip_tool(tool_list[prev_index])
+	if current_tool_type == ToolType.NONE:
+		equip_tool(last_tool_type)
+		return
+	var current_index: int = TOOL_HOTKEY_ORDER.find(current_tool_type)
+	if current_index < 0:
+		equip_tool(TOOL_HOTKEY_ORDER[0])
+		return
+	var prev_index := (current_index - 1 + TOOL_HOTKEY_ORDER.size()) % TOOL_HOTKEY_ORDER.size()
+	equip_tool(TOOL_HOTKEY_ORDER[prev_index])
 
 ## 获取当前工具
 func get_current_tool() -> Node:
@@ -194,21 +266,18 @@ func get_current_tool_type() -> ToolType:
 func has_tool(tool_type: ToolType) -> bool:
 	return tools.has(tool_type)
 
+## 水壶水量统一由 FarmState 管理（跨场景、进存档），这里只是转发。
 func consume_watering_charge() -> bool:
-	var watering_can = tools.get(ToolType.WATERING_CAN)
-	if watering_can == null or not "current_water" in watering_can:
-		return true
-	if watering_can.current_water < watering_can.water_per_use:
+	if not FarmState.has_watering_charge():
 		return false
-	watering_can.current_water -= watering_can.water_per_use
+	FarmState.set_watering_can_water(
+		FarmState.get_watering_can_water() - FarmState.WATERING_CAN_WATER_PER_USE
+	)
 	return true
 
 func has_watering_charge() -> bool:
-	var watering_can = tools.get(ToolType.WATERING_CAN)
-	return watering_can == null or not "current_water" in watering_can \
-		or watering_can.current_water >= watering_can.water_per_use
+	return FarmState.has_watering_charge()
 
-func refill_tools() -> void:
-	var watering_can = tools.get(ToolType.WATERING_CAN)
-	if watering_can and watering_can.has_method("refill"):
-		watering_can.refill()
+## 装满水壶；返回 false 表示本来就是满的。
+func refill_tools() -> bool:
+	return FarmState.refill_watering_can()

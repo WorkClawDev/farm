@@ -1,7 +1,8 @@
-[gd_scene load_steps=6 format=3 uid="uid://npc_base_001"]
+[gd_scene load_steps=7 format=3 uid="uid://npc_base_001"]
 
 [ext_resource type="Script" path="res://src/entities/npc/NPC.gd" id="1_npc_script"]
 [ext_resource type="Texture2D" path="res://assets/sprites/characters/npc_default.png" id="2_npc_sprite"]
+[ext_resource type="Script" path="res://src/ui/components/InteractPrompt.gd" id="3_interact_prompt"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_collision"]
 size = Vector2(24, 24)
@@ -29,7 +30,7 @@ npc_id = "npc_001"
 npc_name = "NPC"
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-scale = Vector2(2, 2)
+scale = Vector2(1, 1)
 texture = ExtResource("2_npc_sprite")
 hframes = 1
 vframes = 1
@@ -48,14 +49,9 @@ shape = SubResource("RectangleShape2D_interaction")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
 
-[node name="InteractionLabel" type="Label" parent="."]
-offset_left = -30.0
-offset_top = -50.0
-offset_right = 30.0
-offset_bottom = -30.0
-horizontal_alignment = 1
-vertical_alignment = 1
-text = "E"
+[node name="InteractPrompt" type="Node2D" parent="."]
+position = Vector2(0, -38)
+script = ExtResource("3_interact_prompt")
 
 [connection signal="body_entered" from="InteractionArea" to="." method="_on_interaction_area_body_entered"]
 [connection signal="body_exited" from="InteractionArea" to="." method="_on_interaction_area_body_exited"]

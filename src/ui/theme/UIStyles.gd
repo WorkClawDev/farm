@@ -31,14 +31,27 @@ static func active_theme() -> Theme:
 static func apply_root(control: Control) -> void:
 	control.theme = active_theme()
 
+## For HUD widgets that set their own theme: UIThemeBridge swaps it when high
+## contrast is toggled (BUG-25: quest/hotbar/tool panels kept the old theme).
+static func follow_theme(control: Control) -> void:
+	control.theme = active_theme()
+	control.add_to_group("theme_followers")
+
 static func format_play_time(seconds: float) -> String:
 	var total := maxi(0, int(seconds))
 	return "%02d:%02d" % [total / 3600, (total % 3600) / 60]
 
-static func format_timestamp(timestamp: int) -> String:
+const SYSTEM_UTC_OFFSET := -100000
+
+## Saves store saved_at as UTC unix seconds; show it in the player's local time.
+## utc_offset_minutes overrides the system zone (tests); the stored value never changes.
+static func format_timestamp(timestamp: int, utc_offset_minutes: int = SYSTEM_UTC_OFFSET) -> String:
 	if timestamp <= 0:
 		return tr_key("ui.save.unknown_time", "时间未知")
-	var value := Time.get_datetime_dict_from_unix_time(timestamp)
+	var offset := utc_offset_minutes
+	if offset == SYSTEM_UTC_OFFSET:
+		offset = int(Time.get_time_zone_from_system().get("bias", 0))
+	var value := Time.get_datetime_dict_from_unix_time(timestamp + offset * 60)
 	return "%04d-%02d-%02d  %02d:%02d" % [
 		int(value.get("year", 0)),
 		int(value.get("month", 0)),

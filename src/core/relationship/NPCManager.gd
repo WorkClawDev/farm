@@ -22,6 +22,9 @@ var _current_scene: Node2D = null
 # NPC父节点
 var _npc_parent: Node2D = null
 
+## Set on NPCs that belong to the scene file (adopted, never freed by the manager).
+const AUTHORED_META := &"npc_manager_authored"
+
 func _ready() -> void:
 	print("[NPCManager] Initialized")
 	_load_npc_data()
@@ -82,7 +85,11 @@ func _spawn_npcs_for_scene() -> void:
 	
 	# 清除现有NPC
 	_despawn_all_npcs()
-	
+
+	# Villagers placed in the scene file are the scene's own; adopt them instead of
+	# spawning a second copy of the same id (BUG-44).
+	_adopt_authored_npcs()
+
 	# 根据场景生成对应的NPC
 	for npc_id in _npc_data.keys():
 		var npc_data = _npc_data[npc_id]
@@ -91,6 +98,29 @@ func _spawn_npcs_for_scene() -> void:
 		# 检查NPC是否应该在这个场景
 		if _should_npc_be_in_scene(npc_id, scene_name):
 			_spawn_npc(npc_id, npc_data)
+
+
+## NPCs authored in the scene under NPCs/: track them (one instance per id) and put
+## them where their schedule says, like a spawned one. The scene keeps owning them.
+func _adopt_authored_npcs() -> void:
+	if _npc_parent == null:
+		return
+	for child in _npc_parent.get_children():
+		if not child is NPC or child.is_queued_for_deletion():
+			continue
+		var npc_id: String = child.npc_id
+		if npc_id == "" or _spawned_npcs.has(npc_id):
+			if npc_id != "":
+				push_warning("[NPCManager] Duplicate authored NPC %s, freeing %s" % [npc_id, child.name])
+				child.queue_free()
+			continue
+		_spawned_npcs[npc_id] = child
+		if not child.has_meta(AUTHORED_META):
+			child.set_meta(AUTHORED_META, true)
+			child.tree_exiting.connect(_on_npc_tree_exiting.bind(npc_id, child))
+			if not child.is_resting and _npc_data.has(npc_id):
+				child.global_position = _get_spawn_position(npc_id, _npc_data[npc_id])
+		print("[NPCManager] Adopted scene NPC: ", npc_id, " at ", child.global_position)
 
 ## 检查NPC是否应该在当前场景
 func _should_npc_be_in_scene(npc_id: String, scene_name: String) -> bool:
@@ -132,6 +162,9 @@ func _spawn_npc(npc_id: String, npc_data: Dictionary) -> NPC:
 		_npc_parent.add_child(npc)
 	
 	_spawned_npcs[npc_id] = npc
+	# NPCs live under the scene and are freed with it on a scene change; drop the
+	# reference then so nothing later touches a freed instance (BUG-30).
+	npc.tree_exiting.connect(_on_npc_tree_exiting.bind(npc_id, npc))
 	npc_spawned.emit(npc_id, npc)
 	
 	print("[NPCManager] Spawned NPC: ", npc_id, " at ", spawn_pos)
@@ -142,7 +175,8 @@ func _get_spawn_position(npc_id: String, npc_data: Dictionary) -> Vector2:
 	# 从日程中获取当前时间的位置
 	if TimeManager and npc_data.has("schedule"):
 		var schedule = npc_data["schedule"]
-		var current_time = get_node("/root/TimeManager").current_time
+		# Past midnight TimeManager runs on to 26.0; schedules are 0-24 (BUG-48).
+		var current_time = fposmod(get_node("/root/TimeManager").current_time, 24.0)
 		
 		for entry in schedule:
 			var start_time = entry.get("start_time", 0.0)
@@ -166,7 +200,8 @@ func _despawn_npc(npc_id: String) -> void:
 	if _spawned_npcs.has(npc_id):
 		var npc = _spawned_npcs[npc_id]
 		_spawned_npcs.erase(npc_id)
-		npc.queue_free()
+		if is_instance_valid(npc) and not npc.is_queued_for_deletion():
+			npc.queue_free()
 		npc_despawned.emit(npc_id)
 		print("[NPCManager] Despawned NPC: ", npc_id)
 
@@ -174,16 +209,32 @@ func _despawn_npc(npc_id: String) -> void:
 func _despawn_all_npcs() -> void:
 	for npc_id in _spawned_npcs.keys():
 		var npc = _spawned_npcs[npc_id]
-		npc.queue_free()
+		if is_instance_valid(npc) and not npc.is_queued_for_deletion() and not npc.has_meta(AUTHORED_META):
+			npc.queue_free()
 	_spawned_npcs.clear()
 	print("[NPCManager] Despawned all NPCs")
 
+
+## A spawned NPC left the tree (despawned or freed together with its scene).
+func _on_npc_tree_exiting(npc_id: String, npc: Node) -> void:
+	if is_same(_spawned_npcs.get(npc_id), npc):
+		_spawned_npcs.erase(npc_id)
+		npc_despawned.emit(npc_id)
+
+
+func _prune_freed_npcs() -> void:
+	for npc_id in _spawned_npcs.keys():
+		if not is_instance_valid(_spawned_npcs[npc_id]):
+			_spawned_npcs.erase(npc_id)
+
 ## 获取NPC实例
 func get_npc(npc_id: String) -> NPC:
+	_prune_freed_npcs()
 	return _spawned_npcs.get(npc_id, null)
 
 ## 获取所有生成的NPC
 func get_all_spawned_npcs() -> Dictionary:
+	_prune_freed_npcs()
 	return _spawned_npcs.duplicate()
 
 ## 场景切换完成回调
@@ -200,18 +251,28 @@ func update_npc_positions() -> void:
 	
 	var current_time = get_node("/root/TimeManager").current_time
 	
+	_prune_freed_npcs()
 	for npc_id in _spawned_npcs.keys():
 		var npc = _spawned_npcs[npc_id]
 		var npc_data = _npc_data.get(npc_id, {})
 		
 		if npc_data.has("schedule"):
 			var new_pos = _get_spawn_position(npc_id, npc_data)
-			if npc.global_position.distance_to(new_pos) > 10.0:
+			var dist: float = npc.global_position.distance_to(new_pos)
+			if dist > 200.0:
+				# Far schedule jump (e.g. lunch plaza): snap so they do not stack while walking.
+				npc.global_position = new_pos
+				if npc.has_method("clear_move_target"):
+					npc.clear_move_target()
+				elif "has_target" in npc:
+					npc.has_target = false
+			elif dist > 10.0:
 				npc.move_to(new_pos)
 
 ## 保存所有NPC状态
 func save_state() -> Dictionary:
 	var state = {}
+	_prune_freed_npcs()
 	for npc_id in _spawned_npcs.keys():
 		var npc = _spawned_npcs[npc_id]
 		state[npc_id] = npc.save_state()
@@ -219,6 +280,7 @@ func save_state() -> Dictionary:
 
 ## 加载NPC状态
 func load_state(state: Dictionary) -> void:
+	_prune_freed_npcs()
 	for npc_id in state.keys():
 		if _spawned_npcs.has(npc_id):
 			_spawned_npcs[npc_id].load_state(state[npc_id])

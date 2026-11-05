@@ -3,7 +3,7 @@
 [ext_resource type="Script" path="res://src/entities/items/ForageItem.gd" id="1_forage"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_forage"]
-radius = 16.0
+radius = 24.0
 
 [sub_resource type="Animation" id="Animation_collect"]
 resource_name = "collect"
@@ -57,7 +57,7 @@ _data = {
 
 [node name="ForageItem" type="Area2D"]
 collision_layer = 4
-collision_mask = 1
+collision_mask = 2
 script = ExtResource("1_forage")
 forage_id = "wild_berry"
 

@@ -1,5 +1,6 @@
 extends Area2D
 class_name ShippingBin
+const InteractPromptScript = preload("res://src/ui/components/InteractPrompt.gd")  # preload: works before the class cache knows the class_name
 
 const PHYSICS_LAYERS = preload("res://src/core/constants/PhysicsLayers.gd")
 
@@ -14,7 +15,7 @@ const SHIPPING_BIN_DISPLAY_SIZE := Vector2(92, 74)
 signal bin_interacted(bin_node: ShippingBin)
 
 # 交互提示
-@export var interaction_prompt: String = "Press E to open shipping bin"
+@export var interaction_prompt: String = "按 Space 出货"
 
 # 是否可以被交互
 @export var is_interactable: bool = true
@@ -26,6 +27,7 @@ signal bin_interacted(bin_node: ShippingBin)
 
 # 玩家是否在范围内
 var _player_in_range: bool = false
+var _ranged_player: Player = null
 var _depth_anchor_offset := 0.0
 
 
@@ -35,6 +37,7 @@ func _ready() -> void:
 	_apply_depth_anchor()
 	_setup_interaction()
 	_connect_signals()
+	InteractPromptScript.attach(self, "出货", InteractPromptScript.sprite_top(self), func(): return _player_in_range and is_interactable)
 	print("[ShippingBin] Initialized at position: ", global_position)
 
 
@@ -134,6 +137,9 @@ func _connect_signals() -> void:
 func _on_body_entered(body: Node2D) -> void:
 	if body is Player:
 		_player_in_range = true
+		_ranged_player = body
+		if is_interactable:
+			body.building_in_range = self
 		_show_prompt()
 		print("[ShippingBin] Player entered interaction range")
 
@@ -141,14 +147,18 @@ func _on_body_entered(body: Node2D) -> void:
 func _on_body_exited(body: Node2D) -> void:
 	if body is Player:
 		_player_in_range = false
+		if body.building_in_range == self:
+			body.building_in_range = null
+		if _ranged_player == body:
+			_ranged_player = null
 		_hide_prompt()
 		print("[ShippingBin] Player left interaction range")
 
 
+## The shared InteractPrompt bubble replaced this label; keep it hidden.
 func _show_prompt() -> void:
 	if prompt_label:
-		prompt_label.text = interaction_prompt
-		prompt_label.visible = true
+		prompt_label.visible = false
 
 
 func _hide_prompt() -> void:
@@ -156,14 +166,11 @@ func _hide_prompt() -> void:
 		prompt_label.visible = false
 
 
-func _input(event: InputEvent) -> void:
-	if not _player_in_range or not is_interactable:
+## Player 用 interact（Space / E）调用这里。不再单独听按键，避免同一次按键开两次，也避免 Space 被当成挥工具。
+func interact() -> void:
+	if not can_interact():
 		return
-
-	# 检测交互按键（E键）
-	if event.is_action_pressed("ui_accept") or (event is InputEventKey and event.pressed and event.keycode == KEY_E):
-		_interact()
-		get_viewport().set_input_as_handled()
+	_interact()
 
 
 ## 执行交互
@@ -217,5 +224,10 @@ func can_interact() -> bool:
 ## 设置交互状态
 func set_interactable(value: bool) -> void:
 	is_interactable = value
+	if _ranged_player != null and is_instance_valid(_ranged_player):
+		if value:
+			_ranged_player.building_in_range = self
+		elif _ranged_player.building_in_range == self:
+			_ranged_player.building_in_range = null
 	if not value:
 		_hide_prompt()

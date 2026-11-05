@@ -5,7 +5,7 @@ const TimeManagerScript := preload("res://src/autoload/TimeManager.gd")
 func test_time_manager_starts_at_expected_defaults() -> void:
 	var time_manager = add_child_autofree(TimeManagerScript.new())
 
-	assert_eq(time_manager.current_time, 6.0, "TimeManager should start at 6:00")
+	assert_eq(time_manager.current_time, 9.0, "TimeManager should start at 9:00")
 	assert_eq(time_manager.current_day, 1, "TimeManager should start on day 1")
 	assert_eq(time_manager.get_season_name(), "Spring", "TimeManager should start in Spring")
 

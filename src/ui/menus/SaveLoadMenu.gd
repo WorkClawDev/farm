@@ -111,6 +111,7 @@ func _build_ui() -> void:
 
 func _create_card(slot: int) -> PanelContainer:
 	var panel := UIFactory.paper_panel(Vector2(320, 360))
+	panel.theme_type_variation = &"SaveCardPanel"
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var content := VBoxContainer.new()
 	content.name = "Content"
@@ -126,8 +127,7 @@ func _create_card(slot: int) -> PanelContainer:
 
 	var heading := Label.new()
 	heading.name = "Heading"
-	heading.theme_type_variation = &"TitleLabel"
-	heading.add_theme_font_size_override("font_size", 24)
+	heading.theme_type_variation = &"CardTitleLabel"
 	content.add_child(heading)
 
 	var date := Label.new()
@@ -142,7 +142,9 @@ func _create_card(slot: int) -> PanelContainer:
 	details.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content.add_child(details)
 
-	var action := UIFactory.button("", &"PrimaryButton", Vector2(0, 52))
+	# BUG-22: three identical cards each with a green "保存到这里" read as three main
+	# actions. Card buttons are normal buttons; the hovered/focused card is highlighted.
+	var action := UIFactory.button("", &"SecondaryButton", Vector2(0, 52))
 	action.name = "Action"
 	action.pressed.connect(_on_slot_pressed.bind(slot))
 	content.add_child(action)
@@ -153,7 +155,25 @@ func _create_card(slot: int) -> PanelContainer:
 	remove.pressed.connect(_on_delete_pressed.bind(slot))
 	content.add_child(remove)
 	_delete_buttons.append(remove)
+	# Highlight the card whose button is hovered or focused (mouse, keyboard, pad).
+	for button in [action, remove]:
+		button.mouse_entered.connect(_set_card_active.bind(panel, true))
+		button.mouse_exited.connect(_set_card_active.bind(panel, false))
+		button.focus_entered.connect(_set_card_active.bind(panel, true))
+		button.focus_exited.connect(_set_card_active.bind(panel, false))
 	return panel
+
+
+func _set_card_active(panel: PanelContainer, active: bool) -> void:
+	if not is_instance_valid(panel):
+		return
+	if not active:
+		# Stay highlighted while another button of the same card still has focus/hover.
+		var focus := get_viewport().gui_get_focus_owner() if is_inside_tree() else null
+		var hovered := get_viewport().gui_get_hovered_control() if is_inside_tree() else null
+		if (focus and panel.is_ancestor_of(focus)) or (hovered and panel.is_ancestor_of(hovered)):
+			return
+	panel.theme_type_variation = &"SaveCardPanelActive" if active else &"SaveCardPanel"
 
 
 func _update_title() -> void:
@@ -287,6 +307,8 @@ func _delete_save(slot: int) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if UIManager.has_open_confirmation():
+		return  # Esc belongs to the confirm dialog on top (UIManager cancels it).
 	if event.is_action_pressed("ui_cancel") or event.is_action_pressed("pause"):
 		close()
 		get_viewport().set_input_as_handled()

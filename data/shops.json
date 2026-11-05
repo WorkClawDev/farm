@@ -36,11 +36,6 @@
 					"unlock_condition": ""
 				},
 				{
-					"item_id": "fiber_seeds",
-					"stock": -1,
-					"unlock_condition": ""
-				},
-				{
 					"item_id": "basic_fertilizer",
 					"stock": 20,
 					"max_stock": 20
@@ -71,6 +66,10 @@
 					"stock": -1
 				},
 				{
+					"item_id": "green_bean_seed",
+					"stock": -1
+				},
+				{
 					"item_id": "tomato_seed",
 					"stock": -1
 				},
@@ -85,23 +84,11 @@
 					"stock": -1
 				},
 				{
-					"item_id": "fiber_seeds",
-					"stock": -1
-				},
-				{
 					"item_id": "corn_seed",
 					"stock": -1
 				},
 				{
-					"item_id": "sunflower",
-					"stock": -1
-				},
-				{
 					"item_id": "pumpkin_seed",
-					"stock": -1
-				},
-				{
-					"item_id": "daffodil",
 					"stock": -1
 				}
 			]

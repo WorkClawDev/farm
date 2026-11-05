@@ -1,5 +1,6 @@
 extends Area2D
 class_name Kitchen
+const InteractPromptScript = preload("res://src/ui/components/InteractPrompt.gd")  # preload: works before the class cache knows the class_name
 
 ## Kitchen - 厨房工作台
 ## 玩家可以在这里进行烹饪
@@ -15,6 +16,7 @@ var cooking_ui: Control = null
 func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 	body_exited.connect(_on_body_exited)
+	InteractPromptScript.attach(self, "烹饪", InteractPromptScript.sprite_top(self), func(): return is_player_in_range)
 	print("[Kitchen] Kitchen initialized")
 
 func _on_body_entered(body: Node2D) -> void:

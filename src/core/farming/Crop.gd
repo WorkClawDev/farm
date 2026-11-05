@@ -238,20 +238,25 @@ func _update_sprite() -> void:
 	var sprite_path: String = ""
 
 	if current_state == State.DEAD:
-		# 枯萎的作物显示特殊精灵
-		sprite_path = "res://assets/sprites/crops/crop_dead.png"
+		# 优先本作物的 stagedead，没有再兜底通用枯死图。
+		sprite_path = FarmState.dead_crop_sprite_path(crop_id)
 	elif current_state == State.MATURE:
 		# 成熟作物
 		if crop_data.stage_sprites.size() > 0:
 			sprite_path = crop_data.stage_sprites[-1]
 	else:
-		# 生长中
-		if current_stage < crop_data.stage_sprites.size():
-			sprite_path = crop_data.stage_sprites[current_stage]
+		# 生长中。stage 0 缺省时回退到 {crop_id}_stage0.png。
+		sprite_path = FarmState.crop_stage_sprite_path(crop_id, current_stage, crop_data.stage_sprites)
 
 	# 加载精灵（如果路径有效）
 	if sprite_path != "" and ResourceLoader.exists(sprite_path):
 		sprite.texture = load(sprite_path)
+		if sprite.texture != null:
+			var tex_size: Vector2 = sprite.texture.get_size()
+			var max_dim := maxf(tex_size.x, tex_size.y)
+			if max_dim > 0.0:
+				var fitted := 48.0 / max_dim
+				sprite.scale = Vector2(fitted, fitted)
 
 	# 如果有浇水效果，可以在这里添加调制颜色
 	if is_watered:

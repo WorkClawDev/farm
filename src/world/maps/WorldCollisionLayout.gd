@@ -38,12 +38,12 @@ func _build_village() -> void:
 	_add_rect("BuildingNorthEast", Rect2(520, 5, 270, 185))
 	_add_rect("BuildingSouthEast", Rect2(760, 405, 250, 175))
 	_add_rect("BuildingSouthWest", Rect2(35, 640, 275, 175))
-	_add_circle("VillageWell", Vector2(420, 320), 48.0)
+	_add_circle("VillageWell", Vector2(420, 320), 28.0)
 
 	var tree_positions := [
 		Vector2(-40, 40), Vector2(-30, 245), Vector2(-20, 520), Vector2(-40, 800),
 		Vector2(1080, 40), Vector2(1100, 245), Vector2(1090, 520), Vector2(1110, 800),
-		Vector2(180, -80), Vector2(900, -70), Vector2(420, 850), Vector2(760, 850),
+		Vector2(192, -65), Vector2(900, -70), Vector2(640, 671), Vector2(760, 850),
 	]
 	for index in range(tree_positions.size()):
 		_add_rect(
@@ -76,8 +76,10 @@ func _build_forest() -> void:
 
 
 func _build_beach() -> void:
-	# Water begins at y=155. The interaction circles remain reachable from shore.
-	_add_rect("Ocean", Rect2(-1400, 155, 4200, 1960))
+	# Painted water starts at y=80: the shore row is the pool-top tiles at y=64,
+	# and their first 4 source pixels (x4) are sand. Fishing circles sit in the
+	# water and still reach a player standing on that sand.
+	_add_rect("Ocean", Rect2(-1400, 80, 4200, 2035))
 	_add_rect("BeachNorthBoundary", Rect2(-950, -760, 1900, 50))
 	_add_rect("BeachWestBoundary", Rect2(-980, -760, 50, 960))
 	_add_rect("BeachEastBoundary", Rect2(930, -760, 50, 960))
