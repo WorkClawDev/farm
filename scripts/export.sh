@@ -15,6 +15,8 @@ resolve_godot() {
 }
 resolve_godot
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+export GODOT
+bash "$PROJECT_DIR/scripts/import_godot_project.sh"
 MODE="${1:-pack}"
 PRESET="${2:-Windows Desktop}"
 
@@ -29,8 +31,13 @@ mkdir -p "$PROJECT_DIR/$(dirname "$OUTPUT")"
 LOG_FILE="${TMPDIR:-/tmp}/pastoral_export_$$.log"
 trap 'rm -f "$LOG_FILE"' EXIT
 "$GODOT" --headless --path "$PROJECT_DIR" "$FLAG" "$PRESET" "$PROJECT_DIR/$OUTPUT" 2>&1 | tee "$LOG_FILE"
-if grep -qE '^(SCRIPT ERROR|ERROR:|FATAL)|Compile Error|Parse Error|Nonexistent function|Invalid call|Failed to load script' "$LOG_FILE"; then
+# Headless export always reports dummy-renderer and text-server shutdown leaks.
+# Those are not export failures; check.sh treats the same lines the same way.
+REAL_ERRORS="$(grep -E '^(SCRIPT ERROR|ERROR:|FATAL)|Compile Error|Parse Error|Nonexistent function|Invalid call|Failed to load script' "$LOG_FILE" \
+  | grep -vE 'resources still in use at exit|RID allocations of type' || true)"
+if [ -n "$REAL_ERRORS" ]; then
   echo "Export emitted script/runtime errors" >&2
+  printf '%s\n' "$REAL_ERRORS" >&2
   exit 1
 fi
 test -f "$PROJECT_DIR/$OUTPUT"
