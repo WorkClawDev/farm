@@ -15,3 +15,4 @@ Credit to Kenney (www.kenney.nl) appreciated, not required.
 
 - UI Pack - Pixel Adventure 2.0 (CC0, `ui_pixel_adventure/`): Large tiles / Thick outline tile_0000, 0002, 0006, 0007, 0013, 0018, 0019, 0033 (used as 9-slice StyleBoxTexture by the UI v1 theme). Kept in the repo but not referenced by the current UI v2 theme (`src/ui/theme/GameTheme.tres`).
 - Beach shore x4 (`assets/tiles/kenney/beach_x4/`): pre-cut 64px tiles from Roguelike RPG sheet (sand col 8 rows 0-1, sea col 0 row 0, pool 3x3 cols 10-12 rows 7-9). `shore_edge_a/b.png` are derived by us (sand + wet band + foam + sea from those cells), CC0-based.
+- Doormat (`assets/sprites/props/doormat.png`, 128x64): Roguelike RPG sheet orange bordered carpet, cells (10,19)+(12,19) top halves and (10,21)+(12,21) bottom halves (stride 17), composed to 32x16 then x4 nearest-neighbor. CC0.

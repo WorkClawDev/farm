@@ -63,10 +63,11 @@ func _add_button(parent: VBoxContainer, key: String, fallback: String, variation
 
 
 ## PrimaryButton's inherited focus ring is the same green as 继续, so the
-## first row looked unfocused and arrow-key moves were easy to miss.
+## first row looked unfocused. A light-green fill with a light label was
+## also hard to read, so focus is a dark fill, a bright rim, and cream text.
 func _install_visible_focus(button: Button) -> void:
 	var focus := StyleBoxFlat.new()
-	focus.bg_color = Color(0.73, 0.9, 0.55, 1)
+	focus.bg_color = Color(0.09, 0.11, 0.10, 1)
 	focus.border_color = Color(1.0, 0.86, 0.28, 1)
 	focus.set_border_width_all(3)
 	focus.set_corner_radius_all(6)
@@ -75,17 +76,18 @@ func _install_visible_focus(button: Button) -> void:
 	focus.content_margin_right = 14.0
 	focus.content_margin_bottom = 8.0
 	button.add_theme_stylebox_override("focus", focus)
+	button.add_theme_color_override("font_focus_color", Color(0.98, 0.96, 0.91, 1))
 	button.focus_mode = Control.FOCUS_ALL
 	button.focus_entered.connect(_paint_menu_focus)
 	button.focus_exited.connect(_paint_menu_focus)
 
 
 func _paint_menu_focus(_arg: Variant = null) -> void:
-	var owner := get_viewport().gui_get_focus_owner() if is_inside_tree() else null
 	for button in _menu_buttons:
 		if not is_instance_valid(button):
 			continue
-		button.modulate = Color(1.12, 1.2, 0.9) if button == owner else Color.WHITE
+		# Leave the stylebox colors alone. A green tint washed the label out.
+		button.modulate = Color.WHITE
 
 
 ## Explicit chain so a direction key cannot land on a hotbar slot or a zero-rect
@@ -147,6 +149,8 @@ func _confirm_quit() -> void:
 		"message": "ui.pause.quit_confirm",
 		"danger": true,
 		"on_confirm": quit_game_requested.emit,
+		# Esc / 取消 closes the overlay and drops focus. Land back on 继续.
+		"on_cancel": _resume_button.grab_focus,
 	})
 
 
