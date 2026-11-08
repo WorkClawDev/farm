@@ -31,6 +31,9 @@ jobs:
           unzip -q /tmp/templates.tpz -d /tmp/templates
           cp -R /tmp/templates/templates/. "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
 
+      - name: Import project resources
+        run: bash scripts/import_godot_project.sh
+
       - name: Full project check
         run: bash scripts/check.sh
 

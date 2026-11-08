@@ -137,6 +137,22 @@ log "Project: $PROJECT_DIR"
 echo ""
 
 echo -e "${CYAN}========================================${NC}"
+echo -e "${CYAN}  Editor import${NC}"
+echo -e "${CYAN}========================================${NC}"
+
+# Fresh checkouts have no .godot/ or *.translation files. Import them before
+# any --script run so theme resources and class_name types exist.
+export GODOT
+if bash "$PROJECT_DIR/scripts/import_godot_project.sh"; then
+    ok "Editor import"
+else
+    err "Editor import"
+    exit 1
+fi
+
+echo ""
+
+echo -e "${CYAN}========================================${NC}"
 echo -e "${CYAN}  Resource sitemap${NC}"
 echo -e "${CYAN}========================================${NC}"
 
