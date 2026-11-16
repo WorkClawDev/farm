@@ -47,6 +47,7 @@ func _ready() -> void:
 	run_loopfeedback_tests()
 	run_hoe_station_priority_tests()
 	run_ui_polish_tests()
+	run_house_wood_floor_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -3387,6 +3388,27 @@ func run_ui_polish_tests() -> void:
 	GameManager.current_state = saved_state
 	GameManager.is_game_active = saved_active
 	print("  UI Polish: All tests completed")
+
+
+func run_house_wood_floor_tests() -> void:
+	print("\n[House Wood Floor]")
+	var backdrop := IllustratedMapBackdrop.new()
+	backdrop.setup("house")
+	var tiles: Array = backdrop._house_wood_tiles()
+	var main := tiles[0] as AtlasTexture if not tiles.is_empty() else null
+	var alt := tiles[1] as AtlasTexture if tiles.size() > 1 else null
+	var sheet := main.atlas if main != null else null
+	assert_true(
+		backdrop.map_style == "house"
+			and main != null and alt != null and sheet != null
+			and str(sheet.resource_path).ends_with("wood_floor.png")
+			and sheet.get_width() == 128 and sheet.get_height() == 64
+			and main.region == Rect2(0, 0, 64, 64)
+			and alt.region == Rect2(64, 0, 64, 64)
+			and alt.atlas == sheet,
+		"house 背景加载 wood_floor.png 纹理且成功"
+	)
+	backdrop.free()
 
 
 func assert_true(condition: bool, message: String):
