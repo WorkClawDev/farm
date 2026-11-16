@@ -58,6 +58,9 @@ var _watering_can_max_water: int = WATERING_CAN_MAX_WATER
 var _watering_can_water: int = WATERING_CAN_MAX_WATER
 ## advance_day 刚处理过的活作物数。-1 表示还没有过夜结算在等着被取走。
 var _overnight_crop_count: int = -1
+## 农场上的矿石，用节点名当稳定 id（OreNorth、OreSouth）。
+## 挖碎了就一直挖碎：切场景和读档都不再出现。只受伤时另记剩余血量。矿洞不写这里。
+var _farm_ores: Dictionary = {}
 
 
 func _ready() -> void:
@@ -77,6 +80,7 @@ func reset() -> void:
 	_watering_can_water = -1
 	set_watering_can_water(WATERING_CAN_MAX_WATER)
 	_overnight_crop_count = -1
+	_farm_ores.clear()
 	farm_reset.emit()
 
 
@@ -534,6 +538,51 @@ func consume_overnight_crop_count() -> int:
 	return count
 
 
+func note_farm_ore_depleted(ore_id: String) -> void:
+	var key := str(ore_id).strip_edges()
+	if key.is_empty():
+		return
+	_farm_ores[key] = {
+		"depleted": true,
+		"current_health": 0,
+	}
+
+
+func note_farm_ore_health(ore_id: String, current_health: int, max_health: int) -> void:
+	var key := str(ore_id).strip_edges()
+	if key.is_empty() or is_farm_ore_depleted(key):
+		return
+	if current_health <= 0:
+		note_farm_ore_depleted(key)
+		return
+	if max_health <= 0 or current_health >= max_health:
+		_farm_ores.erase(key)
+		return
+	_farm_ores[key] = {
+		"depleted": false,
+		"current_health": current_health,
+		"max_health": max_health,
+	}
+
+
+func is_farm_ore_depleted(ore_id: String) -> bool:
+	var state = _farm_ores.get(str(ore_id), {})
+	return state is Dictionary and bool(state.get("depleted", false))
+
+
+## 受伤未挖碎时返回剩余血量。没记录或已经挖碎返回 -1。
+func get_farm_ore_health(ore_id: String) -> int:
+	if is_farm_ore_depleted(ore_id):
+		return -1
+	var state = _farm_ores.get(str(ore_id), {})
+	if not state is Dictionary:
+		return -1
+	var hp := int(state.get("current_health", -1))
+	if hp <= 0:
+		return -1
+	return hp
+
+
 func get_save_state() -> Dictionary:
 	var cells: Array = []
 	for y in range(GRID_HEIGHT):
@@ -545,6 +594,7 @@ func get_save_state() -> Dictionary:
 		"cells": cells,
 		"watering_can_water": _watering_can_water,
 		"watering_can_max_water": _watering_can_max_water,
+		"farm_ores": _farm_ores.duplicate(true),
 	}
 
 
@@ -566,8 +616,31 @@ func load_save_state(data: Dictionary) -> bool:
 	_watering_can_water = -1
 	set_watering_can_water(int(data.get("watering_can_water", _watering_can_max_water)))
 	_overnight_crop_count = -1
+	# 旧档没有 farm_ores：矿石都还在。
+	_restore_farm_ores(data)
 	farm_reset.emit()
 	return true
+
+
+func _restore_farm_ores(data: Dictionary) -> void:
+	_farm_ores.clear()
+	var saved = data.get("farm_ores", {})
+	if not saved is Dictionary:
+		return
+	for raw_id in saved.keys():
+		var raw = saved[raw_id]
+		if not raw is Dictionary:
+			continue
+		var key := str(raw_id).strip_edges()
+		if key.is_empty():
+			continue
+		if bool(raw.get("depleted", false)):
+			note_farm_ore_depleted(key)
+			continue
+		var hp := int(raw.get("current_health", -1))
+		var mx := int(raw.get("max_health", 0))
+		if hp > 0 and mx > hp:
+			note_farm_ore_health(key, hp, mx)
 
 
 func _advance_crop(crop: Dictionary) -> void:

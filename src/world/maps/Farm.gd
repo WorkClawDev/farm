@@ -48,6 +48,8 @@ var _village_exit: Area2D
 var actor_layer: Node2D
 var _player_at_house_door: Player = null
 var _entering_house := false
+## Farm ores tracked so a depleted node can be snapshotted on the way out.
+var _tracked_farm_ores: Array[Ore] = []
 ## BUG-59: steps only (door point is the bottom step; shape sits above it).
 const HOUSE_ENTRANCE_SIZE := Vector2(40, 24)
 
@@ -65,6 +67,7 @@ const PLOT_SPACING := 64.0
 func _ready() -> void:
 	print("[Farm] Scene loaded")
 	_setup_map()
+	_apply_persisted_farm_ores()
 	_setup_ui()
 	add_child(DayNightTint.new())  # outdoor night tint (round 8)
 	_setup_soil_plots()
@@ -653,6 +656,76 @@ func _depth_sorted_objects() -> Array[CanvasItem]:
 		if node is Ore:
 			out.append(node as CanvasItem)
 	return out
+
+
+## 挖碎的农场矿石从 FarmState 里认。节点摘掉，碰撞、提示、血条一起走。
+func _apply_persisted_farm_ores() -> void:
+	_tracked_farm_ores.clear()
+	if layout_root == null:
+		return
+	var remove_nodes: Array[Node] = []
+	for node in layout_root.get_children():
+		if not node is Ore:
+			continue
+		var ore := node as Ore
+		var ore_id := str(ore.name)
+		if FarmState.is_farm_ore_depleted(ore_id):
+			remove_nodes.append(ore)
+			continue
+		var saved_hp := FarmState.get_farm_ore_health(ore_id)
+		if saved_hp > 0 and saved_hp < ore.max_health:
+			ore.current_health = saved_hp
+			if ore.health_bar:
+				ore.health_bar.max_value = ore.max_health
+				ore.health_bar.value = saved_hp
+				ore.health_bar.visible = true
+		var depleted_callback := _on_farm_ore_depleted.bind(ore_id)
+		if not ore.ore_depleted.is_connected(depleted_callback):
+			ore.ore_depleted.connect(depleted_callback)
+		_tracked_farm_ores.append(ore)
+	for node in remove_nodes:
+		_remove_farm_ore(node)
+
+
+func _on_farm_ore_depleted(ore_id: String) -> void:
+	FarmState.note_farm_ore_depleted(ore_id)
+
+
+func _remove_farm_ore(node: Node) -> void:
+	var ore := node as Ore
+	if ore:
+		ore.visible = false
+		ore.monitoring = false
+		ore.monitorable = false
+		ore.collision_layer = 0
+		ore.collision_mask = 0
+		if ore.interaction_hint:
+			ore.interaction_hint.visible = false
+		if ore.health_bar:
+			ore.health_bar.visible = false
+		if ore.collision_shape:
+			ore.collision_shape.disabled = true
+		if ore.solid_collision:
+			ore.solid_collision.disabled = true
+		var body := ore.get_node_or_null("SolidBody") as CollisionObject2D
+		if body:
+			body.collision_layer = 0
+			body.collision_mask = 0
+	var parent := node.get_parent()
+	if parent:
+		parent.remove_child(node)
+	node.queue_free()
+
+
+func _exit_tree() -> void:
+	for ore in _tracked_farm_ores:
+		if not is_instance_valid(ore):
+			continue
+		var ore_id := str(ore.name)
+		if ore.is_depleted():
+			FarmState.note_farm_ore_depleted(ore_id)
+		else:
+			FarmState.note_farm_ore_health(ore_id, ore.current_health, ore.max_health)
 
 
 func _extend_sky_for_house_follow() -> void:

@@ -60,6 +60,7 @@ func _ready() -> void:
 	await _exercise_watering_can()
 	await _exercise_farm_ore_mining()
 	await _exercise_farm_ore_hint_sides()
+	await _exercise_farm_ore_persistence()
 	await _exercise_tool_vs_hotbar_dispatch()
 	await _exercise_tool_number_keys()
 	await _exercise_eat_food()
@@ -939,6 +940,130 @@ func _exercise_farm_ore_hint_sides() -> void:
 			_record("%s 往%s走开后提示隐藏" % [ore_name, side_name], not hint.visible)
 	farm.queue_free()
 	await get_tree().process_frame
+
+
+func _strike_farm_ore(player: Player, ore: Ore) -> void:
+	player.nearby_npcs.clear()
+	player.npc_in_range = null
+	player.building_in_range = null
+	player.global_position = ore.global_position + Vector2(0, 44)
+	player.current_direction = Player.Direction.UP
+	PhysicsServer2D.body_set_state(player.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, player.global_transform)
+	for _i in 3:
+		await get_tree().physics_frame
+	player.tool_manager.equip_tool(ToolManager.ToolType.PICKAXE)
+	var pickaxe = player.tool_manager.tools.get(ToolManager.ToolType.PICKAXE)
+	if pickaxe != null:
+		pickaxe.is_mining = false
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	player._use_tool_on_target()
+
+
+## 挖碎的农场矿石记在 FarmState 里。离开再回来（以及读档）都不再生成。
+func _exercise_farm_ore_persistence() -> void:
+	print("------------------------------------------------------------")
+	print("农场矿石：挖碎 OreNorth 后切到村庄再回农场不再出现，OreSouth 还在")
+	var saved_spawn := GameManager.current_spawn_point
+	GameManager.current_spawn_point = "farm_start"
+	TimeManager.reset()
+	Inventory.reset_with_starter_items()
+	FarmState.reset()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	var north := farm.find_child("OreNorth", true, false) as Ore
+	var south := farm.find_child("OreSouth", true, false) as Ore
+	_record("持久化前 OreNorth 和 OreSouth 都在", player != null and north != null and south != null)
+	if player == null or north == null or south == null:
+		farm.queue_free()
+		await get_tree().process_frame
+		FarmState.reset()
+		GameManager.current_spawn_point = saved_spawn
+		return
+	var north_pos := north.global_position
+	await _strike_farm_ore(player, south)
+	var south_hp := south.current_health
+	_record("OreSouth 被敲掉血但还在", south_hp > 0 and south_hp < south.max_health)
+	for _i in 30:
+		if north.is_depleted():
+			break
+		await _strike_farm_ore(player, north)
+	_record("OreNorth 已挖碎", north.is_depleted())
+	_record("挖碎当下就记入农场状态", FarmState.is_farm_ore_depleted("OreNorth") and not FarmState.is_farm_ore_depleted("OreSouth"))
+
+	farm.queue_free()
+	await get_tree().process_frame
+	_record("离场后 OreSouth 的剩余血量也记上了", FarmState.get_farm_ore_health("OreSouth") == south_hp)
+	var village := (load("res://src/world/maps/Village.tscn") as PackedScene).instantiate()
+	add_child(village)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	_record("中途进了村庄", village.is_inside_tree() and village.name == "Village")
+	village.queue_free()
+	await get_tree().process_frame
+	farm = await _spawn_farm()
+	var north_back := farm.find_child("OreNorth", true, false)
+	var south_back := farm.find_child("OreSouth", true, false) as Ore
+	var south_solid := south_back.get_node_or_null("SolidBody/CollisionShape2D") as CollisionShape2D if south_back != null else null
+	_record("切到村庄再切回农场，OreNorth 不存在（碰撞、提示、血条一并去掉）", north_back == null)
+	_record(
+		"未挖的 OreSouth 仍在",
+		south_back != null
+			and south_back.can_mine()
+			and south_back.get_node_or_null("InteractionHint") != null
+			and south_back.get_node_or_null("HealthBar") != null
+			and south_solid != null
+			and not south_solid.disabled
+	)
+	_record("OreSouth 受伤的血量还在", south_back != null and south_back.current_health == south_hp)
+	var ore_left_behind := false
+	var query := PhysicsPointQueryParameters2D.new()
+	query.position = north_pos
+	query.collide_with_areas = true
+	query.collide_with_bodies = true
+	for result in farm.get_world_2d().direct_space_state.intersect_point(query):
+		var collider: Object = result.collider
+		if collider is Ore:
+			ore_left_behind = true
+		elif collider is Node and (collider as Node).get_parent() is Ore:
+			ore_left_behind = true
+	_record("OreNorth 原来的位置没有矿石碰撞", not ore_left_behind)
+
+	var snapshot := FarmState.get_save_state()
+	var saved_ores: Dictionary = snapshot.get("farm_ores", {})
+	_record(
+		"挖掉的矿石写进存档",
+		bool(saved_ores.get("OreNorth", {}).get("depleted", false))
+			and int(saved_ores.get("OreSouth", {}).get("current_health", -1)) == south_hp
+	)
+	farm.queue_free()
+	await get_tree().process_frame
+	FarmState.reset()
+	var round_trip := _json_round_trip(snapshot)
+	_record(
+		"读档恢复挖掉的矿",
+		FarmState.load_save_state(round_trip)
+			and FarmState.is_farm_ore_depleted("OreNorth")
+			and FarmState.get_farm_ore_health("OreSouth") == south_hp
+	)
+	farm = await _spawn_farm()
+	var loaded_south := farm.find_child("OreSouth", true, false) as Ore
+	_record("读档后再进农场 OreNorth 仍不在", farm.find_child("OreNorth", true, false) == null)
+	_record("读档后再进农场 OreSouth 仍在", loaded_south != null and loaded_south.current_health == south_hp)
+	farm.queue_free()
+	await get_tree().process_frame
+	var legacy := round_trip.duplicate(true)
+	legacy.erase("farm_ores")
+	FarmState.reset()
+	_record(
+		"旧档没有矿石字段时不记成挖掉",
+		FarmState.load_save_state(legacy)
+			and not FarmState.is_farm_ore_depleted("OreNorth")
+			and FarmState.get_farm_ore_health("OreSouth") == -1
+	)
+	FarmState.reset()
+	Inventory.reset_with_starter_items()
+	GameManager.current_spawn_point = saved_spawn
 
 
 func _exercise_watering_can() -> void:
