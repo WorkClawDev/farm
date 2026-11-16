@@ -1068,3 +1068,19 @@
 - 出货 toast「✓ 已出货 ×1（预计 +10 金）」在「今晚的出货」下方约10px，不再压标题 PASS（ui3_ship_b1~3）。小注 P3：toast 横跨左右面板缝，盖住右栏首行「防风草种子 ×1」上沿。
 - 退出框 Esc 取消后焦点回「继续」PASS，↓ 到保存（ui3_after_esc / ui3_after_down）。小注 P3：焦点离开后「继续」仍保持绿色填充（残留 hover）。
 - 门垫 v2 锈棕、1px 描边、无光晕 PASS（ui3_mat_close）；站上去人物画在门垫上方 PASS（ui3_onmat_close）；「↓ 出门」提示、↓ 出门正常（ui3_mv2 / ui3_exited）。地板仍为纯米色无木纹（P3 美术）。
+
+## 2026-11-13 02:55 (UTC-8) charswap ① 玩家换装验收（--freeze-time）— FAIL（y-sort 遮挡）
+- PASS：开局比例与落地（cs1_start）；四向走路帧和朝向、停下保持朝向（cs1_walk_*）；长距离右走全程可见（cs1b_right_1~6）；屋前人画在门廊上（cs1_house_front）；墙、树桩、栅栏内外都挡人，贴着滑行不卡（cs1_wall / cs1_tree_col / cs1_fence_slide_left / cs1b_fence_out_slide）；进屋、站门垫（人在上层）、出门（cs1_onmat_valid / cs1_exited_valid）；日志无 SCRIPT ERROR。
+- FAIL P2【屋后遮挡】步骤：从农舍北侧往下走，直到被后墙挡住。期望：屋顶盖住人的下半身。实际：人整个画在屋顶尖上（cs1b_house_back_blocked / _l4 / _r4）。
+- FAIL P2【桩前遮挡】步骤：站到树桩（或大石块）正南、贴着它。期望：人画在树桩前面。实际：树桩盖住人的腰腹（cs1b_stump_front2）。站桩北侧时被遮挡是正常的（cs1_tree_behind_stump）。
+- 推测：新 sheet 帧高 132、offset (0,-62) 以后，玩家的排序点或道具的排序点没有对齐到脚底。
+- 备注：退出时有约 15.7MB 贴图泄漏，属于旧问题，P3。
+
+## 2026-11-15 17:23 (UTC-8) ysortfix（Sand 直改）+ charswap ① 复测（--freeze-time）— PASS
+- 屋后中、左、右：屋顶盖住下半身，中间只露头，两侧屋檐低所以多露一截腿（ys_house_back_c / _l2 / _r）PASS。
+- 屋前：人画在门廊栏杆上（ys_house_front_b / _c）PASS。
+- 侧檐：东侧贴墙上下走，没有闪烁或跳层（ys_house_side_r*）PASS。西侧那条被西南角的圆灌木堵成死路，只能退出来绕（ys_house_side_l_d），属于碰撞布局，不是 y-sort 问题，记 P3。
+- 矿石 OreNorth：站北侧被石头盖住腿，站南侧人在前（ys_ore_north / ys_ore_south）PASS。贴着石头不按键时没有出现「挖掘」提示，按 Space 时会不会出没测，待查。
+- 树桩：站北侧被盖住、站南侧人在前（ys_stump_north / ys_stump_south2）PASS。桩南紧挨一块石头，所以重叠的面积小。
+- 回归：四向走路、栅栏和墙碰撞、进屋出门都 PASS（ys_walk_* / ys_col_* / ys_in / ys_exit）。日志无 SCRIPT ERROR。
+- 备注：这台机器的截图裁切改成 crop=1280:720:320:219。

@@ -169,6 +169,13 @@ func _exercise_scene(scene_name: String, scene_path: String) -> void:
 					and farm_map.y_sort_enabled
 					and south_of_foundation
 			)
+			var ore_north := instance.find_child("OreNorth", true, false) as CanvasItem
+			_record(
+				"农舍旁的矿石和玩家同层按脚底 Y 排序（站南侧人在前）",
+				ore_north != null
+					and not ore_north.z_as_relative
+					and ore_north.z_index == farm_player.z_index
+			)
 			_record(
 				"站在农舍北侧时墙画在玩家前面",
 				house_for_camera != null

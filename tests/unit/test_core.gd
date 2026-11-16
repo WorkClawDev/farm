@@ -40,6 +40,7 @@ func _ready() -> void:
 	run_tool_number_hotkey_tests()
 	run_house_camera_follow_tests()
 	run_debris_ysort_tests()
+	run_house_back_ysort_tests()
 	run_shop_find_guide_tests()
 	run_quest_tracker_feature_tests()
 	run_loopfeedback_tests()
@@ -415,9 +416,54 @@ func run_player_visual_tests():
 	if player_sprite:
 		var frame_width: int = int(player_sprite.texture.get_width() / player_sprite.hframes)
 		var frame_height: int = int(player_sprite.texture.get_height() / player_sprite.vframes)
-		assert_true(frame_width == 64, "Player sprite frame width should be 64 (16px art ×4)")
-		assert_true(frame_height == 64, "Player sprite frame height should be 64 (16px art ×4)")
-		assert_true(player_sprite.scale == Vector2(1, 1), "Player sprite scale should be 1x (sheet already 64px)")
+		assert_true(frame_width == 80, "Player sprite frame width should be 80")
+		assert_true(frame_height == 132, "Player sprite frame height should be 132")
+		assert_true(player_sprite.hframes == 4 and player_sprite.vframes == 4, "Player sheet is 4 columns by 4 rows")
+		assert_true(player_sprite.scale == Vector2(1, 1), "Player sprite scale should stay 1x")
+		assert_true(player_sprite.offset == Vector2(0, -62), "Player sprite offset should put the feet at the origin")
+		assert_true(
+			str(player_sprite.texture.resource_path).ends_with("characters_iceburgdragon/player_sheet.png"),
+			"Player texture should be the iceburgdragon sheet"
+		)
+
+	var body := player.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	var body_shape := body.shape as RectangleShape2D if body != null else null
+	assert_true(
+		body_shape != null and body_shape.size == Vector2(24, 16) and body.position == Vector2(0, -8),
+		"Player foot collision should be a 24x16 box at (0, -8)"
+	)
+	var interact := player.get_node_or_null("InteractionArea/CollisionShape2D") as CollisionShape2D
+	var interact_shape := interact.shape as CircleShape2D if interact != null else null
+	assert_true(
+		interact_shape != null and is_equal_approx(interact_shape.radius, 72.0),
+		"InteractionArea radius should stay 72"
+	)
+	assert_true(Player.sheet_frame(Player.Direction.DOWN, 0) == 0, "Idle down is row 0 column 0")
+	assert_true(Player.sheet_frame(Player.Direction.UP, 0) == 4, "Idle up is row 1 column 0")
+	assert_true(Player.sheet_frame(Player.Direction.LEFT, 0) == 8, "Idle left is row 2 column 0")
+	assert_true(Player.sheet_frame(Player.Direction.RIGHT, 0) == 12, "Idle right is row 3 column 0")
+	assert_true(Player.sheet_frame(Player.Direction.RIGHT, 3) == 15, "Walk frame is dir_row * 4 + column")
+	assert_true(is_equal_approx(Player.WALK_FPS, 8.0), "Walk cycle should be 8 fps")
+
+	player.sprite = player_sprite
+	player.current_direction = Player.Direction.DOWN
+	player.is_walking = true
+	player._walk_accum = 0.0
+	player._walk_frame = 0
+	player._physics_delta = 0.0
+	player._update_animation()
+	assert_true(player_sprite.frame == 0 and not player_sprite.flip_h, "Walking starts on column 0 without flip")
+	player._physics_delta = 1.0 / Player.WALK_FPS
+	player._update_animation()
+	assert_true(player_sprite.frame == 1, "One 8fps step advances to column 1")
+	player.current_direction = Player.Direction.LEFT
+	player._physics_delta = 0.0
+	player._update_animation()
+	assert_true(player_sprite.frame == 9, "Facing left keeps the current walk column")
+	player.is_walking = false
+	player._physics_delta = 1.0
+	player._update_animation()
+	assert_true(player_sprite.frame == 8 and not player_sprite.flip_h, "Standing uses column 0 of the facing row")
 
 	player.free()
 	print("  Player visuals: All tests completed")
@@ -2543,6 +2589,34 @@ func run_house_camera_follow_tests() -> void:
 	print("  House camera follow: All tests completed")
 
 
+
+
+## Charswap y-sort fix: the farmhouse wall outline stops the player's feet on
+## the back-wall ground line, north of the foundation anchor, so the roof
+## covers the lower body while the head still shows above the peak.
+func run_house_back_ysort_tests() -> void:
+	print("\n[House Back Y-Sort]")
+	var house := (load("res://src/world/objects/HouseExterior.tscn") as PackedScene).instantiate() as HouseExterior
+	add_child(house)
+	var roof := house.get_node_or_null("RoofCollision") as CollisionPolygon2D
+	var sprite := house.get_node_or_null("Sprite2D") as Sprite2D
+	if roof == null or sprite == null or sprite.texture == null:
+		print("  (private farmhouse art missing, skipped)")
+		house.free()
+		return
+	var back_y := INF
+	for point in roof.polygon:
+		back_y = minf(back_y, point.y)
+	var peak_y := sprite.position.y - house.get_display_size().y * 0.5
+	# Player feet rest on the wall (hitbox bottom = node origin). Visible sheet
+	# height is about 124px above the feet (cell 132, frame bottom +4, padding).
+	var player_height := 124.0
+	assert_true(not Farm.actor_draws_in_front_of_house(back_y, 0.0), "屋后被墙挡住时脚在地基北侧，屋子画在人前")
+	assert_true(back_y > peak_y + 32.0, "屋后停步点在屋脊以南，屋顶能盖住下半身")
+	assert_true(back_y - player_height < peak_y, "屋后停步时头还露在屋脊上方")
+	assert_true(Farm.actor_draws_in_front_of_house(8.0, 0.0), "站在地基南侧（门前）人画在屋前")
+	house.free()
+	print("  House back y-sort: All tests completed")
 
 
 func run_debris_ysort_tests() -> void:

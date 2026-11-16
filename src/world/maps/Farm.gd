@@ -631,12 +631,28 @@ func _align_house_draw_order() -> void:
 	if map_root == null or layout_root == null:
 		return
 	map_root.y_sort_enabled = true
-	var house := layout_root.get_node_or_null("PlayerHouseExterior") as CanvasItem
-	if house == null:
-		return
 	var player := get_tree().get_first_node_in_group("player") as CanvasItem
-	house.z_as_relative = false
-	house.z_index = player.z_index if player != null else 0
+	var actor_z := player.z_index if player != null else 0
+	for item in _depth_sorted_objects():
+		item.z_as_relative = false
+		item.z_index = actor_z
+
+
+## Objects-layer props the player can stand both north and south of. Their
+## root is on (or near) the ground contact, so at the player's z they Y-sort
+## against the feet. Left at Objects' absolute z 7, the ore boulder by the
+## house painted over the player's waist even from the south.
+func _depth_sorted_objects() -> Array[CanvasItem]:
+	var out: Array[CanvasItem] = []
+	if layout_root == null:
+		return out
+	var house := layout_root.get_node_or_null("PlayerHouseExterior") as CanvasItem
+	if house != null:
+		out.append(house)
+	for node in layout_root.get_children():
+		if node is Ore:
+			out.append(node as CanvasItem)
+	return out
 
 
 func _extend_sky_for_house_follow() -> void:
