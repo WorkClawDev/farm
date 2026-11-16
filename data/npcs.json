@@ -342,7 +342,7 @@
           }
         }
       ],
-      "sprite": "res://assets/sprites/characters/ninja_adventure/npc_sheets/shopkeeper_lily_sheet.png"
+      "sprite": "res://assets/private/topdown_farm/characters_iceburgdragon/shopkeeper_lily_sheet.png"
     },
     {
       "id": "blacksmith_tom",
@@ -680,7 +680,7 @@
           }
         }
       ],
-      "sprite": "res://assets/sprites/characters/ninja_adventure/npc_sheets/doctor_mary_sheet.png"
+      "sprite": "res://assets/private/topdown_farm/characters_iceburgdragon/doctor_mary_sheet.png"
     }
   ]
 }

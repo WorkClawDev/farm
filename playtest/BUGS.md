@@ -1084,3 +1084,21 @@
 - 树桩：站北侧被盖住、站南侧人在前（ys_stump_north / ys_stump_south2）PASS。桩南紧挨一块石头，所以重叠的面积小。
 - 回归：四向走路、栅栏和墙碰撞、进屋出门都 PASS（ys_walk_* / ys_col_* / ys_in / ys_exit）。日志无 SCRIPT ERROR。
 - 备注：这台机器的截图裁切改成 crop=1280:720:320:219。
+
+## 2026-11-15 17:35 (UTC-8) BUG：农场 OreNorth 挖不了（玩法错误，从初始快照起就这样，不是 ysortfix 引入的）
+- 步骤：--new-game --freeze-time，走到农舍东边的 OreNorth 旁边，先拿锄头按约 3 次 Space，再按 4 换镐子按约 13 次。
+- 预期：镐子能挖，有进度或「要用…」提示，挖完石头消失、背包进矿石或石头。
+- 实际：没有任何 toast，体力一直 100/100，石头还在，背包没多东西，日志也没有 Pickaxe 相关输出（ore_mine_after.png / ore_mine_hit*.png / ore_mine_inv.png）。实机输入延迟大，单看实机不能完全排除「没对准」。
+- 代码只读核对：Player.gd `_use_tool_on_target` 在农场里只处理 FarmPlot 和 Soil，最后调用 `tool_manager.use_tool(null)`，而 ToolManager 里的 PICKAXE 要 target 不为 null 才动作，所以 Ore 根本不会被打到。只有 Mine.gd 接了 Ore 的挖掘。
+- 「挖掘」提示：Ore.tscn 的 InteractionHint 默认 visible=false，全仓库没有代码把它设成显示，所以提示从来不会出现，跟这次换图层无关。
+- 附带：人物几次站到了石头图上面，SolidBody 碰撞可能偏小或偏了，挖的问题修好后一起看。
+
+## 2026-11-15 18:38 (UTC-8) 换装第二批 cs_npc（玛丽、莉莉）复测（--new-game --freeze-time）：PASS，另记 2 个 P3
+- 玛丽：贴图是单帧，没拉伸、没裁切、没底色，和玩家差不多高。看到了左、正面、背面三个朝向，对话时会转身面向玩家。对话「医生・玛丽 / 你好！身体健康吗？」正常（cs2_mary_col2 / cs2_mary_talk）。PASS
+- 玛丽遮挡：玩家站南边人在前，站北边被她盖住腿（cs2_mary_south / cs2_mary_north2）。PASS
+- 玛丽碰撞：从东侧往左走，挡在脚下，只和裙边重叠一点（cs2_mary_col3）。从南侧边缘能擦过去，24×16 脚框属正常。PASS
+- 莉莉：单帧，比例和玛丽一致，会走动和转向。Space 打开「种子商店」，余额 500 金，有防风草、土豆、青豆种子和两种肥料，Esc 能关，任务推进到「与农夫交谈」（cs2_lily / cs2_lily_talk）。PASS
+- 回归：汤姆和另外两个旧村民显示正常，都是单帧，没有整张贴图（cs2_others_a / _b）。日志里没有 SCRIPT ERROR。
+- P3：莉莉头顶的「商店」标签压在发饰上，靠近时 Space 提示也会叠上去，说明这次标签上移对她没生效（cs2_lily.png）。玛丽和其他村民本来就没有名字标签，不算回归。
+- P3/预期：旧村民是 16～20px 的 Q 版，玛丽、莉莉和玩家约 45px，比例和画风差很多，第三批换装后应该会好。
+- 附带：从农场去村子的出口不好找，人会先撞到右边的栅栏（老问题）。

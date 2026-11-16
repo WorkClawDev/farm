@@ -62,6 +62,9 @@ func _add_shop_beacon() -> void:
 	label.text = "商店"
 	label.size = Vector2(72, 22)
 	label.position = Vector2(-36, -64)
+	# Lily's 132px sheet covers the old spot. Other shop NPCs stay put.
+	if npc_id == "shopkeeper_lily":
+		label.position.y -= 70.0
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override("font_size", 16)
 	label.add_theme_color_override("font_outline_color", Color.BLACK)

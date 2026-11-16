@@ -76,6 +76,14 @@ const IDLE_FRAMES = {
 }
 ## Stage B: Ninja Adventure 64px sheets (16×4). Procedural VillagerIllustration retired.
 const SPRITE_BASE_SCALE := Vector2(1, 1)
+## 320x528 iceburgdragon sheets: 4 columns x 4 rows, cell 80x132.
+## Rows: down, up, left, right. Walk columns 0-3 at 8 fps. Idle is column 0.
+const GRID_SHEET_COLUMNS := 4
+const GRID_SHEET_ROWS := 4
+const GRID_CELL_SIZE := Vector2i(80, 132)
+const GRID_SHEET_OFFSET := Vector2(0, -62)
+const GRID_WALK_FPS := 8.0
+const TALL_PROMPT_LIFT := 70.0
 var _walk_anim_t: float = 0.0
 
 func _ready() -> void:
@@ -221,11 +229,19 @@ func _apply_sprite_data(data: Dictionary) -> void:
 		return
 
 	sprite.texture = texture
-	sprite.hframes = 8 if texture.get_width() >= texture.get_height() * 4 else 1
-	sprite.vframes = 1
+	if _texture_is_grid_sheet(texture):
+		sprite.hframes = GRID_SHEET_COLUMNS
+		sprite.vframes = GRID_SHEET_ROWS
+		sprite.centered = true
+		sprite.offset = GRID_SHEET_OFFSET
+	else:
+		# 8x1 Ninja strips stay on the old layout. Do not touch offset or centered.
+		sprite.hframes = 8 if texture.get_width() >= texture.get_height() * 4 else 1
+		sprite.vframes = 1
 	sprite.scale = SPRITE_BASE_SCALE
 	sprite.visible = true
 	sprite.frame = _get_sprite_frame(current_direction)
+	_apply_tall_actor_layout()
 
 ## 连接日程信号
 func _connect_schedule_signals() -> void:
@@ -485,6 +501,11 @@ func set_direction(direction: Direction) -> void:
 func _get_sprite_frame(direction: Direction) -> int:
 	if sprite == null:
 		return 0
+	if _sprite_uses_grid_sheet():
+		var column := 0
+		if is_walking:
+			column = int(_walk_anim_t * GRID_WALK_FPS) % GRID_SHEET_COLUMNS
+		return int(direction) * GRID_SHEET_COLUMNS + column
 	var total_frames: int = maxi(sprite.hframes * sprite.vframes, 1)
 	var idle: int = int(IDLE_FRAMES.get(direction, 0))
 	if idle >= total_frames:
@@ -493,6 +514,33 @@ func _get_sprite_frame(direction: Direction) -> int:
 	if is_walking and total_frames >= 8 and idle + 1 < total_frames:
 		return idle + 1 if int(_walk_anim_t * 5.0) % 2 == 0 else idle
 	return idle
+
+func _sprite_uses_grid_sheet() -> bool:
+	return sprite != null and sprite.texture != null and _texture_is_grid_sheet(sprite.texture)
+
+func _texture_is_grid_sheet(texture: Texture2D) -> bool:
+	var width := texture.get_width()
+	var height := texture.get_height()
+	if width == 320 and height == 528:
+		return true
+	return width == GRID_CELL_SIZE.x * GRID_SHEET_COLUMNS and height == GRID_CELL_SIZE.y * GRID_SHEET_ROWS
+
+## Mary and Lily only: foot box matches the player, and overhead labels move up
+## so the 132px sheet does not cover them. Other NPCs keep the scene collision.
+func _apply_tall_actor_layout() -> void:
+	if npc_id != "doctor_mary" and npc_id != "shopkeeper_lily":
+		return
+	if collision_shape:
+		var foot := RectangleShape2D.new()
+		foot.size = Vector2(24, 16)
+		collision_shape.shape = foot
+		collision_shape.position = Vector2(0, -8)
+	var prompt := get_node_or_null("InteractPrompt") as Node2D
+	if prompt and prompt.position.y > -100.0:
+		prompt.position.y -= TALL_PROMPT_LIFT
+	for child in get_children():
+		if child is Label and child.position.y < 0.0 and child.position.y > -100.0:
+			child.position.y -= TALL_PROMPT_LIFT
 
 ## 面向玩家
 func face_position(target_pos: Vector2) -> void:

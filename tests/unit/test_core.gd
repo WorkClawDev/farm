@@ -23,6 +23,7 @@ func _ready() -> void:
 	run_gift_system_tests()
 	run_quest_system_tests()
 	run_player_visual_tests()
+	run_npc_sheet_tests()
 	run_map_editor_resource_tests()
 	run_season_regrow_shop_tests()
 	run_debug_launch_parse_tests()
@@ -468,6 +469,73 @@ func run_player_visual_tests():
 	player.free()
 	print("  Player visuals: All tests completed")
 
+
+func run_npc_sheet_tests() -> void:
+	print("\n[NPC Sheet Tests]")
+	var packed := load("res://src/entities/npc/NPC.tscn") as PackedScene
+	assert_true(packed != null, "NPC scene should load")
+	if packed == null:
+		return
+
+	var lily := _spawn_sheet_npc(packed, "shopkeeper_lily")
+	var mary := _spawn_sheet_npc(packed, "doctor_mary")
+	var mayor := _spawn_sheet_npc(packed, "mayor")
+	_assert_grid_sheet_npc(lily, "shopkeeper_lily_sheet.png", "Lily")
+	_assert_grid_sheet_npc(mary, "doctor_mary_sheet.png", "Mary")
+
+	var mayor_sprite := mayor.get_node("Sprite2D") as Sprite2D
+	assert_true(mayor_sprite.hframes == 8 and mayor_sprite.vframes == 1, "Mayor stays on an 8x1 strip")
+	assert_true(
+		str(mayor_sprite.texture.resource_path).ends_with("ninja_adventure/npc_sheets/mayor_sheet.png"),
+		"Mayor texture stays the Ninja sheet"
+	)
+	mayor.is_walking = false
+	assert_true(mayor._get_sprite_frame(NPC.Direction.UP) == 6, "Mayor up frame stays 6")
+	assert_true(mayor._get_sprite_frame(NPC.Direction.LEFT) == 2, "Mayor left frame stays 2")
+	assert_true(mayor._get_sprite_frame(NPC.Direction.RIGHT) == 4, "Mayor right frame stays 4")
+	var mayor_body := mayor.get_node("CollisionShape2D") as CollisionShape2D
+	var mayor_shape := mayor_body.shape as RectangleShape2D
+	assert_true(
+		mayor_shape != null and mayor_shape.size == Vector2(24, 24) and mayor_body.position == Vector2(0, 4),
+		"Mayor body collision stays 24x24 at (0, 4)"
+	)
+
+	lily.free()
+	mary.free()
+	mayor.free()
+	print("  NPC sheets: All tests completed")
+
+func _spawn_sheet_npc(packed: PackedScene, npc_id: String) -> NPC:
+	var npc := packed.instantiate() as NPC
+	npc.npc_id = npc_id
+	add_child(npc)
+	return npc
+
+func _assert_grid_sheet_npc(npc: NPC, sheet_name: String, label: String) -> void:
+	var sprite := npc.get_node("Sprite2D") as Sprite2D
+	assert_true(sprite.hframes == 4 and sprite.vframes == 4, "%s sheet is 4 columns by 4 rows" % label)
+	assert_true(
+		str(sprite.texture.resource_path).ends_with("characters_iceburgdragon/" + sheet_name),
+		"%s texture is the iceburgdragon sheet" % label
+	)
+	assert_true(sprite.offset == Vector2(0, -62) and sprite.scale == Vector2.ONE, "%s offset and scale match the player" % label)
+	npc.is_walking = false
+	assert_true(npc._get_sprite_frame(NPC.Direction.UP) == 4, "%s up frame is 4" % label)
+	assert_true(npc._get_sprite_frame(NPC.Direction.LEFT) == 8, "%s left frame is 8" % label)
+	assert_true(npc._get_sprite_frame(NPC.Direction.RIGHT) == 12, "%s right frame is 12" % label)
+	npc.is_walking = true
+	npc._walk_anim_t = 0.0
+	assert_true(npc._get_sprite_frame(NPC.Direction.DOWN) == 0, "%s walk starts on column 0" % label)
+	npc._walk_anim_t = 1.0 / 8.0
+	assert_true(npc._get_sprite_frame(NPC.Direction.RIGHT) == 13, "%s walk advances one column at 8 fps" % label)
+	var body := npc.get_node("CollisionShape2D") as CollisionShape2D
+	var shape := body.shape as RectangleShape2D
+	assert_true(
+		shape != null and shape.size == Vector2(24, 16) and body.position == Vector2(0, -8),
+		"%s foot collision is 24x16 at (0, -8)" % label
+	)
+	var prompt := npc.get_node("InteractPrompt") as Node2D
+	assert_true(is_equal_approx(prompt.position.y, -108.0), "%s interact prompt moved up by 70px" % label)
 
 func run_map_editor_resource_tests():
 	print("\n[Map Editor Resource Tests]")
