@@ -174,18 +174,125 @@ func _test_open_close_same_frame() -> void:
 func _test_shipping_screen() -> void:
 	var old_active := GameManager.is_game_active
 	var old_state := GameManager.current_state
+	var old_size := get_tree().root.size
+	# Playtest viewport. Headless otherwise expands to a square window and
+	# hides the tight margin under the 620px panel.
+	get_tree().root.size = Vector2i(1280, 720)
 	GameManager.is_game_active = true
 	GameManager.current_state = GameManager.GameState.PLAYING
+	var ship_snap := ShippingSystem.save_state()
+	var inv_snap := Inventory.save_state()
+	Inventory.add_item("turnip_seed", 1)
+	ShippingSystem.add_item("turnip_seed", 1, 0)
+	await get_tree().process_frame
 	var screen := await UIManager.open_screen("shipping_bin", {"pause_game": true})
 	_record("出货箱使用统一模态页面", screen != null and UIManager.is_screen_open("shipping_bin"))
 	_record("出货箱打开时时间暂停", TimeManager.is_paused)
 	_record("出货箱页面具备可达焦点", get_viewport().gui_get_focus_owner() != null)
+	await get_tree().process_frame
+	_free_toast_children()
+	UIManager.show_toast("已出货 ×1（预计 +10 金）", {}, "success")
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var bin_ui := screen as ShippingBinUI
+	var toast_rect := _ship_toast_rect()
+	var title_rect := _ship_title_rect(screen)
+	var row_rect := Rect2()
+	var left_rect := Rect2()
+	if bin_ui != null:
+		row_rect = _first_list_rect(bin_ui._bin_list)
+		left_rect = _first_list_rect(bin_ui._inventory_list)
+	var panel_rect := _ship_panel_rect(screen)
+	print("[UI] ship toast ", toast_rect, " title ", title_rect, " row ", row_rect, " left ", left_rect, " panel ", panel_rect)
+	_record(
+		"出货 toast 不与标题、右栏首行相交",
+		_rect_laid_out(toast_rect)
+			and _rect_laid_out(title_rect)
+			and _rect_laid_out(row_rect)
+			and _rect_laid_out(panel_rect)
+			and toast_rect.position.y + 0.5 >= panel_rect.end.y
+			and not toast_rect.intersects(title_rect)
+			and not toast_rect.intersects(row_rect)
+	)
+	_record(
+		"出货 toast 不压左栏格子",
+		_rect_laid_out(left_rect) and not toast_rect.intersects(left_rect)
+	)
 	if screen:
 		screen.close()
 	await get_tree().process_frame
+	var toast_root := UIManager.get_node_or_null("UIOverlay/ToastRoot") as Control
+	_record(
+		"关掉出货箱后普通 toast 仍在原位",
+		toast_root != null
+			and is_equal_approx(toast_root.offset_top, float(UIManager.TOAST_TOP_DEFAULT))
+			and is_equal_approx(toast_root.offset_left, -160.0)
+			and is_equal_approx(toast_root.offset_right, 160.0)
+			and is_equal_approx(toast_root.offset_bottom, float(UIManager.TOAST_TOP_DEFAULT + UIManager.TOAST_ROOT_SPAN))
+	)
 	_record("关闭出货箱会恢复游戏时间", GameManager.current_state == GameManager.GameState.PLAYING and not get_tree().paused and not TimeManager.is_paused)
+	_free_toast_children()
+	ShippingSystem.load_state(ship_snap)
+	Inventory.load_state(inv_snap)
+	get_tree().root.size = old_size
 	GameManager.is_game_active = old_active
 	GameManager.current_state = old_state
+
+
+func _free_toast_children() -> void:
+	var toast_root := UIManager.get_node_or_null("UIOverlay/ToastRoot")
+	if toast_root == null:
+		return
+	for child in toast_root.get_children():
+		toast_root.remove_child(child)
+		child.free()
+
+
+func _ship_toast_rect() -> Rect2:
+	var toast_root := UIManager.get_node_or_null("UIOverlay/ToastRoot")
+	if toast_root == null:
+		return Rect2()
+	for child in toast_root.get_children():
+		if str(child.get_meta("toast_text", "")).find("已出货") < 0:
+			continue
+		var panel := child as Control
+		if panel == null:
+			continue
+		return panel.get_global_rect()
+	return Rect2()
+
+
+func _ship_title_rect(screen: Node) -> Rect2:
+	if screen == null:
+		return Rect2()
+	for node in screen.find_children("*", "Label", true, false):
+		var lab := node as Label
+		if lab != null and lab.text.contains("今晚的出货"):
+			return lab.get_global_rect()
+	return Rect2()
+
+
+func _ship_panel_rect(screen: Node) -> Rect2:
+	if screen == null:
+		return Rect2()
+	for node in screen.find_children("*", "PanelContainer", true, false):
+		var panel := node as Control
+		if panel != null and panel.custom_minimum_size.x >= 800.0 and panel.custom_minimum_size.y >= 400.0:
+			return panel.get_global_rect()
+	return Rect2()
+
+
+func _first_list_rect(list: VBoxContainer) -> Rect2:
+	if list == null or list.get_child_count() == 0:
+		return Rect2()
+	var row := list.get_child(0) as Control
+	if row == null:
+		return Rect2()
+	return row.get_global_rect()
+
+
+func _rect_laid_out(rect: Rect2) -> bool:
+	return rect.size.x >= 8.0 and rect.size.y >= 8.0 and rect.position.y > 1.0
 
 
 func _test_shop_and_dialogue_pause_clock() -> void:

@@ -24,15 +24,17 @@ var _confirmation_owns_pause := false
 var _pause_owned := false
 var _clock_paused := false
 var _held_bright_toasts := false
-var _shipping_toast_refit := false
+var _shipping_toast_refit_tries := 0
 
 const MAX_VISIBLE_TOASTS := 4
 const TOAST_DURATION := 3.0
 const TOAST_TOP_DEFAULT := 88
-## Pre-layout fallback. The right-hand 「今晚的出货」 row starts near this y,
-## so a laid-out title drops the toast to the bottom of its rect plus a gap.
+## Pre-layout fallback while the shipping panel rect is still a 1px stub.
+## A laid-out panel moves the toast into the margin under the panel.
 const TOAST_TOP_BELOW_SHIPPING_TITLE := 176
-const TOAST_SHIPPING_TITLE_GAP := 8
+## offset_bottom - offset_top at the default anchor (400 - 88).
+const TOAST_ROOT_SPAN := 312
+const TOAST_BELOW_PANEL_GAP := 8
 
 
 func _ready() -> void:
@@ -225,6 +227,10 @@ func show_toast(message_key: String, args := {}, variant := "info", hold_until_b
 	panel.set_meta("toast_label", label)
 	panel.process_mode = Node.PROCESS_MODE_ALWAYS
 	_toast_root.add_child(panel)
+	# The new panel's minimum height decides how far under the shipping
+	# panel the anchor can sit without leaving the viewport.
+	if is_screen_open("shipping_bin"):
+		_apply_toast_top()
 
 	var reduce_motion: bool = bool(UserSettings.get_value("accessibility", "reduce_motion", false))
 	var hold := hold_until_bright and not _screen_is_bright()
@@ -379,64 +385,98 @@ func _apply_toast_top() -> void:
 		return
 	var screen_id := "shipping_bin" if is_screen_open("shipping_bin") else ""
 	var top := float(toast_top_for_screen(screen_id))
-	if screen_id == "shipping_bin":
-		var fitted := _toast_top_below_shipping_title()
+	if screen_id != "shipping_bin":
+		_shipping_toast_refit_tries = 0
+	else:
+		var fitted := _toast_top_below_shipping_panel()
 		if fitted >= 0.0:
 			top = fitted
-		elif not _shipping_toast_refit:
-			# Title rect is still the pre-layout stub. Fit again once it is real.
-			_shipping_toast_refit = true
+			_shipping_toast_refit_tries = 0
+		elif _shipping_toast_refit_tries < 6:
+			# The paper panel reports a stretched rect for a frame before
+			# CenterContainer settles. Keep trying until that rect is real.
+			_shipping_toast_refit_tries += 1
 			call_deferred("_refit_shipping_toast_once")
 	_toast_root.offset_top = top
+	_toast_root.offset_bottom = top + float(TOAST_ROOT_SPAN)
 
 
 func _refit_shipping_toast_once() -> void:
-	_shipping_toast_refit = false
-	if _toast_root == null or not is_screen_open("shipping_bin"):
-		return
-	var fitted := _toast_top_below_shipping_title()
-	if fitted >= 0.0:
-		_toast_root.offset_top = fitted
+	_apply_toast_top()
 
 
-## Global y for ToastRoot so the toast sits just under the shipping column title.
-## Returns -1 until that label's get_global_rect() is a real laid-out row.
-func _toast_top_below_shipping_title() -> float:
+## Offset top so the toast sits in the margin under the shipping panel.
+## Returns -1 until that panel's get_global_rect() is a real laid-out box.
+## The centered toast used to sit just under 「今晚的出货」 and crossed the
+## column seam onto the first bin row.
+func _toast_top_below_shipping_panel() -> float:
 	if _toast_root == null:
 		return -1.0
 	var screen := get_screen("shipping_bin")
 	if screen == null:
 		return -1.0
-	var title := _shipping_contents_title(screen)
-	if title == null:
+	var panel := _shipping_outer_panel(screen)
+	if panel == null:
 		return -1.0
-	var blocker := title.get_global_rect()
-	if not _shipping_title_rect_ready(blocker):
+	var blocker := panel.get_global_rect()
+	if not _shipping_panel_rect_ready(panel, blocker):
 		return -1.0
 	var bias := _toast_root.global_position.y - _toast_root.offset_top
-	return blocker.end.y + float(TOAST_SHIPPING_TITLE_GAP) - bias
+	var toast_h := _shipping_toast_height()
+	var viewport_h := _toast_root.get_viewport_rect().size.y
+	var desired := blocker.end.y + float(TOAST_BELOW_PANEL_GAP)
+	var limit := viewport_h - 2.0 - toast_h
+	if viewport_h > toast_h + 8.0 and desired > limit:
+		desired = limit
+	# Prefer clipping the lower edge over covering either column.
+	if desired < blocker.end.y + 1.0:
+		desired = blocker.end.y + 1.0
+	return desired - bias
 
 
-func _shipping_contents_title(screen: Node) -> Label:
-	for node in screen.find_children("*", "Label", true, false):
-		var lab := node as Label
-		if lab == null:
+func _shipping_outer_panel(screen: Node) -> Control:
+	for node in screen.find_children("*", "PanelContainer", true, false):
+		var panel := node as Control
+		if panel == null:
 			continue
-		var text := lab.text
-		if text.contains("今晚的出货") or text.contains("Tonight's Shipment"):
-			return lab
+		if panel.custom_minimum_size.x >= 800.0 and panel.custom_minimum_size.y >= 400.0:
+			return panel
 	return null
 
 
-func _shipping_title_rect_ready(blocker: Rect2) -> bool:
-	# add_child reports a 1px-wide rect at the origin until the next layout pass.
-	return (
-		blocker.size.x >= 32.0
-		and blocker.size.y >= 8.0
-		and blocker.size.y <= 96.0
-		and blocker.position.x > 1.0
-		and blocker.position.y > 1.0
-	)
+func _shipping_panel_rect_ready(panel: Control, rect: Rect2) -> bool:
+	if rect.position.x <= 1.0 or rect.position.y <= 1.0:
+		return false
+	var minimum := panel.custom_minimum_size
+	if minimum.x < 400.0 or minimum.y < 200.0:
+		return false
+	# A frame before CenterContainer settles, this panel stretches to the
+	# whole safe rect (about 2400px tall in a 720p window) instead of its
+	# 620px minimum. That rect would park the toast off the bottom.
+	if absf(rect.size.x - minimum.x) > 32.0 or absf(rect.size.y - minimum.y) > 32.0:
+		return false
+	return true
+
+
+func _shipping_toast_height() -> float:
+	var height := 0.0
+	if _toast_root != null:
+		for child in _toast_root.get_children():
+			if child.is_queued_for_deletion() or not (child is Control):
+				continue
+			var c := child as Control
+			var h := 0.0
+			var minimum_h := c.get_combined_minimum_size().y
+			if minimum_h >= 8.0 and minimum_h <= 96.0:
+				h = minimum_h
+			if c.size.y >= 8.0 and c.size.y <= 96.0:
+				h = maxf(h, c.size.y)
+			if h > height:
+				height = h
+	# One-line shipping toast is 41px. 42 leaves it inside the 720p margin.
+	if height < 8.0:
+		return 42.0
+	return height
 
 
 func _build_overlay() -> void:
@@ -460,7 +500,7 @@ func _build_overlay() -> void:
 	_toast_root.offset_left = -160
 	_toast_root.offset_top = TOAST_TOP_DEFAULT
 	_toast_root.offset_right = 160
-	_toast_root.offset_bottom = 400
+	_toast_root.offset_bottom = TOAST_TOP_DEFAULT + TOAST_ROOT_SPAN
 	# PRESET_CENTER_TOP grows both ways. Pin extra width to the left so the
 	# right edge stays at viewport/2+160 (800 at 1280, under viewport-300).
 	_toast_root.grow_horizontal = Control.GROW_DIRECTION_BEGIN
