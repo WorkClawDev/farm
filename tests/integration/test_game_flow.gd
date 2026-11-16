@@ -125,9 +125,10 @@ func _exercise_scene(scene_name: String, scene_path: String) -> void:
 	if scene_path == "res://src/world/maps/Village.tscn":
 		var sample_npc := instance.get_node_or_null("NPCs/MayorThomas")
 		var mayor_sprite := sample_npc.get_node_or_null("Sprite2D") as Sprite2D if sample_npc else null
-		_record("村民使用 Ninja 精灵表（无矢量插画）", sample_npc != null and sample_npc.get_node_or_null("VillagerIllustration") == null
-			and mayor_sprite != null and mayor_sprite.visible and mayor_sprite.hframes >= 8
-			and mayor_sprite.texture != null and mayor_sprite.texture.get_width() == 512)
+		_record("村民使用 LPC 精灵表（无矢量插画）", sample_npc != null and sample_npc.get_node_or_null("VillagerIllustration") == null
+			and mayor_sprite != null and mayor_sprite.visible and mayor_sprite.hframes == 4 and mayor_sprite.vframes == 4
+			and mayor_sprite.texture != null and mayor_sprite.texture.get_width() == 320
+			and str(mayor_sprite.texture.resource_path).ends_with("characters/lpc/mayor_sheet.png"))
 	elif scene_path == "res://src/world/maps/Forest.tscn":
 		var forage_points := instance.get_node_or_null("ForagePoints")
 		var sample_forage := (

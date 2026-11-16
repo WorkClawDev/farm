@@ -113,7 +113,7 @@
           }
         }
       ],
-      "sprite": "res://assets/sprites/characters/ninja_adventure/npc_sheets/mayor_sheet.png"
+      "sprite": "res://assets/sprites/characters/lpc/mayor_sheet.png"
     },
     {
       "id": "farmer_joe",
@@ -227,7 +227,7 @@
           }
         }
       ],
-      "sprite": "res://assets/sprites/characters/ninja_adventure/npc_sheets/farmer_joe_sheet.png"
+      "sprite": "res://assets/sprites/characters/lpc/farmer_joe_sheet.png"
     },
     {
       "id": "shopkeeper_lily",
@@ -460,7 +460,7 @@
           }
         }
       ],
-      "sprite": "res://assets/sprites/characters/ninja_adventure/npc_sheets/blacksmith_tom_sheet.png"
+      "sprite": "res://assets/sprites/characters/lpc/blacksmith_tom_sheet.png"
     },
     {
       "id": "fisherman_old_jack",

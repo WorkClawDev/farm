@@ -83,7 +83,7 @@ const GRID_SHEET_ROWS := 4
 const GRID_CELL_SIZE := Vector2i(80, 132)
 const GRID_SHEET_OFFSET := Vector2(0, -62)
 const GRID_WALK_FPS := 8.0
-const TALL_PROMPT_LIFT := 70.0
+const GRID_HEAD_CLEARANCE := 6.0
 var _walk_anim_t: float = 0.0
 
 func _ready() -> void:
@@ -525,22 +525,39 @@ func _texture_is_grid_sheet(texture: Texture2D) -> bool:
 		return true
 	return width == GRID_CELL_SIZE.x * GRID_SHEET_COLUMNS and height == GRID_CELL_SIZE.y * GRID_SHEET_ROWS
 
-## Mary and Lily only: foot box matches the player, and overhead labels move up
-## so the 132px sheet does not cover them. Other NPCs keep the scene collision.
+## 320x528 4x4 sheets use the player's 24x16 foot box. Overhead labels and the
+## interact prompt sit fully above the 132px head. 8x1 strips keep the scene layout.
 func _apply_tall_actor_layout() -> void:
-	if npc_id != "doctor_mary" and npc_id != "shopkeeper_lily":
+	if not _sprite_uses_grid_sheet():
 		return
 	if collision_shape:
 		var foot := RectangleShape2D.new()
 		foot.size = Vector2(24, 16)
 		collision_shape.shape = foot
 		collision_shape.position = Vector2(0, -8)
-	var prompt := get_node_or_null("InteractPrompt") as Node2D
-	if prompt and prompt.position.y > -100.0:
-		prompt.position.y -= TALL_PROMPT_LIFT
+	# ceiling is the lowest y the next widget's bottom edge may use.
+	var ceiling := _grid_sheet_head_top() - GRID_HEAD_CLEARANCE
 	for child in get_children():
-		if child is Label and child.position.y < 0.0 and child.position.y > -100.0:
-			child.position.y -= TALL_PROMPT_LIFT
+		if child is Label and child.position.y < 0.0:
+			var label := child as Label
+			var height := label.size.y
+			if height < 1.0:
+				height = label.custom_minimum_size.y
+			if height < 1.0:
+				height = 22.0
+			var target_top := ceiling - height
+			if label.position.y > target_top:
+				label.position.y = target_top
+			ceiling = minf(ceiling, label.position.y - GRID_HEAD_CLEARANCE)
+	var prompt := get_node_or_null("InteractPrompt") as Node2D
+	if prompt and prompt.position.y < 0.0 and prompt.position.y > ceiling:
+		prompt.position.y = ceiling
+
+func _grid_sheet_head_top() -> float:
+	if sprite == null:
+		return GRID_SHEET_OFFSET.y - float(GRID_CELL_SIZE.y) * 0.5
+	var rect := sprite.get_rect()
+	return sprite.position.y + rect.position.y * sprite.scale.y
 
 ## 面向玩家
 func face_position(target_pos: Vector2) -> void:

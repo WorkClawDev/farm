@@ -480,29 +480,21 @@ func run_npc_sheet_tests() -> void:
 	var lily := _spawn_sheet_npc(packed, "shopkeeper_lily")
 	var mary := _spawn_sheet_npc(packed, "doctor_mary")
 	var mayor := _spawn_sheet_npc(packed, "mayor")
+	var joe := _spawn_sheet_npc(packed, "farmer_joe")
+	var tom := _spawn_sheet_npc(packed, "blacksmith_tom")
 	_assert_grid_sheet_npc(lily, "shopkeeper_lily_sheet.png", "Lily")
 	_assert_grid_sheet_npc(mary, "doctor_mary_sheet.png", "Mary")
-
-	var mayor_sprite := mayor.get_node("Sprite2D") as Sprite2D
-	assert_true(mayor_sprite.hframes == 8 and mayor_sprite.vframes == 1, "Mayor stays on an 8x1 strip")
-	assert_true(
-		str(mayor_sprite.texture.resource_path).ends_with("ninja_adventure/npc_sheets/mayor_sheet.png"),
-		"Mayor texture stays the Ninja sheet"
-	)
-	mayor.is_walking = false
-	assert_true(mayor._get_sprite_frame(NPC.Direction.UP) == 6, "Mayor up frame stays 6")
-	assert_true(mayor._get_sprite_frame(NPC.Direction.LEFT) == 2, "Mayor left frame stays 2")
-	assert_true(mayor._get_sprite_frame(NPC.Direction.RIGHT) == 4, "Mayor right frame stays 4")
-	var mayor_body := mayor.get_node("CollisionShape2D") as CollisionShape2D
-	var mayor_shape := mayor_body.shape as RectangleShape2D
-	assert_true(
-		mayor_shape != null and mayor_shape.size == Vector2(24, 24) and mayor_body.position == Vector2(0, 4),
-		"Mayor body collision stays 24x24 at (0, 4)"
-	)
+	_assert_lpc_sheet_npc(mayor, "mayor_sheet.png", "Mayor")
+	_assert_lpc_sheet_npc(joe, "farmer_joe_sheet.png", "Joe")
+	_assert_lpc_sheet_npc(tom, "blacksmith_tom_sheet.png", "Tom")
+	_assert_legacy_strip_npc(packed)
+	_assert_lily_shop_overhead()
 
 	lily.free()
 	mary.free()
 	mayor.free()
+	joe.free()
+	tom.free()
 	print("  NPC sheets: All tests completed")
 
 func _spawn_sheet_npc(packed: PackedScene, npc_id: String) -> NPC:
@@ -535,7 +527,65 @@ func _assert_grid_sheet_npc(npc: NPC, sheet_name: String, label: String) -> void
 		"%s foot collision is 24x16 at (0, -8)" % label
 	)
 	var prompt := npc.get_node("InteractPrompt") as Node2D
-	assert_true(is_equal_approx(prompt.position.y, -108.0), "%s interact prompt moved up by 70px" % label)
+	assert_true(is_equal_approx(prompt.position.y, -134.0), "%s interact prompt sits above the 132px head" % label)
+
+
+func _assert_lpc_sheet_npc(npc: NPC, sheet_name: String, label: String) -> void:
+	var sprite := npc.get_node("Sprite2D") as Sprite2D
+	assert_true(sprite.hframes == 4 and sprite.vframes == 4, "%s sheet is 4 columns by 4 rows" % label)
+	assert_true(
+		str(sprite.texture.resource_path).ends_with("characters/lpc/" + sheet_name),
+		"%s texture is the lpc sheet" % label
+	)
+	var body := npc.get_node("CollisionShape2D") as CollisionShape2D
+	var shape := body.shape as RectangleShape2D
+	assert_true(
+		shape != null and shape.size == Vector2(24, 16) and body.position == Vector2(0, -8),
+		"%s foot collision is 24x16 at (0, -8)" % label
+	)
+
+func _assert_legacy_strip_npc(packed: PackedScene) -> void:
+	var legacy := _spawn_sheet_npc(packed, "fisherman_old_jack")
+	var legacy_sprite := legacy.get_node("Sprite2D") as Sprite2D
+	var legacy_path := ""
+	if legacy_sprite.texture:
+		legacy_path = str(legacy_sprite.texture.resource_path)
+	if legacy_path.ends_with("ninja_adventure/npc_sheets/fisherman_old_jack_sheet.png"):
+		assert_true(legacy_sprite.hframes == 8 and legacy_sprite.vframes == 1, "Old 8x1 NPC keeps hframes 8")
+		var legacy_body := legacy.get_node("CollisionShape2D") as CollisionShape2D
+		var legacy_shape := legacy_body.shape as RectangleShape2D
+		assert_true(
+			legacy_shape != null and legacy_shape.size == Vector2(24, 24) and legacy_body.position == Vector2(0, 4),
+			"Old 8x1 NPC keeps the scene foot box"
+		)
+	legacy.free()
+
+func _assert_lily_shop_overhead() -> void:
+	var packed := load("res://src/entities/npc/ShopNPC.tscn") as PackedScene
+	assert_true(packed != null, "ShopNPC scene should load")
+	if packed == null:
+		return
+	var shop := packed.instantiate() as ShopNPC
+	shop.npc_id = "shopkeeper_lily"
+	var prompt_script = load("res://src/ui/components/InteractPrompt.gd")
+	var prompt = prompt_script.new()
+	prompt.name = "InteractPrompt"
+	prompt.position = Vector2(0, -38)
+	shop.add_child(prompt)
+	add_child(shop)
+	var sprite := shop.get_node("Sprite2D") as Sprite2D
+	var head_top := sprite.position.y + sprite.get_rect().position.y
+	var beacon := shop.get_node_or_null("ShopBeacon") as Label
+	assert_true(beacon != null and beacon.text == "商店", "Lily has a shop label")
+	if beacon:
+		assert_true(
+			beacon.size.y >= 22.0 and beacon.position.y + beacon.size.y <= head_top + 0.01,
+			"Lily shop label sits above the 132px head"
+		)
+		var live_prompt := shop.get_node("InteractPrompt") as Node2D
+		assert_true(live_prompt.position.y <= beacon.position.y, "Lily interact prompt sits above the shop label")
+		assert_true(live_prompt.position.y <= head_top + 0.01, "Lily interact prompt sits above the 132px head")
+	shop.free()
 
 func run_map_editor_resource_tests():
 	print("\n[Map Editor Resource Tests]")
