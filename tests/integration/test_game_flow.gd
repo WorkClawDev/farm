@@ -58,6 +58,8 @@ func _ready() -> void:
 	await _exercise_actor_collisions()
 	await _exercise_golden_path()
 	await _exercise_watering_can()
+	await _exercise_farm_ore_mining()
+	await _exercise_farm_ore_hint_sides()
 	await _exercise_tool_vs_hotbar_dispatch()
 	await _exercise_tool_number_keys()
 	await _exercise_eat_food()
@@ -811,6 +813,132 @@ func _spawn_farm() -> Node:
 	await get_tree().process_frame
 	await get_tree().physics_frame
 	return farm
+
+
+func _exercise_farm_ore_mining() -> void:
+	print("------------------------------------------------------------")
+	print("ORE-1 农场矿石：镐子能挖（扣体力、血条、掉落进背包），别的工具提示，靠近显示「挖掘」")
+	TimeManager.reset()
+	Inventory.reset_with_starter_items()
+	FarmState.reset()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	var ore := farm.find_child("OreNorth", true, false) as Ore
+	_record("农场有 OreNorth 矿石和玩家", player != null and ore != null)
+	if player == null or ore == null:
+		farm.queue_free()
+		await get_tree().process_frame
+		return
+	player.nearby_npcs.clear()
+	player.npc_in_range = null
+	player.building_in_range = null
+	var hint := ore.get_node_or_null("InteractionHint") as Label
+	_record("「挖掘」提示默认隐藏", hint != null and not hint.visible)
+	# 站在矿石南侧、面朝北（脚在实体碰撞下方，面向点落在矿石感应区里）。
+	player.global_position = ore.global_position + Vector2(0, 44)
+	player.current_direction = Player.Direction.UP
+	PhysicsServer2D.body_set_state(player.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, player.global_transform)
+	for _i in 3:
+		await get_tree().physics_frame
+	_record(
+		"走到矿石旁显示「挖掘」，且层级高于玩家",
+		hint != null and hint.visible and hint.z_as_relative and ore.z_index + hint.z_index > player.z_index
+	)
+	_record("面向矿石能找到它", player._find_facing_ore() == ore)
+
+	var item_id := str(ore.get_ore_info().get("id", ""))
+	var count_before := Inventory.get_item_count(item_id)
+	var hp_before := ore.current_health
+	_clear_toasts()
+	player.tool_manager.equip_tool(ToolManager.ToolType.HOE)
+	var stamina_before := StaminaManager.current_stamina
+	player._use_tool_on_target()
+	_record(
+		"拿锄头对着矿石：提示需要镐子，矿石和体力不变",
+		_toast_contains("需要镐子") and ore.current_health == hp_before and StaminaManager.current_stamina == stamina_before
+	)
+
+	player.tool_manager.equip_tool(ToolManager.ToolType.PICKAXE)
+	var pickaxe = player.tool_manager.tools.get(ToolManager.ToolType.PICKAXE)
+	player._use_tool_on_target()
+	_record(
+		"镐子挖一下：矿石掉血、显示血条、扣体力",
+		ore.current_health < hp_before
+			and ore.health_bar != null and ore.health_bar.visible
+			and StaminaManager.current_stamina < stamina_before
+	)
+	for _i in 30:
+		if ore.is_depleted():
+			break
+		if pickaxe != null:
+			pickaxe.is_mining = false  # 跳过 0.3s 挥镐冷却
+		StaminaManager.set_stamina(StaminaManager.max_stamina)
+		player._use_tool_on_target()
+	await get_tree().physics_frame
+	_record("镐子能把农场矿石挖碎", ore.is_depleted())
+	_record("挖碎后矿石掉落进背包", Inventory.get_item_count(item_id) > count_before)
+	_record(
+		"挖碎后提示隐藏、实体碰撞关闭",
+		hint != null and not hint.visible
+			and ore.solid_collision != null and ore.solid_collision.disabled
+	)
+	_record("挖碎后面前不再判定为矿石", player._find_facing_ore() == null)
+	_clear_toasts()
+	farm.queue_free()
+	await get_tree().process_frame
+
+
+## 玩家真的走到矿石跟前（被 SolidBody 挡住的位置）时，四个方向都要显示「挖掘」。
+## 回归：从南边走上来时提示不出现（脚在实体碰撞下方 +42 左右）。
+func _exercise_farm_ore_hint_sides() -> void:
+	print("------------------------------------------------------------")
+	print("ORE-2 农场矿石「挖掘」提示：东南西北走到挡住的位置都显示，走开隐藏")
+	FarmState.reset()
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	_record("提示用例有玩家", player != null)
+	if player == null:
+		farm.queue_free()
+		await get_tree().process_frame
+		return
+	var all_sides := {"南": Vector2.DOWN, "北": Vector2.UP, "东": Vector2.RIGHT, "西": Vector2.LEFT}
+	# OreSouth (1400,700) 的北侧和东侧落在 VillageExit 触发区 (1380..1460, 528..688) 里，
+	# 站过去就切到村庄，只测南、西两侧。
+	var ore_sides := {"OreNorth": ["南", "北", "东", "西"], "OreSouth": ["南", "西"]}
+	for ore_name in ore_sides:
+		var ore := farm.find_child(ore_name, true, false) as Ore
+		var hint := ore.get_node_or_null("InteractionHint") as Label if ore != null else null
+		_record("%s 有「挖掘」提示" % ore_name, hint != null)
+		if hint == null:
+			continue
+		for side_name in ore_sides[ore_name]:
+			var side: Vector2 = all_sides[side_name]
+			player.global_position = ore.global_position + side * 96.0
+			PhysicsServer2D.body_set_state(player.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, player.global_transform)
+			await get_tree().physics_frame
+			# OreNorth 正南被它脚下的装饰灌木（bush_1080_200）先挡住，停在 +42；其余停在矿石 SolidBody 上。
+			var blocker: Object = null
+			for _i in 40:
+				var hit := player.move_and_collide(-side * 4.0)
+				if hit != null:
+					blocker = hit.get_collider()
+					break
+			for _i in 3:
+				await get_tree().physics_frame
+			var stop := player.global_position - ore.global_position
+			_record(
+				"%s 从%s边走到挡住处（%.0f, %.0f）显示「挖掘」" % [ore_name, side_name, stop.x, stop.y],
+				blocker is StaticBody2D and hint.visible
+			)
+			# 100px：出了提示范围（南 72、其余 60），又不会走进 OreSouth 南边的出口触发区。
+			player.global_position = ore.global_position + side * 100.0
+			PhysicsServer2D.body_set_state(player.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, player.global_transform)
+			for _i in 3:
+				await get_tree().physics_frame
+			_record("%s 往%s走开后提示隐藏" % [ore_name, side_name], not hint.visible)
+	farm.queue_free()
+	await get_tree().process_frame
 
 
 func _exercise_watering_can() -> void:

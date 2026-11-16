@@ -287,6 +287,13 @@ func _use_tool_on_target() -> void:
 
 	_play_use_feedback()
 
+	# 面前是矿石（农场 OreNorth/OreSouth、矿洞）：镐子走 Pickaxe.use → Ore.take_damage，
+	# 和矿洞同一套扣体力/血条/掉落；其它工具只提示。放在田格判断前，矿石压着田格也不会翻地。
+	var facing_ore := _find_facing_ore()
+	if facing_ore != null:
+		_use_tool_on_ore(facing_ore)
+		return
+
 	# 农场：按格子选“脚下那格的前一格”（BUG：四个方向只锄出 3 格）
 	var farm := _find_farm_scene()
 	var facing_coord := Vector2i(-1, -1)
@@ -337,6 +344,31 @@ func _use_tool_on_target() -> void:
 
 	# 如果没有找到土壤，尝试使用工具（如钓鱼）
 	tool_manager.use_tool(null)
+
+## 面向点上还能挖的矿石（Ore 的 Area2D 或它的 SolidBody）。
+func _find_facing_ore() -> Ore:
+	var query := PhysicsPointQueryParameters2D.new()
+	query.position = global_position + _get_direction_vector() * interaction_range
+	query.collide_with_areas = true
+	query.collide_with_bodies = true
+	for result in get_world_2d().direct_space_state.intersect_point(query):
+		var collider: Object = result.collider
+		var ore := collider as Ore
+		if ore == null and collider is Node and (collider as Node).get_parent() is Ore:
+			ore = (collider as Node).get_parent() as Ore
+		if ore != null and ore.can_mine():
+			return ore
+	return null
+
+func _use_tool_on_ore(ore: Ore) -> void:
+	if tool_manager.get_current_tool_type() != ToolManager.ToolType.PICKAXE:
+		UIManager.show_toast("需要镐子才能挖矿石", {}, "info")
+		return
+	if tool_manager.use_tool(ore):
+		return
+	var pickaxe = tool_manager.tools.get(ToolManager.ToolType.PICKAXE)
+	if pickaxe != null and not pickaxe.is_mining and StaminaManager.current_stamina < pickaxe.energy_cost:
+		UIManager.show_toast("体力不足", {}, "info")
 
 ## BUG-21: villagers are solid, but when they crowd the player (three of them share
 ## the plaza target by the fountain) WASD looked dead. Like Stardew, pushing into a

@@ -115,8 +115,11 @@ func _do_mining(ore: Ore) -> bool:
 			hit_particles.emitting = true
 			hit_particles.global_position = ore.global_position
 
-		# 发射物品获取事件
-		get_node("/root/EventBus").inventory.item_added.emit(result.item_id, result.quantity)
+		# 掉落进背包（Inventory 自己会发 EventBus.inventory.item_added）
+		if Inventory.add_item(result.item_id, result.quantity):
+			UIManager.show_toast("获得 %s ×%d" % [Inventory.get_item_name(result.item_id), result.quantity], {}, "info")
+		else:
+			UIManager.show_toast("背包满了", {}, "info")
 	else:
 		print("[Pickaxe] Mining progress: ", result.current_health, "/", result.max_health)
 

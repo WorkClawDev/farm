@@ -44,6 +44,7 @@ var ore_data: Dictionary = {}
 @onready var particles: GPUParticles2D = $Particles if has_node("Particles") else null
 @onready var health_bar: ProgressBar = $HealthBar if has_node("HealthBar") else null
 @onready var solid_collision: CollisionShape2D = $SolidBody/CollisionShape2D if has_node("SolidBody/CollisionShape2D") else null
+@onready var interaction_hint: Label = $InteractionHint if has_node("InteractionHint") else null
 
 const OreIllustrationScene = preload("res://src/world/objects/OreIllustration.gd")
 
@@ -57,7 +58,77 @@ func _ready() -> void:
 		health_bar.visible = false
 		health_bar.max_value = max_health
 		health_bar.value = current_health
+		health_bar.z_index = 2  # 同层 Y 排序时血条也画在玩家上面
+		_style_health_bar()
+	_setup_interaction_hint()
 	print("[Ore] Initialized: ", ore_data.get(ore_type, {}).get("name", "Unknown Ore"))
+
+
+## 「挖掘」提示：玩家脚底进入能挖到这块矿石的范围时显示，离开或挖完隐藏。
+## 每个物理帧按距离判断，不靠 Area2D 进出信号（传送、读档、出生点落在区域里都不会漏）。
+## 农场把矿石放到和玩家同层按 Y 排序，提示再抬高两层，带深色底，玩家站在矿石南边（人在前）时
+## 挪到玩家头顶，不再压在 132px 高角色的白衬衫上看不清。
+## 范围是十字形：正对矿石的一条带里才显示，和镐子的面向判定（面前 32px 落进 88x88 感应区）一致。
+const HINT_BAND_HALF := 44.0      # 横/竖带的半宽（= 感应区半边）
+const HINT_REACH_SIDE := 60.0     # 东西两侧脚底离中心最远多少还显示（站停在 ±38）
+const HINT_REACH_NORTH := 60.0    # 北侧（站停在 -22）
+const HINT_REACH_SOUTH := 72.0    # 南侧：脚在实体碰撞下方，站停在 +38～+42
+const HINT_ABOVE_FEET := 158.0    # 玩家在南侧时，提示顶边在脚底上方多少（角色约 124px 高）
+var _hint_player: Node2D = null
+var _hint_base_y := 0.0
+
+
+func _setup_interaction_hint() -> void:
+	if interaction_hint == null:
+		return
+	interaction_hint.visible = false
+	interaction_hint.z_index = 2
+	interaction_hint.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	interaction_hint.add_theme_color_override("font_outline_color", Color(0.12, 0.08, 0.05))
+	interaction_hint.add_theme_constant_override("outline_size", 4)
+	var pill := StyleBoxFlat.new()
+	pill.bg_color = Color(0.1, 0.07, 0.05, 0.78)
+	pill.set_corner_radius_all(4)
+	pill.content_margin_left = 5.0
+	pill.content_margin_right = 5.0
+	pill.content_margin_bottom = 1.0
+	interaction_hint.add_theme_stylebox_override("normal", pill)
+	_hint_base_y = interaction_hint.position.y
+
+
+func _physics_process(_delta: float) -> void:
+	if interaction_hint == null:
+		return
+	var show := is_player_in_hint_reach()
+	interaction_hint.visible = show
+	if show:
+		var d := _hint_player.global_position - global_position
+		var in_front := d.y > 0.0 and absf(d.x) <= HINT_BAND_HALF  # 正南、人画在矿石前面
+		interaction_hint.position.y = minf(_hint_base_y, d.y - HINT_ABOVE_FEET) if in_front else _hint_base_y
+
+
+## 玩家脚底（Player 原点）相对矿石原点是否在提示范围内。
+func is_player_in_hint_reach() -> bool:
+	if not can_mine() or not is_inside_tree():
+		return false
+	if _hint_player == null or not is_instance_valid(_hint_player) or not _hint_player.is_inside_tree():
+		_hint_player = get_tree().get_first_node_in_group("player") as Node2D
+	if _hint_player == null:
+		return false
+	var d := _hint_player.global_position - global_position
+	var vertical := absf(d.x) <= HINT_BAND_HALF and d.y >= -HINT_REACH_NORTH and d.y <= HINT_REACH_SOUTH
+	var horizontal := absf(d.y) <= HINT_BAND_HALF and absf(d.x) <= HINT_REACH_SIDE
+	return vertical or horizontal
+
+
+## 全局主题的进度条是绿色，压在草地上看不见。矿石血条换成深底琥珀色。
+func _style_health_bar() -> void:
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(0.1, 0.08, 0.06, 0.85)
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = Color(0.96, 0.72, 0.25)
+	health_bar.add_theme_stylebox_override("background", bg)
+	health_bar.add_theme_stylebox_override("fill", fill)
 
 
 ## 设置矿石（由Mine场景调用）
@@ -261,6 +332,8 @@ func _play_destroy_animation() -> void:
 
 ## 设置耗尽状态的视觉效果
 func _set_depleted_visual() -> void:
+	if interaction_hint:
+		interaction_hint.visible = false
 	if sprite:
 		sprite.visible = false
 	var visual := get_node_or_null("OreIllustration")
