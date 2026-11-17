@@ -302,7 +302,7 @@ func _exercise_scene(scene_name: String, scene_path: String) -> void:
 				var shelf_has_fiber := shopkeeper.shop_ui.find_child("ShopItem_fiber_seeds", true, false) != null
 				_record(
 					"种子商店当季货架可显示，且没有纤维种子",
-					shopkeeper.shop_ui.item_list.item_count == 5 and not shelf_has_fiber
+					shopkeeper.shop_ui.item_list.item_count == 6 and not shelf_has_fiber
 				)
 				shopkeeper.shop_ui._on_close_button_pressed()
 			_record("关闭商店后恢复玩家控制", GameManager.current_state == GameManager.GameState.PLAYING)

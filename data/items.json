@@ -1293,6 +1293,16 @@
         "energy": 20
       },
       "description": "猪产下的新鲜猪肉，营养丰富。"
+    },
+    {
+      "id": "dirt_path",
+      "name": "土路",
+      "type": "resource",
+      "icon": "res://assets/sprites/items/dirt_path.png",
+      "max_stack": 999,
+      "buy_price": 5,
+      "sell_price": 2,
+      "description": "铺在草地上的土路。"
     }
   ]
 }

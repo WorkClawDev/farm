@@ -48,6 +48,7 @@ func _ready() -> void:
 	run_hoe_station_priority_tests()
 	run_ui_polish_tests()
 	run_house_wood_floor_tests()
+	run_dirt_path_item_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -3409,6 +3410,30 @@ func run_house_wood_floor_tests() -> void:
 		"house 背景加载 wood_floor.png 纹理且成功"
 	)
 	backdrop.free()
+
+
+func run_dirt_path_item_tests() -> void:
+	print("\n[Dirt Path Item]")
+	var item = ItemDatabase.get_item("dirt_path")
+	assert_true(item != null, "dirt_path item exists")
+	var icon_path := str(ItemDatabase.get_icon_path("dirt_path"))
+	assert_true(load(icon_path) != null, "dirt_path icon loads from %s" % icon_path)
+	var shop = load("res://src/core/economy/ShopSystem.gd").new()
+	add_child(shop)
+	var saved_time := TimeManager.current_time
+	TimeManager.current_time = 10.0
+	var opened = shop.open_shop("seed_shop")
+	var ids: Array = []
+	for entry in shop.get_shop_items("seed_shop"):
+		ids.append(str(entry.get("item_id", "")))
+	var price = shop.calculate_buy_price("dirt_path", 1)
+	assert_true(opened and ids.has("dirt_path"), "seed shop lists dirt_path")
+	assert_true(price == 5, "dirt_path costs 5 gold")
+	shop.close_shop()
+	TimeManager.current_time = saved_time
+	remove_child(shop)
+	shop.free()
+	print("  Dirt path item: All tests completed")
 
 
 func assert_true(condition: bool, message: String):

@@ -44,6 +44,11 @@
 					"item_id": "quality_fertilizer",
 					"stock": 20,
 					"max_stock": 20
+				},
+				{
+					"item_id": "dirt_path",
+					"stock": -1,
+					"buy_price": 5
 				}
 			]
 		},
@@ -90,6 +95,11 @@
 				{
 					"item_id": "pumpkin_seed",
 					"stock": -1
+				},
+				{
+					"item_id": "dirt_path",
+					"stock": -1,
+					"buy_price": 6
 				}
 			]
 		},
