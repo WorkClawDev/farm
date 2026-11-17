@@ -61,6 +61,9 @@ var _overnight_crop_count: int = -1
 ## 农场上的矿石，用节点名当稳定 id（OreNorth、OreSouth）。
 ## 挖碎了就一直挖碎：切场景和读档都不再出现。只受伤时另记剩余血量。矿洞不写这里。
 var _farm_ores: Dictionary = {}
+## 玩家自铺土路（pave1b）。键是农场 64px 世界格 Vector2i，值恒为 true。
+## 背景里画的固定路不在这里。
+var _player_paths: Dictionary = {}
 
 
 func _ready() -> void:
@@ -81,6 +84,7 @@ func reset() -> void:
 	set_watering_can_water(WATERING_CAN_MAX_WATER)
 	_overnight_crop_count = -1
 	_farm_ores.clear()
+	_player_paths.clear()
 	farm_reset.emit()
 
 
@@ -583,6 +587,30 @@ func get_farm_ore_health(ore_id: String) -> int:
 	return hp
 
 
+## 记一格玩家铺的路。已经有了返回 false。
+func add_player_path(cell: Vector2i) -> bool:
+	if _player_paths.has(cell):
+		return false
+	_player_paths[cell] = true
+	return true
+
+
+## 只拆玩家铺的路。没有这格返回 false。
+func remove_player_path(cell: Vector2i) -> bool:
+	return _player_paths.erase(cell)
+
+
+func has_player_path(cell: Vector2i) -> bool:
+	return _player_paths.has(cell)
+
+
+func get_player_paths() -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for cell in _player_paths.keys():
+		out.append(cell)
+	return out
+
+
 func get_save_state() -> Dictionary:
 	var cells: Array = []
 	for y in range(GRID_HEIGHT):
@@ -595,6 +623,7 @@ func get_save_state() -> Dictionary:
 		"watering_can_water": _watering_can_water,
 		"watering_can_max_water": _watering_can_max_water,
 		"farm_ores": _farm_ores.duplicate(true),
+		"player_paths": _player_paths_save_array(),
 	}
 
 
@@ -618,8 +647,30 @@ func load_save_state(data: Dictionary) -> bool:
 	_overnight_crop_count = -1
 	# 旧档没有 farm_ores：矿石都还在。
 	_restore_farm_ores(data)
+	# 旧档没有 player_paths：当成一格路都没铺。
+	_restore_player_paths(data)
 	farm_reset.emit()
 	return true
+
+
+## 存成 [[x, y], ...]，JSON 存档里也能原样读回。
+func _player_paths_save_array() -> Array:
+	var out: Array = []
+	for cell: Vector2i in _player_paths.keys():
+		out.append([cell.x, cell.y])
+	return out
+
+
+func _restore_player_paths(data: Dictionary) -> void:
+	_player_paths.clear()
+	var saved = data.get("player_paths", [])
+	if not saved is Array:
+		return
+	for raw in saved:
+		if raw is Array and raw.size() >= 2:
+			_player_paths[Vector2i(int(raw[0]), int(raw[1]))] = true
+		elif raw is Dictionary and raw.has("x") and raw.has("y"):
+			_player_paths[Vector2i(int(raw["x"]), int(raw["y"]))] = true
 
 
 func _restore_farm_ores(data: Dictionary) -> void:

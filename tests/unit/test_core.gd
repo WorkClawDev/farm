@@ -49,6 +49,7 @@ func _ready() -> void:
 	run_ui_polish_tests()
 	run_house_wood_floor_tests()
 	run_dirt_path_item_tests()
+	run_player_path_state_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -3434,6 +3435,35 @@ func run_dirt_path_item_tests() -> void:
 	remove_child(shop)
 	shop.free()
 	print("  Dirt path item: All tests completed")
+
+
+func run_player_path_state_tests() -> void:
+	print("\n[Player Path State]")
+	FarmState.reset()
+	var a := Vector2i(3, 12)
+	var b := Vector2i(-1, 4)
+	assert_true(FarmState.get_player_paths().is_empty(), "player paths start empty after reset")
+	assert_true(FarmState.add_player_path(a) and FarmState.has_player_path(a), "add_player_path then has_player_path")
+	assert_true(not FarmState.add_player_path(a), "adding the same path cell twice is refused")
+	FarmState.add_player_path(b)
+	assert_true(FarmState.remove_player_path(b) and not FarmState.has_player_path(b), "remove_player_path clears the cell")
+	assert_true(not FarmState.remove_player_path(b), "removing a missing path cell returns false")
+	var saved := FarmState.get_save_state()
+	var json_saved = JSON.parse_string(JSON.stringify(saved))
+	FarmState.reset()
+	var loaded := json_saved is Dictionary and FarmState.load_save_state(json_saved)
+	assert_true(
+		loaded and FarmState.has_player_path(a) and FarmState.get_player_paths().size() == 1,
+		"player paths survive save_state JSON round-trip"
+	)
+	var old_save := saved.duplicate(true)
+	old_save.erase("player_paths")
+	var old_loaded := FarmState.load_save_state(old_save)
+	assert_true(old_loaded and FarmState.get_player_paths().is_empty(), "old save without player_paths loads with no paths")
+	FarmState.add_player_path(a)
+	FarmState.reset()
+	assert_true(FarmState.get_player_paths().is_empty(), "reset clears player paths")
+	print("  Player path state: All tests completed")
 
 
 func assert_true(condition: bool, message: String):

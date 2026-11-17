@@ -27,6 +27,7 @@ var _interact_needs_release := false
 ## After a dialogue closes, a second E/Space within this window is taken as part of
 ## closing it, not as "talk again" (BUG-26 residual: the line after the last one).
 const DIALOGUE_RETALK_COOLDOWN_MS := 600
+const DIRT_PATH_ITEM_ID := "dirt_path"
 var _interact_blocked_until_msec := 0
 ## A direction key still held from walking into the previous map's exit would
 ## carry the player past the arrival spot (BUG-37); ignore it until released.
@@ -293,6 +294,25 @@ func _use_tool_on_target() -> void:
 	if facing_ore != null:
 		_use_tool_on_ore(facing_ore)
 		return
+
+	# pave1b 自铺土路：放在矿石之后、田格之前。
+	# - 收起工具、快捷栏选着土路：在面前 64px 世界格铺路，成功才扣 1 个。
+	# - 镐子或锄头对着玩家铺的路：拆掉退回 1 个，不再往下走耕地/敲石头。
+	var path_farm := _find_farm_scene()
+	if path_farm != null and path_farm.has_method("try_place_path"):
+		var path_cell: Vector2i = path_farm.get_facing_path_cell(global_position, _get_direction_vector())
+		if tool_manager.is_using_hotbar_item() and Inventory.get_selected_item_id() == DIRT_PATH_ITEM_ID:
+			if Inventory.has_item(DIRT_PATH_ITEM_ID, 1) and bool(path_farm.try_place_path(path_cell)):
+				Inventory.remove_item(DIRT_PATH_ITEM_ID, 1)
+			return
+		var held_tool := tool_manager.get_current_tool_type()
+		if (held_tool == ToolManager.ToolType.PICKAXE or held_tool == ToolManager.ToolType.HOE) and FarmState.has_player_path(path_cell):
+			if not Inventory.can_add_item(DIRT_PATH_ITEM_ID, 1):
+				UIManager.show_toast("背包已满", {}, "info")
+				return
+			if bool(path_farm.try_remove_path(path_cell)):
+				Inventory.add_item(DIRT_PATH_ITEM_ID, 1)
+			return
 
 	# 农场：按格子选“脚下那格的前一格”（BUG：四个方向只锄出 3 格）
 	var farm := _find_farm_scene()

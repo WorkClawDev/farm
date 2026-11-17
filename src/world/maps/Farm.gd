@@ -50,6 +50,10 @@ var _player_at_house_door: Player = null
 var _entering_house := false
 ## Farm ores tracked so a depleted node can be snapshotted on the way out.
 var _tracked_farm_ores: Array[Ore] = []
+## pave1b 玩家自铺土路：地面层容器 + 每格一个 Sprite2D。
+var _path_layer: Node2D
+var _path_sprites: Dictionary = {}
+var _path_texture: Texture2D
 ## BUG-59: steps only (door point is the bottom step; shape sits above it).
 const HOUSE_ENTRANCE_SIZE := Vector2(40, 24)
 
@@ -71,12 +75,14 @@ func _ready() -> void:
 	_setup_ui()
 	add_child(DayNightTint.new())  # outdoor night tint (round 8)
 	_setup_soil_plots()
+	_setup_player_paths()
 	_setup_house_entrance()
 	_setup_village_exit()
 	_connect_time_signals()
 	_connect_event_signals()
 	FarmState.cell_changed.connect(_on_farm_cell_changed)
 	FarmState.farm_reset.connect(_refresh_all_plots)
+	FarmState.farm_reset.connect(_rebuild_player_paths)
 	GameManager.notification_requested.connect(_show_notification)
 	var player_node := get_tree().get_first_node_in_group("player") as Node2D
 	if player_node:
@@ -715,6 +721,158 @@ func _remove_farm_ore(node: Node) -> void:
 	if parent:
 		parent.remove_child(node)
 	node.queue_free()
+
+
+## ---- 玩家自铺土路（pave1b）----
+## 格子是农场 64px 世界格（与 Ground 瓦片对齐），和田地的 PLOT 网格无关。
+## 自动拼接留给 pave2：从 _pick_path_tile 接入。
+const PATH_CELL_SIZE := 64
+const PATH_TEXTURE_PATH := "res://assets/sprites/tiles/dirt_path_atlas_alpha.png"
+## DIRT_PATH.md 图集 [0,0] = path_dirt_a（纯土内部）。
+const PATH_TILE_DIRT_A := Rect2(0, 0, 64, 64)
+func _setup_player_paths() -> void:
+	_path_layer = Node2D.new()
+	_path_layer.name = "PlayerPaths"
+	# 地面层：FarmMap 的 Ground(-3)/TerrainOverlay(-2) 之上，
+	# TilledArea(-1)、装饰、物件和人物(0+) 之下。排在 FarmMap 后、篱笆前。
+	_path_layer.z_index = -2
+	_path_layer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	add_child(_path_layer)
+	if map_root != null:
+		move_child(_path_layer, map_root.get_index() + 1)
+	_rebuild_player_paths()
+
+
+## 世界坐标所在的 64px 世界格。
+func get_path_cell_at(world_position: Vector2) -> Vector2i:
+	var local := world_position - global_position
+	return Vector2i(floori(local.x / PATH_CELL_SIZE), floori(local.y / PATH_CELL_SIZE))
+
+
+## 人站的那格朝面向方向的下一格。
+func get_facing_path_cell(world_position: Vector2, facing: Vector2) -> Vector2i:
+	return get_path_cell_at(world_position) + Vector2i(roundi(facing.x), roundi(facing.y))
+
+
+func is_player_path(world_cell: Vector2i) -> bool:
+	return FarmState.has_player_path(world_cell)
+
+
+## 铺一格土路。铺不了时弹 toast、返回 false，调用方不扣物品。
+func try_place_path(world_cell: Vector2i) -> bool:
+	var reason := _path_block_reason(world_cell)
+	if not reason.is_empty():
+		_show_notification(reason)
+		return false
+	if not FarmState.add_player_path(world_cell):
+		_show_notification("这里已经铺了路")
+		return false
+	_add_path_sprite(world_cell)
+	return true
+
+
+## 只拆玩家铺的路；背景里画的固定路不在 FarmState 里，拆不到。
+func try_remove_path(world_cell: Vector2i) -> bool:
+	if not FarmState.remove_player_path(world_cell):
+		return false
+	_remove_path_sprite(world_cell)
+	return true
+
+
+## 空字符串 = 能铺。
+func _path_block_reason(world_cell: Vector2i) -> String:
+	if FarmState.has_player_path(world_cell):
+		return "这里已经铺了路"
+	var rect := _path_cell_rect(world_cell)
+	if map_root != null and not map_root.get_world_rect().encloses(rect):
+		return "这里不能铺路"
+	if _path_field_rect().has_point(rect.get_center()):
+		return "田里不能铺路"
+	if _path_cell_is_water(world_cell):
+		return "水里不能铺路"
+	if _path_cell_hits_solid(rect):
+		return "这里有东西挡着，不能铺路"
+	return ""
+
+
+func _path_cell_rect(world_cell: Vector2i) -> Rect2:
+	return Rect2(Vector2(world_cell * PATH_CELL_SIZE), Vector2(PATH_CELL_SIZE, PATH_CELL_SIZE))
+
+
+## 田地网格（含已耕地）占的矩形，Farm 本地坐标。
+## 铺路只看格子中心是否落在田里，避免田格与 64px 路网错开 32px 时把田北原有路整行挡住。
+## 篱笆由 _path_cell_hits_solid 拦截。
+func _path_field_rect() -> Rect2:
+	var half := PLOT_SPACING * 0.5
+	var top_left := PLOT_ORIGIN - Vector2(half, half)
+	var size := Vector2(FarmState.GRID_WIDTH, FarmState.GRID_HEIGHT) * PLOT_SPACING
+	return Rect2(top_left, size)
+
+
+func _path_cell_is_water(world_cell: Vector2i) -> bool:
+	var overlay := map_root.get_layer(&"terrain_overlay") as TileMapLayer if map_root != null else null
+	if overlay == null:
+		return false
+	var center := global_position + _path_cell_rect(world_cell).get_center()
+	return _is_farm_pond_water_cell(overlay, overlay.local_to_map(overlay.to_local(center)))
+
+
+## 房子、树、树桩、矿石、出货箱、工作台、鸡舍/谷仓、篱笆、地图边界：
+## 都是 WORLD 层的实体碰撞，直接用格子内缩 2px 的矩形去查。
+func _path_cell_hits_solid(rect: Rect2) -> bool:
+	if not is_inside_tree():
+		return false
+	var shape := RectangleShape2D.new()
+	shape.size = rect.size - Vector2(4, 4)
+	var query := PhysicsShapeQueryParameters2D.new()
+	query.shape = shape
+	query.transform = Transform2D(0.0, global_position + rect.get_center())
+	query.collision_mask = PHYSICS_LAYERS.WORLD
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
+	return not get_world_2d().direct_space_state.intersect_shape(query, 1).is_empty()
+
+
+## pave2 自动拼接入口：按四邻掩码从图集里挑瓦片。这一单统一用 path_dirt_a。
+func _pick_path_tile(_world_cell: Vector2i) -> Rect2:
+	return PATH_TILE_DIRT_A
+
+
+func _add_path_sprite(world_cell: Vector2i) -> void:
+	if _path_layer == null or _path_sprites.has(world_cell):
+		return
+	if _path_texture == null:
+		_path_texture = load(PATH_TEXTURE_PATH) as Texture2D
+	var sprite := Sprite2D.new()
+	sprite.name = "Path_%d_%d" % [world_cell.x, world_cell.y]
+	sprite.texture = _path_texture
+	sprite.region_enabled = true
+	sprite.region_rect = _pick_path_tile(world_cell)
+	sprite.centered = false
+	sprite.position = Vector2(world_cell * PATH_CELL_SIZE)
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_path_layer.add_child(sprite)
+	_path_sprites[world_cell] = sprite
+
+
+func _remove_path_sprite(world_cell: Vector2i) -> void:
+	var sprite = _path_sprites.get(world_cell)
+	_path_sprites.erase(world_cell)
+	if sprite is Node and is_instance_valid(sprite):
+		(sprite as Node).queue_free()
+
+
+## 进场和读档（farm_reset）时按 FarmState 重画。
+func _rebuild_player_paths() -> void:
+	if _path_layer == null:
+		return
+	for sprite in _path_sprites.values():
+		if sprite is Node and is_instance_valid(sprite):
+			_path_layer.remove_child(sprite)
+			(sprite as Node).queue_free()
+	_path_sprites.clear()
+	for cell in FarmState.get_player_paths():
+		_add_path_sprite(cell)
 
 
 func _exit_tree() -> void:
