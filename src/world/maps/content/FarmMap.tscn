@@ -23,6 +23,9 @@
 [ext_resource type="Script" path="res://src/world/map_editor/CollisionPreset.gd" id="21_3stn6"]
 [ext_resource type="Script" path="res://src/world/map_editor/MapMarker2D.gd" id="22_oypdr"]
 [ext_resource type="Script" path="res://src/world/objects/FarmMapDecor.gd" id="23_decor"]
+[ext_resource type="TileSet" path="res://assets/tiles/cliff_tileset.tres" id="24_cliff"]
+[ext_resource type="Texture2D" path="res://assets/tiles/kenney/decor/bush_64.png" id="25_bush"]
+[ext_resource type="Texture2D" path="res://assets/sprites/items/ninja_adventure/stone.png" id="26_stone"]
 
 [sub_resource type="Resource" id="Resource_57dp0"]
 script = ExtResource("21_3stn6")
@@ -43,6 +46,9 @@ size = Vector2(48, 2240)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_o80ww"]
 size = Vector2(32, 32)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_stop"]
+size = Vector2(64, 64)
 
 [node name="FarmMap" type="Node2D" unique_id=767086109]
 script = ExtResource("1_25i0t")
@@ -65,6 +71,134 @@ tile_set = ExtResource("3_d0mrp")
 script = ExtResource("4_m5e23")
 layer_id = &"terrain_overlay"
 
+[node name="Cliffs" type="TileMapLayer" parent="."]
+z_index = 1
+texture_filter = 1
+tile_map_data = PackedByteArray("AAD+//z/AAAEAAIAAAD///z/AAAEAAIAAAAAAPz/AAAEAAIAAAABAPz/AAAEAAIAAAACAPz/AAAEAAIAAAADAPz/AAAEAAIAAAAEAPz/AAAEAAIAAAAFAPz/AAAEAAIAAAAGAPz/AAAEAAIAAAAHAPz/AAAEAAIAAAAIAPz/AAAEAAIAAAAJAPz/AAAEAAIAAAAKAPz/AAAEAAIAAAALAPz/AAAEAAIAAAAMAPz/AAAEAAIAAAANAPz/AAAEAAIAAAAOAPz/AAAEAAIAAAAPAPz/AAAEAAIAAAAQAPz/AAAEAAIAAAARAPz/AAAEAAIAAAASAPz/AAAEAAIAAAATAPz/AAAEAAIAAAAUAPz/AAAEAAIAAAAVAPz/AAAEAAIAAAAWAPz/AAAEAAIAAAAXAPz/AAAEAAIAAAAYAPz/AAAEAAIAAAAZAPz/AAAEAAIAAAAaAPz/AAAEAAIAAAAbAPz/AAAEAAIAAAAcAPz/AAAEAAIAAAAdAPz/AAAEAAIAAAD+//3/AAAEAAIAAAD///3/AAAEAAIAAAAAAP3/AAAEAAIAAAABAP3/AAAEAAIAAAACAP3/AAAEAAIAAAADAP3/AAAEAAIAAAAEAP3/AAAEAAIAAAAFAP3/AAAEAAIAAAAGAP3/AAAEAAIAAAAHAP3/AAAEAAIAAAAIAP3/AAAEAAIAAAAJAP3/AAAEAAIAAAAKAP3/AAAEAAIAAAALAP3/AAAEAAIAAAAMAP3/AAAEAAIAAAANAP3/AAAEAAIAAAAOAP3/AAAEAAIAAAAPAP3/AAAEAAIAAAAQAP3/AAAEAAIAAAARAP3/AAAEAAIAAAASAP3/AAAEAAIAAAATAP3/AAAEAAIAAAAUAP3/AAAEAAIAAAAVAP3/AAAEAAIAAAAWAP3/AAAEAAIAAAAXAP3/AAAEAAIAAAAYAP3/AAAEAAIAAAAZAP3/AAAEAAIAAAAaAP3/AAAEAAIAAAAbAP3/AAAEAAIAAAAcAP3/AAAEAAIAAAAdAP3/AAAEAAIAAAD+//7/AAAEAAIAAAD///7/AAAEAAIAAAAAAP7/AAAEAAIAAAABAP7/AAAEAAIAAAACAP7/AAAEAAIAAAADAP7/AAAEAAIAAAAEAP7/AAAEAAIAAAAFAP7/AAAEAAIAAAAGAP7/AAAEAAIAAAAHAP7/AAAEAAIAAAAIAP7/AAAEAAIAAAAJAP7/AAAEAAIAAAAKAP7/AAAEAAIAAAALAP7/AAAEAAIAAAAMAP7/AAAEAAIAAAANAP7/AAAEAAIAAAAOAP7/AAAEAAIAAAAPAP7/AAAEAAIAAAAQAP7/AAAEAAIAAAARAP7/AAAEAAIAAAASAP7/AAAEAAIAAAATAP7/AAAEAAIAAAAUAP7/AAAEAAIAAAAVAP7/AAAEAAIAAAAWAP7/AAAEAAIAAAAXAP7/AAAEAAIAAAAYAP7/AAAEAAIAAAAZAP7/AAAEAAIAAAAaAP7/AAAEAAIAAAAbAP7/AAAEAAIAAAAcAP7/AAAEAAIAAAAdAP7/AAAEAAIAAAD+////AAAEAAIAAAD/////AAAEAAIAAAAAAP//AAAEAAIAAAABAP//AAAEAAIAAAACAP//AAAEAAIAAAADAP//AAAEAAIAAAAEAP//AAAEAAIAAAAFAP//AAAEAAIAAAAGAP//AAAEAAIAAAAHAP//AAAEAAIAAAAIAP//AAAEAAIAAAAJAP//AAAEAAIAAAAKAP//AAAEAAIAAAALAP//AAAEAAIAAAAMAP//AAAEAAIAAAANAP//AAAEAAIAAAAOAP//AAAEAAIAAAAPAP//AAAEAAIAAAAQAP//AAAEAAIAAAARAP//AAAEAAIAAAASAP//AAAEAAIAAAATAP//AAAEAAIAAAAUAP//AAAEAAIAAAAVAP//AAAEAAIAAAAWAP//AAAEAAIAAAAXAP//AAAEAAIAAAAYAP//AAAEAAIAAAAZAP//AAAEAAIAAAAaAP//AAAEAAIAAAAbAP//AAAEAAIAAAAcAP//AAAEAAIAAAAdAP//AAAEAAIAAAAAAAAAAAACAAMAAAABAAAAAAACAAAAAAACAAAAAAADAAAAAAADAAAAAAAAAAAAAAAEAAAAAAACAAAAAAAFAAAAAAABAAAAAAAGAAAAAAACAAAAAAAHAAAAAAABAAAAAAAIAAAAAAAAAAAAAAAJAAAAAAABAAAAAAAKAAAAAAAAAAAAAAALAAAAAAADAAAAAAAMAAAAAAAAAAAAAAANAAAAAAADAAAAAAAOAAAAAAACAAAAAAAPAAAAAAADAAAAAAAQAAAAAAACAAAAAAARAAAAAAADAAAAAAASAAAAAAAIAAIAAAATAAAAAAAEAAIAAAAUAAAAAAAEAAIAAAAVAAAAAAAEAAIAAAAWAAAAAAAEAAIAAAAXAAAAAAAFAAIAAAAYAAAAAAAEAAIAAAAZAAAAAAAEAAIAAAAaAAAAAAAEAAIAAAAbAAAAAAAEAAIAAAAAAAEAAAADAAMAAAABAAEAAAAGAAAAAAACAAEAAAAHAAAAAAADAAEAAAAEAAAAAAAEAAEAAAAGAAAAAAAFAAEAAAAFAAAAAAAGAAEAAAAGAAAAAAAHAAEAAAAFAAAAAAAIAAEAAAAEAAAAAAAJAAEAAAAFAAAAAAAKAAEAAAAEAAAAAAALAAEAAAAHAAAAAAAMAAEAAAAEAAAAAAANAAEAAAAHAAAAAAAOAAEAAAAGAAAAAAAPAAEAAAAHAAAAAAAQAAEAAAAGAAAAAAARAAEAAAAHAAAAAAASAAEAAAAJAAIAAAATAAEAAAAEAAIAAAAUAAEAAAAFAAIAAAAVAAEAAAAEAAIAAAAWAAEAAAAEAAIAAAAXAAEAAAAEAAIAAAAYAAEAAAAEAAIAAAAZAAEAAAAFAAIAAAAaAAEAAAAEAAIAAAAbAAEAAAAEAAIAAAASAAIAAAAIAAIAAAATAAIAAAABAAAAAAAUAAIAAAAAAAAAAAAVAAIAAAABAAAAAAAWAAIAAAAAAAAAAAAXAAIAAAACAAAAAAAYAAIAAAABAAAAAAAZAAIAAAADAAAAAAAaAAIAAAADAAAAAAAbAAIAAAAIAAIAAAASAAMAAAAJAAIAAAATAAMAAAAFAAAAAAAUAAMAAAAEAAAAAAAVAAMAAAAFAAAAAAAWAAMAAAAEAAAAAAAXAAMAAAAGAAAAAAAYAAMAAAAFAAAAAAAZAAMAAAAHAAAAAAAaAAMAAAAHAAAAAAAbAAMAAAAJAAIAAAA=")
+tile_set = ExtResource("24_cliff")
+
+[node name="CliffStoppers" type="Node2D" parent="."]
+z_index = 2
+
+[node name="Hedge19" type="StaticBody2D" parent="CliffStoppers"]
+position = Vector2(1248, 32)
+collision_layer = 1
+collision_mask = 0
+
+[node name="Sprite2D" type="Sprite2D" parent="CliffStoppers/Hedge19"]
+texture = ExtResource("25_bush")
+texture_filter = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CliffStoppers/Hedge19"]
+shape = SubResource("RectangleShape2D_stop")
+
+[node name="Hedge20" type="StaticBody2D" parent="CliffStoppers"]
+position = Vector2(1312, 32)
+collision_layer = 1
+collision_mask = 0
+
+[node name="Sprite2D" type="Sprite2D" parent="CliffStoppers/Hedge20"]
+texture = ExtResource("25_bush")
+texture_filter = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CliffStoppers/Hedge20"]
+shape = SubResource("RectangleShape2D_stop")
+
+[node name="Hedge21" type="StaticBody2D" parent="CliffStoppers"]
+position = Vector2(1376, 32)
+collision_layer = 1
+collision_mask = 0
+
+[node name="Sprite2D" type="Sprite2D" parent="CliffStoppers/Hedge21"]
+texture = ExtResource("25_bush")
+texture_filter = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CliffStoppers/Hedge21"]
+shape = SubResource("RectangleShape2D_stop")
+
+[node name="Hedge22" type="StaticBody2D" parent="CliffStoppers"]
+position = Vector2(1440, 32)
+collision_layer = 1
+collision_mask = 0
+
+[node name="Sprite2D" type="Sprite2D" parent="CliffStoppers/Hedge22"]
+texture = ExtResource("25_bush")
+texture_filter = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CliffStoppers/Hedge22"]
+shape = SubResource("RectangleShape2D_stop")
+
+[node name="Hedge23" type="StaticBody2D" parent="CliffStoppers"]
+position = Vector2(1504, 32)
+collision_layer = 1
+collision_mask = 0
+
+[node name="Sprite2D" type="Sprite2D" parent="CliffStoppers/Hedge23"]
+texture = ExtResource("25_bush")
+texture_filter = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CliffStoppers/Hedge23"]
+shape = SubResource("RectangleShape2D_stop")
+
+[node name="Hedge24" type="StaticBody2D" parent="CliffStoppers"]
+position = Vector2(1568, 32)
+collision_layer = 1
+collision_mask = 0
+
+[node name="Sprite2D" type="Sprite2D" parent="CliffStoppers/Hedge24"]
+texture = ExtResource("25_bush")
+texture_filter = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CliffStoppers/Hedge24"]
+shape = SubResource("RectangleShape2D_stop")
+
+[node name="Hedge25" type="StaticBody2D" parent="CliffStoppers"]
+position = Vector2(1632, 32)
+collision_layer = 1
+collision_mask = 0
+
+[node name="Sprite2D" type="Sprite2D" parent="CliffStoppers/Hedge25"]
+texture = ExtResource("25_bush")
+texture_filter = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CliffStoppers/Hedge25"]
+shape = SubResource("RectangleShape2D_stop")
+
+[node name="Hedge26" type="StaticBody2D" parent="CliffStoppers"]
+position = Vector2(1696, 32)
+collision_layer = 1
+collision_mask = 0
+
+[node name="Sprite2D" type="Sprite2D" parent="CliffStoppers/Hedge26"]
+texture = ExtResource("25_bush")
+texture_filter = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CliffStoppers/Hedge26"]
+shape = SubResource("RectangleShape2D_stop")
+
+[node name="Hedge27" type="StaticBody2D" parent="CliffStoppers"]
+position = Vector2(1760, 32)
+collision_layer = 1
+collision_mask = 0
+
+[node name="Sprite2D" type="Sprite2D" parent="CliffStoppers/Hedge27"]
+texture = ExtResource("25_bush")
+texture_filter = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CliffStoppers/Hedge27"]
+shape = SubResource("RectangleShape2D_stop")
+
+[node name="PocketRock" type="StaticBody2D" parent="CliffStoppers"]
+position = Vector2(1760, 96)
+collision_layer = 1
+collision_mask = 0
+
+[node name="Sprite2D" type="Sprite2D" parent="CliffStoppers/PocketRock"]
+texture = ExtResource("26_stone")
+texture_filter = 1
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CliffStoppers/PocketRock"]
+shape = SubResource("RectangleShape2D_stop")
 [node name="Decoration" type="Node2D" parent="." unique_id=1162218745]
 z_index = 2
 script = ExtResource("5_432xf")

@@ -529,7 +529,10 @@ func _exercise_collision(instance: Node, scene_path: String) -> void:
 					house_collision != null and house_collision.get_collider() == house
 				)
 			player.global_position = house_center + Vector2(125, 130)
-			var outside_house_collision := player.move_and_collide(Vector2(0, -200))
+			# 终点放在北壁前面。壁碰撞止于 y≈116，脚框顶在原点上方 16px，
+			# 原点 y=148 时脚顶在 132，这一段不挨崖壁。
+			var outside_motion := Vector2(0, 148.0 - player.global_position.y)
+			var outside_house_collision := player.move_and_collide(outside_motion)
 			_record(
 				"Farm house collision does not extend beyond the artwork",
 				outside_house_collision == null
@@ -915,10 +918,19 @@ func _exercise_farm_ore_hint_sides() -> void:
 			continue
 		for side_name in ore_sides[ore_name]:
 			var side: Vector2 = all_sides[side_name]
-			player.global_position = ore.global_position + side * 96.0
+			# OreNorth 北、东的 96px 起点嵌在崖壁里：北 (1080,84) 在北壁（碰撞止于 y≈116），
+			# 东 (1176,180) 在第 18 列 outer_sw（x 1152–1216，行 0–3）。
+			# 贴墙空隙里脚框能站住的起点：北 (1080,136) 脚顶 y=120；东 (1136,180) 脚右缘 x=1148。
+			var approach := ore.global_position + side * 96.0
+			if ore_name == "OreNorth" and side_name == "北":
+				approach = Vector2(1080, 136)
+			elif ore_name == "OreNorth" and side_name == "东":
+				approach = Vector2(1136, 180)
+			player.global_position = approach
 			PhysicsServer2D.body_set_state(player.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, player.global_transform)
 			await get_tree().physics_frame
 			# OreNorth 正南被它脚下的装饰灌木（bush_1080_200）先挡住，停在 +42；其余停在矿石 SolidBody 上。
+			var solid_body := ore.get_node_or_null("SolidBody")
 			var blocker: Object = null
 			for _i in 40:
 				var hit := player.move_and_collide(-side * 4.0)
@@ -928,16 +940,34 @@ func _exercise_farm_ore_hint_sides() -> void:
 			for _i in 3:
 				await get_tree().physics_frame
 			var stop := player.global_position - ore.global_position
+			var reached := blocker is StaticBody2D and hint.visible
+			# 北、东贴着崖壁走，碰到的必须是这块矿的 SolidBody，不能是别的 StaticBody2D。
+			if ore_name == "OreNorth" and (side_name == "北" or side_name == "东"):
+				reached = reached and blocker == solid_body
 			_record(
 				"%s 从%s边走到挡住处（%.0f, %.0f）显示「挖掘」" % [ore_name, side_name, stop.x, stop.y],
-				blocker is StaticBody2D and hint.visible
+				reached
 			)
 			# 100px：出了提示范围（南 72、其余 60），又不会走进 OreSouth 南边的出口触发区。
-			player.global_position = ore.global_position + side * 100.0
+			# OreNorth 在 (1080,180)。往北 100px 嵌进北壁（第 0–1 行，碰撞止于 y≈116）。
+			# 往东 100px 嵌进第 18 列 outer_sw 收口（x 1152–1216，行 0–3，设计如此）。
+			# 这两向靠近之后改往南、往西离开感应区，断言仍是提示隐藏。
+			var away := side
+			var away_name: String = side_name
+			if ore_name == "OreNorth" and side_name == "北":
+				away = Vector2.DOWN
+				away_name = "南"
+			elif ore_name == "OreNorth" and side_name == "东":
+				away = Vector2.LEFT
+				away_name = "西"
+			player.global_position = ore.global_position + away * 100.0
 			PhysicsServer2D.body_set_state(player.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, player.global_transform)
 			for _i in 3:
 				await get_tree().physics_frame
-			_record("%s 往%s走开后提示隐藏" % [ore_name, side_name], not hint.visible)
+			var hide_label := "%s 往%s走开后提示隐藏" % [ore_name, side_name]
+			if away_name != side_name:
+				hide_label = "%s 从%s边靠近后往%s走开，提示隐藏" % [ore_name, side_name, away_name]
+			_record(hide_label, not hint.visible)
 	farm.queue_free()
 	await get_tree().process_frame
 

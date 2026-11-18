@@ -14,18 +14,19 @@ const TEX_EDGE_ROCK := preload("res://assets/sprites/items/ninja_adventure/stone
 const PLACEMENTS: Array[Dictionary] = [
 	# West / north edge trees (6)
 	{"path": "trees/x4/separately/Trees/Tree1_x4.png", "pos": Vector2(96, 160), "kind": "tree"},
-	{"path": "trees/x4/separately/Trees/Tree2_x4.png", "pos": Vector2(200, 96), "kind": "tree"},
+	{"path": "trees/x4/separately/Trees/Tree2_x4.png", "pos": Vector2(200, 180), "kind": "tree"},
 	{"path": "trees/x4/separately/Trees/Tree1_x4.png", "pos": Vector2(72, 300), "kind": "tree"},
-	{"path": "trees/x4/separately/Trees/Tree3_x4.png", "pos": Vector2(280, 80), "kind": "tree"},
+	{"path": "trees/x4/separately/Trees/Tree3_x4.png", "pos": Vector2(280, 180), "kind": "tree"},
 	{"path": "trees/x4/separately/Trees/Tree2_x4.png", "pos": Vector2(1280, 120), "kind": "tree"},
-	{"path": "trees/x4/separately/Trees/Tree1_x4.png", "pos": Vector2(1420, 220), "kind": "tree"},
+	# Pocket east grass (col 26, row 1), beside the rock. (1420, 220) sat in the south-wall solid.
+	{"path": "trees/x4/separately/Trees/Tree1_x4.png", "pos": Vector2(1708, 100), "kind": "tree"},
 	# Bush clumps near farmhouse (3)
 	{"path": "bushes/x4/separately/Assets/Bush_simple1_1_x4.png", "pos": Vector2(700, 200), "kind": "bush"},
 	{"path": "bushes/x4/separately/Assets/Bush_simple2_1_x4.png", "pos": Vector2(1080, 200), "kind": "bush"},
 	{"path": "bushes/x4/separately/Assets/Bush_simple1_2_x4.png", "pos": Vector2(680, 240), "kind": "bush"},
 	# Roadside rocks (2)
 	{"path": "rocks/x4/separately/Rock1_3_x4.png", "pos": Vector2(560, 580), "kind": "rock"},
-	{"path": "rocks/x4/separately/Rock1_4_x4.png", "pos": Vector2(1080, 600), "kind": "rock"},
+	{"path": "rocks/x4/separately/Rock1_4_x4.png", "pos": Vector2(480, 760), "kind": "rock"},
 	{"path": "rocks/x4/separately/Rock2_3_x4.png", "pos": Vector2(420, 540), "kind": "rock"},
 ]
 
@@ -35,7 +36,7 @@ const EDGE_PLACEMENTS: Array[Dictionary] = [
 	{"tex": TEX_EDGE_BUSH, "pos": Vector2(520, 500), "kind": "bush"},
 	{"tex": TEX_EDGE_TREE, "pos": Vector2(470, 660), "kind": "tree"},
 	{"tex": TEX_EDGE_BUSH, "pos": Vector2(540, 700), "kind": "bush"},
-	{"tex": TEX_EDGE_ROCK, "pos": Vector2(1200, 248), "kind": "rock"},
+	{"tex": TEX_EDGE_ROCK, "pos": Vector2(1200, 300), "kind": "rock"},
 ]
 
 

@@ -51,6 +51,7 @@ func _ready() -> void:
 	run_dirt_path_item_tests()
 	run_player_path_state_tests()
 	run_dirt_path_mask_tests()
+	run_cliff_north_wall_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -3513,3 +3514,66 @@ func assert_true(condition: bool, message: String):
 	else:
 		failed_tests += 1
 		print("  [FAIL] %s" % message)
+
+func run_cliff_north_wall_tests() -> void:
+	print("\n[Cliff North Wall]")
+	var packed_map = load("res://src/world/maps/content/FarmMap.tscn")
+	var map = packed_map.instantiate()
+	var cliffs := map.get_node_or_null("Cliffs") as TileMapLayer
+	var overlay := map.get_node_or_null("TerrainOverlay") as TileMapLayer
+	assert_true(cliffs != null, "Cliffs layer exists")
+	if cliffs == null or cliffs.tile_set == null:
+		map.free()
+		print("  Cliff north wall: aborted")
+		return
+	var row0 := false
+	for cell in cliffs.get_used_cells():
+		if cell.y == 0:
+			row0 = true
+			break
+	assert_true(row0, "Cliffs row 0 has tiles")
+	assert_true(
+		overlay != null and cliffs.z_index == overlay.z_index and not cliffs.y_sort_enabled,
+		"Cliffs shares TerrainOverlay z and does not y-sort"
+	)
+	assert_true(cliffs.tile_set.get_physics_layers_count() >= 1, "Cliff TileSet has physics layer 0")
+	assert_true(
+		cliffs.tile_set.get_physics_layer_collision_layer(0) == 1,
+		"Cliff physics layer 0 is world_solid collision layer 1"
+	)
+	var source := cliffs.tile_set.get_source(0) as TileSetAtlasSource
+	var top_data: TileData = null
+	if source != null:
+		top_data = source.get_tile_data(cliffs.get_cell_atlas_coords(Vector2i(13, 0)), 0)
+	assert_true(
+		top_data != null and top_data.get_collision_polygons_count(0) > 0,
+		"North wall cell (13, 0) has collision"
+	)
+	# Real walk. Foot is 24x16 at (0, -8), so the top of the box is 16px above the origin.
+	# The farmhouse stands on this ray (back wall near y=205) and is not the cliff under test.
+	add_child(map)
+	if cliffs.has_method("update_internals"):
+		cliffs.update_internals()
+	var house := map.get_node_or_null("Objects/PlayerHouseExterior") as CollisionObject2D
+	if house != null:
+		house.collision_layer = 0
+	var player_scene := load("res://src/entities/player/Player.tscn") as PackedScene
+	var player := player_scene.instantiate() as CharacterBody2D
+	map.add_child(player)
+	player.global_position = Vector2(841, 358)
+	player.force_update_transform()
+	PhysicsServer2D.body_set_state(player.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, player.global_transform)
+	var hit := player.move_and_collide(Vector2(0, -400))
+	var stop_y := player.global_position.y
+	assert_true(
+		hit != null and hit.get_collider() == cliffs,
+		"Walking north from (841, 358) first hits the Cliffs layer"
+	)
+	assert_true(
+		stop_y >= 120.0 and stop_y <= 140.0,
+		"Walking north from (841, 358) stops at y 120..140 (stop %.1f)" % stop_y
+	)
+	assert_true(stop_y >= 110.0, "Walking north from (841, 358) stops at y>=110 (stop %.1f)" % stop_y)
+	map.free()
+	print("  Cliff north wall: All tests completed")
+
