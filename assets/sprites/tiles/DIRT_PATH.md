@@ -120,3 +120,19 @@ func pick_tile(c: Vector2i) -> String:
 
 ## 来源和授权
 自制素材：GenerateImage 生成的 AI 样张取纹理，加 `assets/source_art/ai_samples/tools/path_edges.py` 手绘 16px 像素后放大 ×4（最近邻）。不涉及第三方素材，没有外部授权，**不需要署名**，不用改 `assets/third_party/` 下的 ATTRIBUTION。
+
+## 换色（2026-11-18）
+`dirt_path_atlas_alpha.png` 已换成农场原有土路的橙色：土 (234,165,108)，路沿 (189,108,74)，斑点压淡。网格和坐标不变。原黄土版备份在 `/workspace/farm_asset_candidates/dirt_path/dirt_path_atlas_alpha_yellow_backup.png`，换色脚本 `recolor_farm.py`。
+
+## v2 重画（2026-11-18）
+
+玩家自铺路改为**整格 64px 宽、直边**，颜色与地图原有橙色土路（`kenney/decor/dirt_64.png` 平涂）一致。只换图，网格和坐标不变，不用改代码。
+
+- 调色：土 (234,165,108)，路沿 (189,108,74) 占源图 1px（显示 4px），内侧辅沿 (220,145,92) 再 1px；斑点少量浅 (242,184,130) / 深 (210,140,88)，每格 2–4 个、确定性和 `_b` / `dirt_a/b/c` 不同。
+- 草侧画直沿；通路侧铺到格边且为纯土色，可与原有土路无缝衔接。外角切 2 源像素透明圆角。
+- 内角（`inner_*` / `bend_*` / T / 十字）不再挖圆形缺口：在草对角处把邻格（`h`/`v`/`end`）的路沿（深沿 1px + 辅沿 1px）原样接到本格，折成直角 L，和邻格零错位。最外角像素是深沿，不挖透明，草色只出现在对角的邻格里。
+- 16px 源图最近邻 ×4 到 64px。脚本：`/workspace/farm_asset_candidates/dirt_path/build_atlas_v2.py`。
+- 换色后的波浪窄路备份：`/workspace/farm_asset_candidates/dirt_path/dirt_path_atlas_alpha_orange_wobbly_backup.png`。
+- 对比图：`playtest/screenshots/dirt_path_v2_compare.png`；接头 2× 特写：`playtest/screenshots/dirt_path_v2_joints.png`。
+
+仍受现有 autotile 表限制：没有孤立格专用瓦片（仍用 `end_s` 兜底，南沿无边）。
