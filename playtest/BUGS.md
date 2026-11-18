@@ -1056,3 +1056,15 @@
 - 出货箱旁：拿锄头（1）面朝草地按 Space 会锄地、扣体力 98→96，不开面板（hc_box_hoe.png、hc_box_hoe_toast.png 有「土地已翻好」）。面朝箱子本体或空手（Tab）按 Space 会打开「农场出货箱」（hc_box_face.png、hc_box_open.png）。
 - 工作台旁：拿锄头面朝草地按 Space 会锄地、扣体力 94→92，不开面板（hc_wb_hoe.png）。面朝工作台本体或空手按 Space 会打开 农场手册·制作（hc_wb_face.png、hc_wb_open.png）。
 - 小注：工作台旁那次没拍到 toast，多半是延迟；制作页还只是占位文字「配方与可用材料会整理在这里」。
+
+## 2026-11-04 07:35 (UTC-8) uinits 复测 — FAIL（1 项）
+- 出货 toast FAIL：「✓ 已出货 ×1（预计 +10金）」仍压在右侧标题「今晚的出货」那一行的左半部分（ui_ship.png, ui_ship_b1~5.png）。期望：挪到标题下方、不遮挡。
+- 暂停焦点 PASS：深色底+黄描边，字清楚；退出框默认「取消」（ui_pause1/2.png, ui_quit.png）。小问题：退出框按 Esc 取消回到暂停菜单后，没有按钮带焦点框（ui_quit_esc.png）。
+- 门垫：无碰撞、「↓ 出门」提示出现，PASS（ui_prompt.png）；左右各偏约半格都能出门，PASS（ui_exit_l/r.png）。
+- 门垫观感（P3）：橙色很显眼，外圈米白光晕发糊、和像素风不搭；站在门垫上时，门垫盖住了角色下半身（应在角色下层）；地板是素米色，不是木纹（ui_mat_close.png, ui_onmat_close.png）。
+- 偏约 1 格（还压着门垫边）也能出门（ui_far_down.png），比 ±半格宽，可以接受，待统筹决定。
+
+## 2026-11-04 19:18 (UTC-8) uinits 复测（--freeze-time）— PASS
+- 出货 toast「✓ 已出货 ×1（预计 +10 金）」在「今晚的出货」下方约10px，不再压标题 PASS（ui3_ship_b1~3）。小注 P3：toast 横跨左右面板缝，盖住右栏首行「防风草种子 ×1」上沿。
+- 退出框 Esc 取消后焦点回「继续」PASS，↓ 到保存（ui3_after_esc / ui3_after_down）。小注 P3：焦点离开后「继续」仍保持绿色填充（残留 hover）。
+- 门垫 v2 锈棕、1px 描边、无光晕 PASS（ui3_mat_close）；站上去人物画在门垫上方 PASS（ui3_onmat_close）；「↓ 出门」提示、↓ 出门正常（ui3_mv2 / ui3_exited）。地板仍为纯米色无木纹（P3 美术）。

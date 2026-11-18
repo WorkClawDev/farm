@@ -44,6 +44,7 @@ func _ready() -> void:
 	run_quest_tracker_feature_tests()
 	run_loopfeedback_tests()
 	run_hoe_station_priority_tests()
+	run_ui_polish_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -3070,6 +3071,130 @@ func _hoe_workbench_space(bench: Workbench, player: Player) -> void:
 		return
 	player._interact_needs_release = false
 	player._dispatch_interact()
+
+
+func run_ui_polish_tests() -> void:
+	print("\n[UI Polish]")
+	var saved_state = GameManager.current_state
+	var saved_active = GameManager.is_game_active
+	var saved_paused := get_tree().paused
+	UIManager.close_all()
+	var toast_root := UIManager.get_node_or_null("UIOverlay/ToastRoot") as Control
+	assert_true(
+		UIManager.TOAST_TOP_DEFAULT == 88
+			and UIManager.toast_top_for_screen("pause") == 88
+			and UIManager.TOAST_TOP_BELOW_SHIPPING_TITLE >= 160
+			and UIManager.toast_top_for_screen("shipping_bin") == UIManager.TOAST_TOP_BELOW_SHIPPING_TITLE,
+		"普通 toast 仍在 y=88，出货 toast 锚点更低"
+	)
+	assert_true(
+		toast_root != null and is_equal_approx(toast_root.offset_top, float(UIManager.TOAST_TOP_DEFAULT)),
+		"没打开出货箱时 toast 在原位"
+	)
+	var screen := ShippingBinUI.new()
+	UIManager._screen_root.add_child(screen)
+	UIManager._stack.append({
+		"id": "shipping_bin",
+		"node": screen,
+		"focus": null,
+		"pause": false,
+	})
+	UIManager._apply_toast_top()
+	assert_true(
+		toast_root != null and is_equal_approx(toast_root.offset_top, float(UIManager.TOAST_TOP_BELOW_SHIPPING_TITLE)),
+		"出货箱打开时 toast 下移，避开面板标题"
+	)
+	_unit_clear_toasts()
+	UIManager.show_toast("已出货 ×1（预计 +10 金）", {}, "success")
+	assert_true(
+		toast_root != null
+			and is_equal_approx(toast_root.offset_top, float(UIManager.TOAST_TOP_BELOW_SHIPPING_TITLE))
+			and _unit_toast_has("已出货"),
+		"出货 toast 显示在标题下方"
+	)
+	UIManager.close_all()
+	_unit_clear_toasts()
+	assert_true(
+		toast_root != null and is_equal_approx(toast_root.offset_top, float(UIManager.TOAST_TOP_DEFAULT)),
+		"关掉出货箱后 toast 回到原位"
+	)
+
+	var pm := PauseMenu.new()
+	add_child(pm)
+	var focus_box := pm._resume_button.get_theme_stylebox("focus") as StyleBoxFlat
+	var ink := pm._resume_button.get_theme_color("font_focus_color")
+	var bg := focus_box.bg_color if focus_box else Color.WHITE
+	var rim := focus_box.border_color if focus_box else Color.BLACK
+	assert_true(
+		focus_box != null
+			and bg.r < 0.2 and bg.g < 0.2 and bg.b < 0.2
+			and rim.r > 0.9 and rim.g > 0.7
+			and focus_box.border_width_left >= 3
+			and focus_box.border_width_top >= 3
+			and focus_box.border_width_right >= 3
+			and focus_box.border_width_bottom >= 3
+			and ink.r > 0.9 and ink.g > 0.9 and ink.b > 0.85,
+		"暂停按钮焦点是深色底、亮色描边，文字清楚"
+	)
+	pm._confirm_quit()
+	var owner := get_viewport().gui_get_focus_owner()
+	var owner_text := (owner as Button).text if owner is Button else ""
+	assert_true(owner_text == "取消", "退出确认框默认焦点仍在取消")
+	var esc := InputEventKey.new()
+	esc.keycode = KEY_ESCAPE
+	esc.physical_keycode = KEY_ESCAPE
+	esc.pressed = true
+	UIManager._unhandled_input(esc)
+	var back := get_viewport().gui_get_focus_owner()
+	var back_text := (back as Button).text if back is Button else ""
+	assert_true(
+		not UIManager.has_open_confirmation() and back == pm._resume_button and back_text == "继续",
+		"退出确认框按 Esc 取消后焦点回到继续"
+	)
+	UIManager.close_all()
+	pm.queue_free()
+
+	var house := (load("res://src/world/maps/PlayerHouse.tscn") as PackedScene).instantiate() as PlayerHouse
+	add_child(house)
+	var exit := house.exit_area
+	var exit_shape := (exit.get_node("CollisionShape2D") as CollisionShape2D).shape as RectangleShape2D
+	var bed_shape := (house.interaction_zones.get_node("BedZone/CollisionShape2D") as CollisionShape2D).shape as RectangleShape2D
+	var mat := house.map_root.get_layer(&"decoration").get_node_or_null("Doormat") as Sprite2D
+	var sign := exit.get_node_or_null("ExitSign") as Label
+	var hint := exit.get_node_or_null("ExitHint") as Area2D
+	assert_true(
+		mat != null and mat.texture != null
+			and mat.texture.get_width() == 128 and mat.texture.get_height() == 64
+			and mat.get_child_count() == 0
+			and absf(mat.global_position.x - exit.global_position.x) < 1.0
+			and is_equal_approx(mat.global_position.y, exit.global_position.y - 32.0),
+		"门垫 128×64 铺在出口正上方，没有碰撞"
+	)
+	assert_true(
+		exit_shape != null and bed_shape != null
+			and bed_shape.size == Vector2(64, 32)
+			and is_equal_approx(exit_shape.size.x, bed_shape.size.x + 64.0)
+			and is_equal_approx(exit_shape.size.y, bed_shape.size.y),
+		"出口判定两侧各加宽 32px，床的判定不变"
+	)
+	assert_true(
+		hint != null and sign != null and sign.text == "↓ 出门" and not sign.visible,
+		"出门提示默认隐藏"
+	)
+	house._on_exit_hint_body_entered(house.get_node("Player"))
+	assert_true(sign.visible, "靠近出口显示 ↓ 出门")
+	house._on_exit_hint_body_exited(house.get_node("Player"))
+	assert_true(not sign.visible, "离开出口后门牌消失")
+	var stranger := Node2D.new()
+	house._on_exit_hint_body_entered(stranger)
+	assert_true(not sign.visible, "不是玩家靠近不显示出门提示")
+	stranger.free()
+	house.queue_free()
+
+	get_tree().paused = saved_paused
+	GameManager.current_state = saved_state
+	GameManager.is_game_active = saved_active
+	print("  UI Polish: All tests completed")
 
 
 func assert_true(condition: bool, message: String):

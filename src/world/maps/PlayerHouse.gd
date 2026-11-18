@@ -14,6 +14,9 @@ const MapMenuInput = preload("res://src/world/maps/MapMenuInput.gd")
 const IllustratedMapBackdropScene = preload("res://src/world/maps/IllustratedMapBackdrop.gd")
 const WorldCollisionLayoutScene = preload("res://src/world/maps/WorldCollisionLayout.gd")
 const InteractPromptScript = preload("res://src/ui/components/InteractPrompt.gd")
+const ExitSignScript = preload("res://src/world/maps/ExitSign.gd")
+const DOORMAT_TEXTURE := "res://assets/sprites/props/doormat.png"
+const EXIT_MOUTH_PAD := 32.0
 
 const BED_ATLAS_PATH := "res://assets/private/topdown_farm/interior/x4/hero_home/Interior_x4.png"
 ## I1 single bed on Interior_x4 (already x4, so the sprite stays at scale 1).
@@ -43,6 +46,7 @@ var house_data: Dictionary = {}
 
 var _exit_to_village := false
 var _in_bed_zone := false
+var _exit_sign: Label
 
 func _ready() -> void:
 	print("[PlayerHouse] Scene loaded")
@@ -54,6 +58,7 @@ func _ready() -> void:
 	_setup_furniture()
 	_setup_bed_sprite()
 	_setup_bed_prompt()
+	_setup_exit_guide()
 	# Leave by the door you came in through (BUG-40): the village door or the farm.
 	_exit_to_village = GameManager.current_spawn_point == "village_house_entrance"
 	_show_village_home_hint()
@@ -400,3 +405,84 @@ func _spawn_food_shelf(atlas: Texture2D) -> void:
 	shape_node.position = Vector2(0.0, -size.y * 0.5)
 	body.add_child(shape_node)
 	root.add_child(body)
+
+## Door mat and a wider mouth so the way out is easy to find. The mat has no collision.
+func _setup_exit_guide() -> void:
+	_widen_exit_mouth()
+	_spawn_doormat()
+	_setup_exit_prompt()
+
+
+func _widen_exit_mouth() -> void:
+	if exit_area == null:
+		return
+	var shape_node := exit_area.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if shape_node == null:
+		return
+	var rect := shape_node.shape as RectangleShape2D
+	if rect == null:
+		return
+	# BedZone and UpgradeStation share this resource.
+	var widened := rect.duplicate() as RectangleShape2D
+	widened.size = Vector2(rect.size.x + EXIT_MOUTH_PAD * 2.0, rect.size.y)
+	shape_node.shape = widened
+
+
+func _spawn_doormat() -> void:
+	if map_root == null or exit_area == null or not ResourceLoader.exists(DOORMAT_TEXTURE):
+		return
+	var layer := map_root.get_layer(&"decoration") as Node2D
+	if layer == null or layer.get_node_or_null("Doormat") != null:
+		return
+	var texture := load(DOORMAT_TEXTURE) as Texture2D
+	if texture == null:
+		return
+	var sprite := Sprite2D.new()
+	sprite.name = "Doormat"
+	sprite.texture = texture
+	sprite.centered = true
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	# Floor decal: absolute z under the player, outside the actor Y-sort.
+	sprite.z_as_relative = false
+	sprite.z_index = -1
+	sprite.y_sort_enabled = false
+	# Bottom edge sits on the exit point, so the mat lies directly above it.
+	var mat_world := exit_area.global_position + Vector2(0, -texture.get_height() * 0.5)
+	sprite.position = layer.to_local(mat_world)
+	layer.add_child(sprite)
+
+
+func _setup_exit_prompt() -> void:
+	if exit_area == null or exit_area.get_node_or_null("ExitHint") != null:
+		return
+	var hint := Area2D.new()
+	hint.name = "ExitHint"
+	hint.position = Vector2(0, -48)
+	hint.collision_layer = 0
+	hint.collision_mask = 2
+	hint.monitorable = false
+	var shape_node := CollisionShape2D.new()
+	shape_node.name = "CollisionShape2D"
+	var shape := RectangleShape2D.new()
+	# Approach band above the exit. The spawn at y=300 stays outside.
+	shape.size = Vector2(192, 112)
+	shape_node.shape = shape
+	hint.add_child(shape_node)
+	exit_area.add_child(hint)
+	hint.body_entered.connect(_on_exit_hint_body_entered)
+	hint.body_exited.connect(_on_exit_hint_body_exited)
+	_exit_sign = ExitSignScript.attach(exit_area, "↓ 出门", Vector2(0, -88))
+	if _exit_sign:
+		_exit_sign.visible = false
+		_exit_sign.z_as_relative = false
+		_exit_sign.z_index = 100
+
+
+func _on_exit_hint_body_entered(body: Node2D) -> void:
+	if body is Player and _exit_sign:
+		_exit_sign.visible = true
+
+
+func _on_exit_hint_body_exited(body: Node2D) -> void:
+	if body is Player and _exit_sign:
+		_exit_sign.visible = false
