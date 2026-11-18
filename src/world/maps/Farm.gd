@@ -725,11 +725,21 @@ func _remove_farm_ore(node: Node) -> void:
 
 ## ---- 玩家自铺土路（pave1b）----
 ## 格子是农场 64px 世界格（与 Ground 瓦片对齐），和田地的 PLOT 网格无关。
-## 自动拼接留给 pave2：从 _pick_path_tile 接入。
+## 土路按四邻和对角自动拼接，region 查 dirt_path_atlas.json。
 const PATH_CELL_SIZE := 64
 const PATH_TEXTURE_PATH := "res://assets/sprites/tiles/dirt_path_atlas_alpha.png"
-## DIRT_PATH.md 图集 [0,0] = path_dirt_a（纯土内部）。
-const PATH_TILE_DIRT_A := Rect2(0, 0, 64, 64)
+const PATH_ATLAS_JSON := "res://assets/sprites/tiles/dirt_path_atlas.json"
+## 四邻 N=1 E=2 S=4 W=8；对角 NW=1 NE=2 SW=4 SE=8。角规则见 dirt_path_atlas.json。
+const PATH_BIT_N := 1
+const PATH_BIT_E := 2
+const PATH_BIT_S := 4
+const PATH_BIT_W := 8
+const PATH_DIAG_NW := 1
+const PATH_DIAG_NE := 2
+const PATH_DIAG_SW := 4
+const PATH_DIAG_SE := 8
+
+static var _path_atlas_tiles: Dictionary = {}
 func _setup_player_paths() -> void:
 	_path_layer = Node2D.new()
 	_path_layer.name = "PlayerPaths"
@@ -833,9 +843,119 @@ func _path_cell_hits_solid(rect: Rect2) -> bool:
 	return not get_world_2d().direct_space_state.intersect_shape(query, 1).is_empty()
 
 
-## pave2 自动拼接入口：按四邻掩码从图集里挑瓦片。这一单统一用 path_dirt_a。
-func _pick_path_tile(_world_cell: Vector2i) -> Rect2:
-	return PATH_TILE_DIRT_A
+## 掩码转 region。cell 只决定 h/v/edge 奇偶和内部土的变体；diag 走 json 的角规则。
+static func path_region_for_mask(mask: int, cell: Vector2i = Vector2i.ZERO, diag: int = 0) -> Rect2:
+	return _path_region_named(_path_tile_name_for_mask(mask, cell, diag))
+
+
+static func _path_tile_name_for_mask(mask: int, cell: Vector2i, diag: int) -> String:
+	var suffix := "_b" if posmod(cell.x + cell.y, 2) == 1 else ""
+	var nw := (diag & PATH_DIAG_NW) != 0
+	var ne := (diag & PATH_DIAG_NE) != 0
+	var sw := (diag & PATH_DIAG_SW) != 0
+	var se := (diag & PATH_DIAG_SE) != 0
+	match mask:
+		15:
+			var miss: Array[String] = []
+			if not nw:
+				miss.append("nw")
+			if not ne:
+				miss.append("ne")
+			if not sw:
+				miss.append("sw")
+			if not se:
+				miss.append("se")
+			if miss.size() == 0 or miss.size() == 2:
+				var dirt: Array[String] = ["path_dirt_a", "path_dirt_b", "path_dirt_c"]
+				return dirt[posmod(cell.x + 2 * cell.y, 3)]
+			if miss.size() == 1:
+				return "path_inner_" + miss[0]
+			return "path_cross"
+		14:
+			return ("path_edge_n" + suffix) if (se or sw) else "path_t_s"
+		13:
+			return ("path_edge_e" + suffix) if (nw or sw) else "path_t_w"
+		11:
+			return ("path_edge_s" + suffix) if (ne or nw) else "path_t_n"
+		7:
+			return ("path_edge_w" + suffix) if (ne or se) else "path_t_e"
+		6:
+			return "path_outer_nw" if se else "path_bend_es"
+		12:
+			return "path_outer_ne" if sw else "path_bend_sw"
+		9:
+			return "path_outer_se" if nw else "path_bend_wn"
+		3:
+			return "path_outer_sw" if ne else "path_bend_ne"
+		5:
+			return "path_v" + suffix
+		10:
+			return "path_h" + suffix
+		1:
+			return "path_end_n"
+		2:
+			return "path_end_e"
+		4:
+			return "path_end_s"
+		8:
+			return "path_end_w"
+	return "path_end_s"
+
+
+static func _path_region_named(tile_name: String) -> Rect2:
+	var tiles := _path_atlas_tile_map()
+	var pair = tiles.get(tile_name, [4, 1])
+	var col := int(pair[0])
+	var row := int(pair[1])
+	return Rect2(col * PATH_CELL_SIZE, row * PATH_CELL_SIZE, PATH_CELL_SIZE, PATH_CELL_SIZE)
+
+
+static func _path_atlas_tile_map() -> Dictionary:
+	if not _path_atlas_tiles.is_empty():
+		return _path_atlas_tiles
+	var file := FileAccess.open(PATH_ATLAS_JSON, FileAccess.READ)
+	if file == null:
+		return {}
+	var parsed = JSON.parse_string(file.get_as_text())
+	file.close()
+	if parsed is Dictionary:
+		var tiles = parsed.get("tiles", {})
+		if tiles is Dictionary and not tiles.is_empty():
+			_path_atlas_tiles = tiles
+	return _path_atlas_tiles
+
+
+## 按四邻 is_player_path 和图集角规则选 region。纹理仍是 dirt_path_atlas_alpha.png。
+func _pick_path_tile(world_cell: Vector2i) -> Rect2:
+	var mask := 0
+	if is_player_path(world_cell + Vector2i(0, -1)):
+		mask |= PATH_BIT_N
+	if is_player_path(world_cell + Vector2i(1, 0)):
+		mask |= PATH_BIT_E
+	if is_player_path(world_cell + Vector2i(0, 1)):
+		mask |= PATH_BIT_S
+	if is_player_path(world_cell + Vector2i(-1, 0)):
+		mask |= PATH_BIT_W
+	var diag := 0
+	if is_player_path(world_cell + Vector2i(-1, -1)):
+		diag |= PATH_DIAG_NW
+	if is_player_path(world_cell + Vector2i(1, -1)):
+		diag |= PATH_DIAG_NE
+	if is_player_path(world_cell + Vector2i(-1, 1)):
+		diag |= PATH_DIAG_SW
+	if is_player_path(world_cell + Vector2i(1, 1)):
+		diag |= PATH_DIAG_SE
+	return path_region_for_mask(mask, world_cell, diag)
+
+
+## 铺或拆一格后，重选这一格和周围 8 格（对角决定 outer / edge / inner）。
+func _refresh_path_regions(world_cell: Vector2i) -> void:
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			var cell := world_cell + Vector2i(dx, dy)
+			var sprite = _path_sprites.get(cell)
+			if sprite is Sprite2D and is_instance_valid(sprite):
+				(sprite as Sprite2D).region_rect = _pick_path_tile(cell)
 
 
 func _add_path_sprite(world_cell: Vector2i) -> void:
@@ -853,6 +973,7 @@ func _add_path_sprite(world_cell: Vector2i) -> void:
 	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	_path_layer.add_child(sprite)
 	_path_sprites[world_cell] = sprite
+	_refresh_path_regions(world_cell)
 
 
 func _remove_path_sprite(world_cell: Vector2i) -> void:
@@ -860,9 +981,10 @@ func _remove_path_sprite(world_cell: Vector2i) -> void:
 	_path_sprites.erase(world_cell)
 	if sprite is Node and is_instance_valid(sprite):
 		(sprite as Node).queue_free()
+	_refresh_path_regions(world_cell)
 
 
-## 进场和读档（farm_reset）时按 FarmState 重画。
+## 进场和读档（farm_reset）时按 FarmState 重画。邻居已在存档里，按四邻重选。
 func _rebuild_player_paths() -> void:
 	if _path_layer == null:
 		return
@@ -873,6 +995,10 @@ func _rebuild_player_paths() -> void:
 	_path_sprites.clear()
 	for cell in FarmState.get_player_paths():
 		_add_path_sprite(cell)
+	for cell in FarmState.get_player_paths():
+		var placed = _path_sprites.get(cell)
+		if placed is Sprite2D and is_instance_valid(placed):
+			(placed as Sprite2D).region_rect = _pick_path_tile(cell)
 
 
 func _exit_tree() -> void:

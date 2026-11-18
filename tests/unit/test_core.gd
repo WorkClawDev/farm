@@ -50,6 +50,7 @@ func _ready() -> void:
 	run_house_wood_floor_tests()
 	run_dirt_path_item_tests()
 	run_player_path_state_tests()
+	run_dirt_path_mask_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -3464,6 +3465,44 @@ func run_player_path_state_tests() -> void:
 	FarmState.reset()
 	assert_true(FarmState.get_player_paths().is_empty(), "reset clears player paths")
 	print("  Player path state: All tests completed")
+
+
+
+func run_dirt_path_mask_tests() -> void:
+	print("\n[Dirt Path Mask]")
+	var farm_script = load("res://src/world/maps/Farm.gd")
+	var even := Vector2i(0, 0)
+	var odd := Vector2i(1, 0)
+	_assert_path_mask(farm_script, 0, even, 0, Rect2(256, 64, 64, 64), "isolated cell uses path_end_s")
+	_assert_path_mask(farm_script, 1, even, 0, Rect2(128, 64, 64, 64), "north end uses path_end_n")
+	_assert_path_mask(farm_script, 2, even, 0, Rect2(192, 64, 64, 64), "east end uses path_end_e")
+	_assert_path_mask(farm_script, 4, even, 0, Rect2(256, 64, 64, 64), "south end uses path_end_s")
+	_assert_path_mask(farm_script, 8, even, 0, Rect2(320, 64, 64, 64), "west end uses path_end_w")
+	_assert_path_mask(farm_script, 10, even, 0, Rect2(256, 0, 64, 64), "horizontal road uses path_h")
+	_assert_path_mask(farm_script, 10, odd, 0, Rect2(320, 0, 64, 64), "horizontal road odd cell uses path_h_b")
+	_assert_path_mask(farm_script, 5, even, 0, Rect2(0, 64, 64, 64), "vertical road uses path_v")
+	_assert_path_mask(farm_script, 5, odd, 0, Rect2(64, 64, 64, 64), "vertical road odd cell uses path_v_b")
+	_assert_path_mask(farm_script, 3, even, 0, Rect2(192, 128, 64, 64), "NE bend uses path_bend_ne")
+	_assert_path_mask(farm_script, 6, even, 0, Rect2(0, 128, 64, 64), "ES bend uses path_bend_es")
+	_assert_path_mask(farm_script, 9, even, 0, Rect2(128, 128, 64, 64), "WN bend uses path_bend_wn")
+	_assert_path_mask(farm_script, 12, even, 0, Rect2(64, 128, 64, 64), "SW bend uses path_bend_sw")
+	_assert_path_mask(farm_script, 11, even, 0, Rect2(256, 128, 64, 64), "NEW junction uses path_t_n")
+	_assert_path_mask(farm_script, 7, even, 0, Rect2(320, 128, 64, 64), "NES junction uses path_t_e")
+	_assert_path_mask(farm_script, 14, even, 0, Rect2(0, 192, 64, 64), "ESW junction uses path_t_s")
+	_assert_path_mask(farm_script, 13, even, 0, Rect2(64, 192, 64, 64), "NSW junction uses path_t_w")
+	_assert_path_mask(farm_script, 15, even, 0, Rect2(192, 0, 64, 64), "cross uses path_cross")
+	_assert_path_mask(farm_script, 6, even, 8, Rect2(256, 256, 64, 64), "ES bend with SE path uses path_outer_nw")
+	_assert_path_mask(farm_script, 14, even, 8, Rect2(128, 192, 64, 64), "ESW with a south diagonal uses path_edge_n")
+	_assert_path_mask(farm_script, 14, odd, 8, Rect2(0, 256, 64, 64), "ESW edge variant uses path_edge_n_b")
+	_assert_path_mask(farm_script, 15, even, 15, Rect2(0, 0, 64, 64), "four diagonals use path_dirt_a")
+	_assert_path_mask(farm_script, 15, odd, 15, Rect2(64, 0, 64, 64), "four diagonals odd cell uses path_dirt_b")
+	_assert_path_mask(farm_script, 15, even, 14, Rect2(128, 320, 64, 64), "one missing NW diagonal uses path_inner_nw")
+	print("  Dirt path mask: All tests completed")
+
+
+func _assert_path_mask(farm_script, mask: int, cell: Vector2i, diag: int, expected: Rect2, message: String) -> void:
+	var got: Rect2 = farm_script.path_region_for_mask(mask, cell, diag)
+	assert_true(got == expected, "%s (got %s)" % [message, got])
 
 
 func assert_true(condition: bool, message: String):
