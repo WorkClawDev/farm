@@ -51,6 +51,7 @@ func _ready() -> void:
 	run_dirt_path_item_tests()
 	run_player_path_state_tests()
 	run_dirt_path_mask_tests()
+	run_map_road_tests()
 	run_cliff_north_wall_tests()
 	
 	print("==================================================")
@@ -3541,6 +3542,105 @@ func run_dirt_path_mask_tests() -> void:
 	_assert_path_mask(farm_script, 15, odd, 15, Rect2(64, 0, 64, 64), "four diagonals odd cell uses path_dirt_b")
 	_assert_path_mask(farm_script, 15, even, 14, Rect2(128, 320, 64, 64), "one missing NW diagonal uses path_inner_nw")
 	print("  Dirt path mask: All tests completed")
+
+
+func run_map_road_tests() -> void:
+	print("\n[Map Roads]")
+	var snapshot: Dictionary = FarmState.get_save_state()
+	FarmState.reset()
+	var farm: Farm = Farm.new()
+	FarmState.farm_reset.connect(farm._rebuild_player_paths)
+	farm._setup_player_paths()
+	assert_true(Farm.MAP_ROADS.size() == 27, "MAP_ROADS has 27 cells")
+	var leaked := false
+	for road in Farm.MAP_ROADS:
+		if FarmState.has_player_path(road):
+			leaked = true
+	assert_true(not leaked, "map roads are not stored as player paths")
+	assert_true(farm._path_sprites.size() == 27, "startup draws one sprite per map road")
+	var cell_13_4 := Vector2i(13, 4)
+	var cell_13_5 := Vector2i(13, 5)
+	assert_true(farm.is_path_cell(cell_13_4) and farm.is_path_cell(cell_13_5), "MAP_ROADS cells count as paths")
+	assert_true(not farm.is_player_path(cell_13_4), "(13,4) is a map road, not a player path")
+	var tile_13_5: Rect2 = farm._pick_path_tile(cell_13_5)
+	assert_true(
+		tile_13_5 == Farm.path_region_for_mask(11, cell_13_5, 0),
+		"(13,5) mask includes north neighbor (13,4) (got %s)" % tile_13_5
+	)
+	var sprite_13 = farm._path_sprites.get(cell_13_5)
+	var region_13 := Rect2()
+	if sprite_13 is Sprite2D:
+		region_13 = (sprite_13 as Sprite2D).region_rect
+	assert_true(sprite_13 is Sprite2D and region_13 == tile_13_5, "(13,5) sprite uses the north-neighbor tile")
+	assert_true(not farm.try_place_path(cell_13_5), "try_place_path refuses a map road cell")
+	assert_true(not farm.try_remove_path(cell_13_5), "try_remove_path refuses a map road cell")
+	assert_true(
+		farm._path_sprites.has(cell_13_5) and is_instance_valid(farm._path_sprites[cell_13_5]),
+		"map road sprite stays when removal is refused"
+	)
+	var cell_23_5 := Vector2i(23, 5)
+	var cell_24_5 := Vector2i(24, 5)
+	var region_23 := _map_road_sprite_region(farm, cell_23_5)
+	assert_true(
+		region_23 == Farm.path_region_for_mask(8, cell_23_5, 0),
+		"(23,5) starts as a west end"
+	)
+	assert_true(farm.try_place_path(cell_24_5), "player path places on (24,5)")
+	var joined: Rect2 = Farm.path_region_for_mask(10, cell_23_5, 0)
+	assert_true(farm._pick_path_tile(cell_23_5) == joined, "(23,5) counts (24,5) as an east neighbor")
+	assert_true(_map_road_sprite_region(farm, cell_23_5) == joined, "(23,5) map road tile refreshes onto the player path")
+	var saved: Dictionary = FarmState.get_save_state()
+	var saved_paths = saved.get("player_paths", [])
+	var map_in_save := false
+	if saved_paths is Array:
+		for road in Farm.MAP_ROADS:
+			for raw in saved_paths:
+				if raw is Array and raw.size() >= 2 and int(raw[0]) == road.x and int(raw[1]) == road.y:
+					map_in_save = true
+	assert_true(
+		saved_paths is Array and not map_in_save and saved_paths.size() == 1,
+		"save player_paths omits MAP_ROADS and keeps only the player cell"
+	)
+	assert_true(farm.try_remove_path(cell_24_5), "player path at (24,5) can be removed")
+	assert_true(not farm._path_sprites.has(cell_24_5), "removed player path sprite is gone")
+	assert_true(
+		farm._path_sprites.has(cell_23_5) and is_instance_valid(farm._path_sprites[cell_23_5]),
+		"map road (23,5) remains after the player path is removed"
+	)
+	assert_true(
+		_map_road_sprite_region(farm, cell_23_5) == Farm.path_region_for_mask(8, cell_23_5, 0),
+		"(23,5) map road tile refreshes back after the player path is removed"
+	)
+	assert_true(not FarmState.has_player_path(cell_23_5), "map road cell stays out of FarmState")
+	assert_true(FarmState.add_player_path(cell_24_5), "stage a player path before farm_reset")
+	FarmState.reset()
+	assert_true(
+		farm._path_sprites.size() == 27 and farm._path_sprites.has(cell_23_5) and not farm._path_sprites.has(cell_24_5),
+		"farm_reset redraws map roads and drops player paths"
+	)
+	var hoed := 0
+	for y in FarmState.GRID_HEIGHT:
+		for x in FarmState.GRID_WIDTH:
+			var coord := Vector2i(x, y)
+			var guard := 0
+			while FarmState.get_debris(coord) != "" and guard < 6:
+				FarmState.strike_debris(coord)
+				guard += 1
+			if FarmState.till(coord):
+				hoed += 1
+	assert_true(hoed == 80, "all 80 plots can be hoed")
+	if FarmState.farm_reset.is_connected(farm._rebuild_player_paths):
+		FarmState.farm_reset.disconnect(farm._rebuild_player_paths)
+	farm.free()
+	FarmState.load_save_state(snapshot)
+	print("  Map roads: All tests completed")
+
+
+func _map_road_sprite_region(farm: Farm, cell: Vector2i) -> Rect2:
+	var sprite = farm._path_sprites.get(cell)
+	if sprite is Sprite2D:
+		return (sprite as Sprite2D).region_rect
+	return Rect2()
 
 
 func _assert_path_mask(farm_script, mask: int, cell: Vector2i, diag: int, expected: Rect2, message: String) -> void:

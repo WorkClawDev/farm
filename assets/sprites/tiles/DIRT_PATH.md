@@ -136,3 +136,12 @@ func pick_tile(c: Vector2i) -> String:
 - 对比图：`playtest/screenshots/dirt_path_v2_compare.png`；接头 2× 特写：`playtest/screenshots/dirt_path_v2_joints.png`。
 
 仍受现有 autotile 表限制：没有孤立格专用瓦片（仍用 `end_s` 兜底，南沿无边）。
+
+
+## v3.1（2026-11-18，用户已批准）
+
+- 色板改为暖褐低饱和：底色 #ad9270，亮点 #b89e7c，暗点 #9e8262，石子 #c9b394 / 影 #836850；去掉深色硬描边，边缘像素按 42%/16% 向 #5e4430 着色。
+- 草侧边缘为缓波浪加大草簇压边（草地 B 色板），路面在接缝处宽 48px（12/16 源像素）。
+- 图集 384x832：前 6 行 36 块与 v2 同名同格，第 6–12 行为变体，JSON 新增可选 `variants` 字段，Farm.gd 不读取，无需改代码。
+- 生成脚本与 16px 源图：/workspace/farm_asset_candidates/path_v3/（build_path_v3.py、PATH_v3.md）。全部为自绘像素，无第三方素材。
+- 同批：farm_ground_atlas_64.png 仅替换第 (23,0) 格 FARM_SOIL 为深褐垄沟耕地 v2（#6b4a33 / 垄 #4f3524 / 脊 #7d5a40）。

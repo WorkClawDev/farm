@@ -157,14 +157,11 @@ func _setup_field_fence() -> void:
 	for i in h_count + 1:
 		_add_fence_sprite(fence, TEX_FENCE_H, Vector2(h_start + float(i) * FENCE_H_PITCH, bottom_y), 0.0)
 
-	var top_y := PLOT_ORIGIN.y - PLOT_SPACING * 0.5
 	var bot_post_y := PLOT_ORIGIN.y + float(rows - 1) * PLOT_SPACING + PLOT_SPACING * 0.5
-	for corner in [Vector2(left_x, top_y), Vector2(right_x, top_y), Vector2(left_x, bot_post_y), Vector2(right_x, bot_post_y)]:
+	# North posts sit just south of the road row (world y 320-384).
+	var north_post_y := 388.0
+	for corner in [Vector2(left_x, north_post_y), Vector2(right_x, north_post_y), Vector2(left_x, bot_post_y), Vector2(right_x, bot_post_y)]:
 		_add_fence_sprite(fence, TEX_FENCE_POST, corner, 0.0)
-	# Short returns at the north corners. The middle stays open onto the road.
-	for i in 3:
-		_add_fence_sprite(fence, TEX_FENCE_H, Vector2(left_x + 16.0 + float(i) * FENCE_H_PITCH, top_y - 16.0), 0.0)
-		_add_fence_sprite(fence, TEX_FENCE_H, Vector2(right_x - 16.0 - float(i) * FENCE_H_PITCH, top_y - 16.0), 0.0)
 
 	var thickness := 16.0
 	# Start below the road so Joe's tavern stand (600, 350) stays clear.
@@ -751,6 +748,16 @@ const PATH_DIAG_NW := 1
 const PATH_DIAG_NE := 2
 const PATH_DIAG_SW := 4
 const PATH_DIAG_SE := 8
+## 地图原有土路（64px 世界格）。只画在 PlayerPaths 上，不写入 FarmState。
+const MAP_ROADS: Array[Vector2i] = [
+	Vector2i(4, 5), Vector2i(5, 5), Vector2i(6, 5), Vector2i(7, 5), Vector2i(8, 5),
+	Vector2i(9, 5), Vector2i(10, 5), Vector2i(11, 5), Vector2i(12, 5), Vector2i(13, 5),
+	Vector2i(14, 5), Vector2i(15, 5), Vector2i(16, 5), Vector2i(17, 5), Vector2i(18, 5),
+	Vector2i(19, 5), Vector2i(20, 5), Vector2i(21, 5), Vector2i(22, 5), Vector2i(23, 5),
+	Vector2i(13, 4),
+	Vector2i(20, 6), Vector2i(20, 7), Vector2i(20, 8), Vector2i(20, 9),
+	Vector2i(21, 9), Vector2i(22, 9),
+]
 
 static var _path_atlas_tiles: Dictionary = {}
 func _setup_player_paths() -> void:
@@ -781,6 +788,15 @@ func is_player_path(world_cell: Vector2i) -> bool:
 	return FarmState.has_player_path(world_cell)
 
 
+func is_map_road(world_cell: Vector2i) -> bool:
+	return MAP_ROADS.has(world_cell)
+
+
+## 地图原有路和玩家自铺路都参与自动拼接。
+func is_path_cell(world_cell: Vector2i) -> bool:
+	return is_map_road(world_cell) or is_player_path(world_cell)
+
+
 ## 铺一格土路。铺不了时弹 toast、返回 false，调用方不扣物品。
 func try_place_path(world_cell: Vector2i) -> bool:
 	var reason := _path_block_reason(world_cell)
@@ -794,8 +810,10 @@ func try_place_path(world_cell: Vector2i) -> bool:
 	return true
 
 
-## 只拆玩家铺的路；背景里画的固定路不在 FarmState 里，拆不到。
+## 只拆玩家铺的路。MAP_ROADS 上返回 false，精灵留着。
 func try_remove_path(world_cell: Vector2i) -> bool:
+	if is_map_road(world_cell):
+		return false
 	if not FarmState.remove_player_path(world_cell):
 		return false
 	_remove_path_sprite(world_cell)
@@ -804,7 +822,7 @@ func try_remove_path(world_cell: Vector2i) -> bool:
 
 ## 空字符串 = 能铺。
 func _path_block_reason(world_cell: Vector2i) -> String:
-	if FarmState.has_player_path(world_cell):
+	if is_map_road(world_cell) or FarmState.has_player_path(world_cell):
 		return "这里已经铺了路"
 	var rect := _path_cell_rect(world_cell)
 	if map_root != null and not map_root.get_world_rect().encloses(rect):
@@ -938,25 +956,25 @@ static func _path_atlas_tile_map() -> Dictionary:
 	return _path_atlas_tiles
 
 
-## 按四邻 is_player_path 和图集角规则选 region。纹理仍是 dirt_path_atlas_alpha.png。
+## 按四邻 is_path_cell 和图集角规则选 region。纹理仍是 dirt_path_atlas_alpha.png。
 func _pick_path_tile(world_cell: Vector2i) -> Rect2:
 	var mask := 0
-	if is_player_path(world_cell + Vector2i(0, -1)):
+	if is_path_cell(world_cell + Vector2i(0, -1)):
 		mask |= PATH_BIT_N
-	if is_player_path(world_cell + Vector2i(1, 0)):
+	if is_path_cell(world_cell + Vector2i(1, 0)):
 		mask |= PATH_BIT_E
-	if is_player_path(world_cell + Vector2i(0, 1)):
+	if is_path_cell(world_cell + Vector2i(0, 1)):
 		mask |= PATH_BIT_S
-	if is_player_path(world_cell + Vector2i(-1, 0)):
+	if is_path_cell(world_cell + Vector2i(-1, 0)):
 		mask |= PATH_BIT_W
 	var diag := 0
-	if is_player_path(world_cell + Vector2i(-1, -1)):
+	if is_path_cell(world_cell + Vector2i(-1, -1)):
 		diag |= PATH_DIAG_NW
-	if is_player_path(world_cell + Vector2i(1, -1)):
+	if is_path_cell(world_cell + Vector2i(1, -1)):
 		diag |= PATH_DIAG_NE
-	if is_player_path(world_cell + Vector2i(-1, 1)):
+	if is_path_cell(world_cell + Vector2i(-1, 1)):
 		diag |= PATH_DIAG_SW
-	if is_player_path(world_cell + Vector2i(1, 1)):
+	if is_path_cell(world_cell + Vector2i(1, 1)):
 		diag |= PATH_DIAG_SE
 	return path_region_for_mask(mask, world_cell, diag)
 
@@ -997,7 +1015,7 @@ func _remove_path_sprite(world_cell: Vector2i) -> void:
 	_refresh_path_regions(world_cell)
 
 
-## 进场和读档（farm_reset）时按 FarmState 重画。邻居已在存档里，按四邻重选。
+## 进场和读档（farm_reset）时重画地图原有路和玩家路。按四邻重选。
 func _rebuild_player_paths() -> void:
 	if _path_layer == null:
 		return
@@ -1006,9 +1024,11 @@ func _rebuild_player_paths() -> void:
 			_path_layer.remove_child(sprite)
 			(sprite as Node).queue_free()
 	_path_sprites.clear()
-	for cell in FarmState.get_player_paths():
+	for cell in MAP_ROADS:
 		_add_path_sprite(cell)
 	for cell in FarmState.get_player_paths():
+		_add_path_sprite(cell)
+	for cell in _path_sprites.keys():
 		var placed = _path_sprites.get(cell)
 		if placed is Sprite2D and is_instance_valid(placed):
 			(placed as Sprite2D).region_rect = _pick_path_tile(cell)
