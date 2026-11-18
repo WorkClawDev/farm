@@ -1,0 +1,19 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://dyne6nw47j8kn"
+
+[deps]
+
+files=["res://assets/third_party/lpc/CREDITS_used.filename.translation", "res://assets/third_party/lpc/CREDITS_used.notes.translation", "res://assets/third_party/lpc/CREDITS_used.authors.translation", "res://assets/third_party/lpc/CREDITS_used.licenses.translation", "res://assets/third_party/lpc/CREDITS_used.urls.translation"]
+
+source_file="res://assets/third_party/lpc/CREDITS_used.csv"
+dest_files=["res://assets/third_party/lpc/CREDITS_used.filename.translation", "res://assets/third_party/lpc/CREDITS_used.notes.translation", "res://assets/third_party/lpc/CREDITS_used.authors.translation", "res://assets/third_party/lpc/CREDITS_used.licenses.translation", "res://assets/third_party/lpc/CREDITS_used.urls.translation"]
+
+[params]
+
+compress=1
+delimiter=0
+unescape_keys=false
+unescape_translations=true

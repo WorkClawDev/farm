@@ -48,6 +48,12 @@ var _village_exit: Area2D
 var actor_layer: Node2D
 var _player_at_house_door: Player = null
 var _entering_house := false
+## Farm ores tracked so a depleted node can be snapshotted on the way out.
+var _tracked_farm_ores: Array[Ore] = []
+## pave1b 玩家自铺土路：地面层容器 + 每格一个 Sprite2D。
+var _path_layer: Node2D
+var _path_sprites: Dictionary = {}
+var _path_texture: Texture2D
 ## BUG-59: steps only (door point is the bottom step; shape sits above it).
 const HOUSE_ENTRANCE_SIZE := Vector2(40, 24)
 
@@ -65,15 +71,18 @@ const PLOT_SPACING := 64.0
 func _ready() -> void:
 	print("[Farm] Scene loaded")
 	_setup_map()
+	_apply_persisted_farm_ores()
 	_setup_ui()
 	add_child(DayNightTint.new())  # outdoor night tint (round 8)
 	_setup_soil_plots()
+	_setup_player_paths()
 	_setup_house_entrance()
 	_setup_village_exit()
 	_connect_time_signals()
 	_connect_event_signals()
 	FarmState.cell_changed.connect(_on_farm_cell_changed)
 	FarmState.farm_reset.connect(_refresh_all_plots)
+	FarmState.farm_reset.connect(_rebuild_player_paths)
 	GameManager.notification_requested.connect(_show_notification)
 	var player_node := get_tree().get_first_node_in_group("player") as Node2D
 	if player_node:
@@ -103,6 +112,7 @@ func _setup_map() -> void:
 		elif issue.severity == MapValidationIssue.Severity.WARNING:
 			push_warning("[FarmMap:%s] %s" % [issue.code, issue.message])
 	print("[Farm] Authored map loaded: ", map_root.map_id, " (", map_root.size_in_tiles, ")")
+	FarmTilesetBuilder.scatter_grass(tile_map)
 	_setup_actor_layer()
 	_align_house_draw_order()
 	_extend_sky_for_house_follow()
@@ -147,14 +157,11 @@ func _setup_field_fence() -> void:
 	for i in h_count + 1:
 		_add_fence_sprite(fence, TEX_FENCE_H, Vector2(h_start + float(i) * FENCE_H_PITCH, bottom_y), 0.0)
 
-	var top_y := PLOT_ORIGIN.y - PLOT_SPACING * 0.5
 	var bot_post_y := PLOT_ORIGIN.y + float(rows - 1) * PLOT_SPACING + PLOT_SPACING * 0.5
-	for corner in [Vector2(left_x, top_y), Vector2(right_x, top_y), Vector2(left_x, bot_post_y), Vector2(right_x, bot_post_y)]:
+	# North posts sit just south of the road row (world y 320-384).
+	var north_post_y := 388.0
+	for corner in [Vector2(left_x, north_post_y), Vector2(right_x, north_post_y), Vector2(left_x, bot_post_y), Vector2(right_x, bot_post_y)]:
 		_add_fence_sprite(fence, TEX_FENCE_POST, corner, 0.0)
-	# Short returns at the north corners. The middle stays open onto the road.
-	for i in 3:
-		_add_fence_sprite(fence, TEX_FENCE_H, Vector2(left_x + 16.0 + float(i) * FENCE_H_PITCH, top_y - 16.0), 0.0)
-		_add_fence_sprite(fence, TEX_FENCE_H, Vector2(right_x - 16.0 - float(i) * FENCE_H_PITCH, top_y - 16.0), 0.0)
 
 	var thickness := 16.0
 	# Start below the road so Joe's tavern stand (600, 350) stays clear.
@@ -594,9 +601,11 @@ static func house_camera_follow_region(door: Vector2, visual_center: Vector2, di
 	return Rect2(Vector2.ZERO, Vector2(maxf(east, 1.0), maxf(south, 1.0)))
 
 
-## Godot adds Camera2D.offset to the top-left after the limit clamp, so this
-## delta recentres the player without changing limit_*. screen_size is the
-## visible world size (viewport / zoom).
+## Visible top-left is the limit clamp plus this offset. It must stay inside
+## [limits.position, limits.end - screen_size]. screen_size is the visible
+## world size (viewport / zoom). A non-zero offset used to undo the clamp and
+## showed blue past x=0 / y=0, so this returns zero. An axis where the map is
+## smaller than the screen keeps the centred clamp.
 static func house_camera_follow_offset(player_pos: Vector2, follow_region: Rect2, limits: Rect2, screen_size: Vector2) -> Vector2:
 	if screen_size.x <= 1.0 or screen_size.y <= 1.0:
 		return Vector2.ZERO
@@ -612,7 +621,17 @@ static func house_camera_follow_offset(player_pos: Vector2, follow_region: Rect2
 		clamped.y = limits.position.y + (limits.size.y - screen_size.y) * 0.5
 	else:
 		clamped.y = clampf(desired.y, limits.position.y, limits.end.y - screen_size.y)
-	return desired - clamped
+	# Clamp the visible top-left again. It already equals clamped, so the offset is zero.
+	var visible := desired
+	if limits.size.x > screen_size.x:
+		visible.x = clampf(visible.x, limits.position.x, limits.end.x - screen_size.x)
+	else:
+		visible.x = clamped.x
+	if limits.size.y > screen_size.y:
+		visible.y = clampf(visible.y, limits.position.y, limits.end.y - screen_size.y)
+	else:
+		visible.y = clamped.y
+	return visible - clamped
 
 
 ## Greater Y draws in front. The house root sits on the foundation bottom.
@@ -631,12 +650,399 @@ func _align_house_draw_order() -> void:
 	if map_root == null or layout_root == null:
 		return
 	map_root.y_sort_enabled = true
-	var house := layout_root.get_node_or_null("PlayerHouseExterior") as CanvasItem
-	if house == null:
-		return
 	var player := get_tree().get_first_node_in_group("player") as CanvasItem
-	house.z_as_relative = false
-	house.z_index = player.z_index if player != null else 0
+	var actor_z := player.z_index if player != null else 0
+	for item in _depth_sorted_objects():
+		item.z_as_relative = false
+		item.z_index = actor_z
+
+
+## Objects-layer props the player can stand both north and south of. Their
+## root is on (or near) the ground contact, so at the player's z they Y-sort
+## against the feet. Left at Objects' absolute z 7, the ore boulder by the
+## house painted over the player's waist even from the south.
+func _depth_sorted_objects() -> Array[CanvasItem]:
+	var out: Array[CanvasItem] = []
+	if layout_root == null:
+		return out
+	var house := layout_root.get_node_or_null("PlayerHouseExterior") as CanvasItem
+	if house != null:
+		out.append(house)
+	for node in layout_root.get_children():
+		if node is Ore:
+			out.append(node as CanvasItem)
+	return out
+
+
+## 挖碎的农场矿石从 FarmState 里认。节点摘掉，碰撞、提示、血条一起走。
+func _apply_persisted_farm_ores() -> void:
+	_tracked_farm_ores.clear()
+	if layout_root == null:
+		return
+	var remove_nodes: Array[Node] = []
+	for node in layout_root.get_children():
+		if not node is Ore:
+			continue
+		var ore := node as Ore
+		var ore_id := str(ore.name)
+		if FarmState.is_farm_ore_depleted(ore_id):
+			remove_nodes.append(ore)
+			continue
+		var saved_hp := FarmState.get_farm_ore_health(ore_id)
+		if saved_hp > 0 and saved_hp < ore.max_health:
+			ore.current_health = saved_hp
+			if ore.health_bar:
+				ore.health_bar.max_value = ore.max_health
+				ore.health_bar.value = saved_hp
+				ore.health_bar.visible = true
+		var depleted_callback := _on_farm_ore_depleted.bind(ore_id)
+		if not ore.ore_depleted.is_connected(depleted_callback):
+			ore.ore_depleted.connect(depleted_callback)
+		_tracked_farm_ores.append(ore)
+	for node in remove_nodes:
+		_remove_farm_ore(node)
+
+
+func _on_farm_ore_depleted(ore_id: String) -> void:
+	FarmState.note_farm_ore_depleted(ore_id)
+
+
+func _remove_farm_ore(node: Node) -> void:
+	var ore := node as Ore
+	if ore:
+		ore.visible = false
+		ore.monitoring = false
+		ore.monitorable = false
+		ore.collision_layer = 0
+		ore.collision_mask = 0
+		if ore.interaction_hint:
+			ore.interaction_hint.visible = false
+		if ore.health_bar:
+			ore.health_bar.visible = false
+		if ore.collision_shape:
+			ore.collision_shape.disabled = true
+		if ore.solid_collision:
+			ore.solid_collision.disabled = true
+		var body := ore.get_node_or_null("SolidBody") as CollisionObject2D
+		if body:
+			body.collision_layer = 0
+			body.collision_mask = 0
+	var parent := node.get_parent()
+	if parent:
+		parent.remove_child(node)
+	node.queue_free()
+
+
+## ---- 玩家自铺土路（pave1b）----
+## 格子是农场 64px 世界格（与 Ground 瓦片对齐），和田地的 PLOT 网格无关。
+## 土路按四邻和对角自动拼接，region 查 dirt_path_atlas.json。
+const PATH_CELL_SIZE := 64
+const PATH_TEXTURE_PATH := "res://assets/sprites/tiles/dirt_path_atlas_alpha.png"
+const PATH_ATLAS_JSON := "res://assets/sprites/tiles/dirt_path_atlas.json"
+## 四邻 N=1 E=2 S=4 W=8；对角 NW=1 NE=2 SW=4 SE=8。角规则见 dirt_path_atlas.json。
+const PATH_BIT_N := 1
+const PATH_BIT_E := 2
+const PATH_BIT_S := 4
+const PATH_BIT_W := 8
+const PATH_DIAG_NW := 1
+const PATH_DIAG_NE := 2
+const PATH_DIAG_SW := 4
+const PATH_DIAG_SE := 8
+## 地图原有土路（64px 世界格）。只画在 PlayerPaths 上，不写入 FarmState。
+const MAP_ROADS: Array[Vector2i] = [
+	Vector2i(4, 5), Vector2i(5, 5), Vector2i(6, 5), Vector2i(7, 5), Vector2i(8, 5),
+	Vector2i(9, 5), Vector2i(10, 5), Vector2i(11, 5), Vector2i(12, 5), Vector2i(13, 5),
+	Vector2i(14, 5), Vector2i(15, 5), Vector2i(16, 5), Vector2i(17, 5), Vector2i(18, 5),
+	Vector2i(19, 5), Vector2i(20, 5), Vector2i(21, 5), Vector2i(22, 5), Vector2i(23, 5),
+	Vector2i(13, 4),
+	Vector2i(20, 6), Vector2i(20, 7), Vector2i(20, 8), Vector2i(20, 9),
+	Vector2i(21, 9), Vector2i(22, 9),
+]
+
+static var _path_atlas_tiles: Dictionary = {}
+func _setup_player_paths() -> void:
+	_path_layer = Node2D.new()
+	_path_layer.name = "PlayerPaths"
+	# 地面层：FarmMap 的 Ground(-3)/TerrainOverlay(-2) 之上，
+	# TilledArea(-1)、装饰、物件和人物(0+) 之下。排在 FarmMap 后、篱笆前。
+	_path_layer.z_index = -2
+	_path_layer.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	add_child(_path_layer)
+	if map_root != null:
+		move_child(_path_layer, map_root.get_index() + 1)
+	_rebuild_player_paths()
+
+
+## 世界坐标所在的 64px 世界格。
+func get_path_cell_at(world_position: Vector2) -> Vector2i:
+	var local := world_position - global_position
+	return Vector2i(floori(local.x / PATH_CELL_SIZE), floori(local.y / PATH_CELL_SIZE))
+
+
+## 人站的那格朝面向方向的下一格。
+func get_facing_path_cell(world_position: Vector2, facing: Vector2) -> Vector2i:
+	return get_path_cell_at(world_position) + Vector2i(roundi(facing.x), roundi(facing.y))
+
+
+func is_player_path(world_cell: Vector2i) -> bool:
+	return FarmState.has_player_path(world_cell)
+
+
+func is_map_road(world_cell: Vector2i) -> bool:
+	return MAP_ROADS.has(world_cell)
+
+
+## 地图原有路和玩家自铺路都参与自动拼接。
+func is_path_cell(world_cell: Vector2i) -> bool:
+	return is_map_road(world_cell) or is_player_path(world_cell)
+
+
+## 铺一格土路。铺不了时弹 toast、返回 false，调用方不扣物品。
+func try_place_path(world_cell: Vector2i) -> bool:
+	var reason := _path_block_reason(world_cell)
+	if not reason.is_empty():
+		_show_notification(reason)
+		return false
+	if not FarmState.add_player_path(world_cell):
+		_show_notification("这里已经铺了路")
+		return false
+	_add_path_sprite(world_cell)
+	return true
+
+
+## 只拆玩家铺的路。MAP_ROADS 上返回 false，精灵留着。
+func try_remove_path(world_cell: Vector2i) -> bool:
+	if is_map_road(world_cell):
+		return false
+	if not FarmState.remove_player_path(world_cell):
+		return false
+	_remove_path_sprite(world_cell)
+	return true
+
+
+## 空字符串 = 能铺。
+func _path_block_reason(world_cell: Vector2i) -> String:
+	if is_map_road(world_cell) or FarmState.has_player_path(world_cell):
+		return "这里已经铺了路"
+	var rect := _path_cell_rect(world_cell)
+	if map_root != null and not map_root.get_world_rect().encloses(rect):
+		return "这里不能铺路"
+	if _path_field_rect().has_point(rect.get_center()):
+		return "田里不能铺路"
+	if _path_cell_is_water(world_cell):
+		return "水里不能铺路"
+	if _path_cell_hits_solid(rect):
+		return "这里有东西挡着，不能铺路"
+	return ""
+
+
+func _path_cell_rect(world_cell: Vector2i) -> Rect2:
+	return Rect2(Vector2(world_cell * PATH_CELL_SIZE), Vector2(PATH_CELL_SIZE, PATH_CELL_SIZE))
+
+
+## 田地网格（含已耕地）占的矩形，Farm 本地坐标。
+## 铺路只看格子中心是否落在田里，避免田格与 64px 路网错开 32px 时把田北原有路整行挡住。
+## 篱笆由 _path_cell_hits_solid 拦截。
+func _path_field_rect() -> Rect2:
+	var half := PLOT_SPACING * 0.5
+	var top_left := PLOT_ORIGIN - Vector2(half, half)
+	var size := Vector2(FarmState.GRID_WIDTH, FarmState.GRID_HEIGHT) * PLOT_SPACING
+	return Rect2(top_left, size)
+
+
+func _path_cell_is_water(world_cell: Vector2i) -> bool:
+	var overlay := map_root.get_layer(&"terrain_overlay") as TileMapLayer if map_root != null else null
+	if overlay == null:
+		return false
+	var center := global_position + _path_cell_rect(world_cell).get_center()
+	return _is_farm_pond_water_cell(overlay, overlay.local_to_map(overlay.to_local(center)))
+
+
+## 房子、树、树桩、矿石、出货箱、工作台、鸡舍/谷仓、篱笆、地图边界：
+## 都是 WORLD 层的实体碰撞，直接用格子内缩 2px 的矩形去查。
+func _path_cell_hits_solid(rect: Rect2) -> bool:
+	if not is_inside_tree():
+		return false
+	var shape := RectangleShape2D.new()
+	shape.size = rect.size - Vector2(4, 4)
+	var query := PhysicsShapeQueryParameters2D.new()
+	query.shape = shape
+	query.transform = Transform2D(0.0, global_position + rect.get_center())
+	query.collision_mask = PHYSICS_LAYERS.WORLD
+	query.collide_with_bodies = true
+	query.collide_with_areas = false
+	return not get_world_2d().direct_space_state.intersect_shape(query, 1).is_empty()
+
+
+## 掩码转 region。cell 只决定 h/v/edge 奇偶和内部土的变体；diag 走 json 的角规则。
+static func path_region_for_mask(mask: int, cell: Vector2i = Vector2i.ZERO, diag: int = 0) -> Rect2:
+	return _path_region_named(_path_tile_name_for_mask(mask, cell, diag))
+
+
+static func _path_tile_name_for_mask(mask: int, cell: Vector2i, diag: int) -> String:
+	var suffix := "_b" if posmod(cell.x + cell.y, 2) == 1 else ""
+	var nw := (diag & PATH_DIAG_NW) != 0
+	var ne := (diag & PATH_DIAG_NE) != 0
+	var sw := (diag & PATH_DIAG_SW) != 0
+	var se := (diag & PATH_DIAG_SE) != 0
+	match mask:
+		15:
+			var miss: Array[String] = []
+			if not nw:
+				miss.append("nw")
+			if not ne:
+				miss.append("ne")
+			if not sw:
+				miss.append("sw")
+			if not se:
+				miss.append("se")
+			if miss.size() == 0 or miss.size() == 2:
+				var dirt: Array[String] = ["path_dirt_a", "path_dirt_b", "path_dirt_c"]
+				return dirt[posmod(cell.x + 2 * cell.y, 3)]
+			if miss.size() == 1:
+				return "path_inner_" + miss[0]
+			return "path_cross"
+		14:
+			return ("path_edge_n" + suffix) if (se or sw) else "path_t_s"
+		13:
+			return ("path_edge_e" + suffix) if (nw or sw) else "path_t_w"
+		11:
+			return ("path_edge_s" + suffix) if (ne or nw) else "path_t_n"
+		7:
+			return ("path_edge_w" + suffix) if (ne or se) else "path_t_e"
+		6:
+			return "path_outer_nw" if se else "path_bend_es"
+		12:
+			return "path_outer_ne" if sw else "path_bend_sw"
+		9:
+			return "path_outer_se" if nw else "path_bend_wn"
+		3:
+			return "path_outer_sw" if ne else "path_bend_ne"
+		5:
+			return "path_v" + suffix
+		10:
+			return "path_h" + suffix
+		1:
+			return "path_end_n"
+		2:
+			return "path_end_e"
+		4:
+			return "path_end_s"
+		8:
+			return "path_end_w"
+	return "path_end_s"
+
+
+static func _path_region_named(tile_name: String) -> Rect2:
+	var tiles := _path_atlas_tile_map()
+	var pair = tiles.get(tile_name, [4, 1])
+	var col := int(pair[0])
+	var row := int(pair[1])
+	return Rect2(col * PATH_CELL_SIZE, row * PATH_CELL_SIZE, PATH_CELL_SIZE, PATH_CELL_SIZE)
+
+
+static func _path_atlas_tile_map() -> Dictionary:
+	if not _path_atlas_tiles.is_empty():
+		return _path_atlas_tiles
+	var file := FileAccess.open(PATH_ATLAS_JSON, FileAccess.READ)
+	if file == null:
+		return {}
+	var parsed = JSON.parse_string(file.get_as_text())
+	file.close()
+	if parsed is Dictionary:
+		var tiles = parsed.get("tiles", {})
+		if tiles is Dictionary and not tiles.is_empty():
+			_path_atlas_tiles = tiles
+	return _path_atlas_tiles
+
+
+## 按四邻 is_path_cell 和图集角规则选 region。纹理仍是 dirt_path_atlas_alpha.png。
+func _pick_path_tile(world_cell: Vector2i) -> Rect2:
+	var mask := 0
+	if is_path_cell(world_cell + Vector2i(0, -1)):
+		mask |= PATH_BIT_N
+	if is_path_cell(world_cell + Vector2i(1, 0)):
+		mask |= PATH_BIT_E
+	if is_path_cell(world_cell + Vector2i(0, 1)):
+		mask |= PATH_BIT_S
+	if is_path_cell(world_cell + Vector2i(-1, 0)):
+		mask |= PATH_BIT_W
+	var diag := 0
+	if is_path_cell(world_cell + Vector2i(-1, -1)):
+		diag |= PATH_DIAG_NW
+	if is_path_cell(world_cell + Vector2i(1, -1)):
+		diag |= PATH_DIAG_NE
+	if is_path_cell(world_cell + Vector2i(-1, 1)):
+		diag |= PATH_DIAG_SW
+	if is_path_cell(world_cell + Vector2i(1, 1)):
+		diag |= PATH_DIAG_SE
+	return path_region_for_mask(mask, world_cell, diag)
+
+
+## 铺或拆一格后，重选这一格和周围 8 格（对角决定 outer / edge / inner）。
+func _refresh_path_regions(world_cell: Vector2i) -> void:
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			var cell := world_cell + Vector2i(dx, dy)
+			var sprite = _path_sprites.get(cell)
+			if sprite is Sprite2D and is_instance_valid(sprite):
+				(sprite as Sprite2D).region_rect = _pick_path_tile(cell)
+
+
+func _add_path_sprite(world_cell: Vector2i) -> void:
+	if _path_layer == null or _path_sprites.has(world_cell):
+		return
+	if _path_texture == null:
+		_path_texture = load(PATH_TEXTURE_PATH) as Texture2D
+	var sprite := Sprite2D.new()
+	sprite.name = "Path_%d_%d" % [world_cell.x, world_cell.y]
+	sprite.texture = _path_texture
+	sprite.region_enabled = true
+	sprite.region_rect = _pick_path_tile(world_cell)
+	sprite.centered = false
+	sprite.position = Vector2(world_cell * PATH_CELL_SIZE)
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_path_layer.add_child(sprite)
+	_path_sprites[world_cell] = sprite
+	_refresh_path_regions(world_cell)
+
+
+func _remove_path_sprite(world_cell: Vector2i) -> void:
+	var sprite = _path_sprites.get(world_cell)
+	_path_sprites.erase(world_cell)
+	if sprite is Node and is_instance_valid(sprite):
+		(sprite as Node).queue_free()
+	_refresh_path_regions(world_cell)
+
+
+## 进场和读档（farm_reset）时重画地图原有路和玩家路。按四邻重选。
+func _rebuild_player_paths() -> void:
+	if _path_layer == null:
+		return
+	for sprite in _path_sprites.values():
+		if sprite is Node and is_instance_valid(sprite):
+			_path_layer.remove_child(sprite)
+			(sprite as Node).queue_free()
+	_path_sprites.clear()
+	for cell in MAP_ROADS:
+		_add_path_sprite(cell)
+	for cell in FarmState.get_player_paths():
+		_add_path_sprite(cell)
+	for cell in _path_sprites.keys():
+		var placed = _path_sprites.get(cell)
+		if placed is Sprite2D and is_instance_valid(placed):
+			(placed as Sprite2D).region_rect = _pick_path_tile(cell)
+
+
+func _exit_tree() -> void:
+	for ore in _tracked_farm_ores:
+		if not is_instance_valid(ore):
+			continue
+		var ore_id := str(ore.name)
+		if ore.is_depleted():
+			FarmState.note_farm_ore_depleted(ore_id)
+		else:
+			FarmState.note_farm_ore_health(ore_id, ore.current_health, ore.max_health)
 
 
 func _extend_sky_for_house_follow() -> void:

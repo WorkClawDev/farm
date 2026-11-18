@@ -27,6 +27,7 @@ var _interact_needs_release := false
 ## After a dialogue closes, a second E/Space within this window is taken as part of
 ## closing it, not as "talk again" (BUG-26 residual: the line after the last one).
 const DIALOGUE_RETALK_COOLDOWN_MS := 600
+const DIRT_PATH_ITEM_ID := "dirt_path"
 var _interact_blocked_until_msec := 0
 ## A direction key still held from walking into the previous map's exit would
 ## carry the player past the arrival spot (BUG-37); ignore it until released.
@@ -47,22 +48,25 @@ var interaction_range: float = 32.0
 @onready var camera: Camera2D = $Camera2D
 @onready var interaction_area: Area2D = $InteractionArea
 
-# 方向对应的静止帧
-const IDLE_FRAMES = {
-	Direction.DOWN: 0,
-	Direction.UP: 6,
-	Direction.LEFT: 2,
-	Direction.RIGHT: 4
-}
+# 4 列 × 4 行，行顺序 下 / 上 / 左 / 右。走路循环 0–3 列，8fps。站立用第 0 列。
+const SHEET_COLUMNS := 4
+const WALK_FPS := 8.0
+var _walk_accum := 0.0
+var _walk_frame := 0
+var _physics_delta := 0.0
+
+static func sheet_frame(direction: Direction, walk_col: int) -> int:
+	return int(direction) * SHEET_COLUMNS + posmod(walk_col, SHEET_COLUMNS)
 
 func _ready() -> void:
 	# 初始化相机
 	if camera:
 		camera.enabled = true
 		camera.make_current()
-	# 设置初始帧
+	# 设置初始帧（朝下站立，第 0 列）
 	if sprite:
-		sprite.frame = IDLE_FRAMES[current_direction]
+		sprite.frame = sheet_frame(current_direction, 0)
+		sprite.flip_h = false
 	# 初始化战斗系统
 	_setup_combat()
 	# 初始化工具管理器
@@ -74,7 +78,8 @@ func _ready() -> void:
 	GameManager.register_player(self)
 	_move_needs_release = InputManager.get_movement_vector() != Vector2.ZERO
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
+	_physics_delta = delta
 	if GameManager.current_state != GameManager.GameState.PLAYING:
 		# The E/Space press that closes a dialogue or shop is still "just pressed"
 		# when control comes back here; without this it re-talks to the NPC and the
@@ -143,31 +148,28 @@ func _update_direction(input_direction: Vector2) -> void:
 		tool_manager.update_pose()
 
 func _update_animation() -> void:
-	var anim_prefix := _get_animation_prefix()
-	var anim_name := anim_prefix + ("_walk" if is_walking else "_idle")
+	var col := _advance_walk_column()
+	# 场景里的旧条带动画会改 frame / flip_h。新的四方向 sheet 只靠帧号。
+	if animation_player and animation_player.is_playing():
+		animation_player.stop(true)
+	if sprite == null:
+		return
+	sprite.frame = sheet_frame(current_direction, col)
+	sprite.flip_h = false
 
-	if animation_player:
-		if is_walking and animation_player.has_animation(anim_name):
-			animation_player.play(anim_name)
-		else:
-			animation_player.stop()
-			# 设置静止帧（上/下走路循环会镜像跨步帧，停下时还原）
-			if sprite and IDLE_FRAMES.has(current_direction):
-				sprite.frame = IDLE_FRAMES[current_direction]
-				sprite.flip_h = false
-
-func _get_animation_prefix() -> String:
-	match current_direction:
-		Direction.DOWN:
-			return "down"
-		Direction.LEFT:
-			return "left"
-		Direction.RIGHT:
-			return "right"
-		Direction.UP:
-			return "up"
-		_:
-			return "down"
+func _advance_walk_column() -> int:
+	if not is_walking:
+		_walk_accum = 0.0
+		_walk_frame = 0
+		return 0
+	var step := 1.0 / WALK_FPS
+	_walk_accum += _physics_delta
+	var guard := 0
+	while _walk_accum >= step and guard < 16:
+		_walk_accum -= step
+		_walk_frame = (_walk_frame + 1) % SHEET_COLUMNS
+		guard += 1
+	return _walk_frame
 
 # 设置玩家位置（用于传送等）
 func set_spawn_position(pos: Vector2) -> void:
@@ -286,6 +288,32 @@ func _use_tool_on_target() -> void:
 
 	_play_use_feedback()
 
+	# 面前是矿石（农场 OreNorth/OreSouth、矿洞）：镐子走 Pickaxe.use → Ore.take_damage，
+	# 和矿洞同一套扣体力/血条/掉落；其它工具只提示。放在田格判断前，矿石压着田格也不会翻地。
+	var facing_ore := _find_facing_ore()
+	if facing_ore != null:
+		_use_tool_on_ore(facing_ore)
+		return
+
+	# pave1b 自铺土路：放在矿石之后、田格之前。
+	# - 收起工具、快捷栏选着土路：在面前 64px 世界格铺路，成功才扣 1 个。
+	# - 镐子或锄头对着玩家铺的路：拆掉退回 1 个，不再往下走耕地/敲石头。
+	var path_farm := _find_farm_scene()
+	if path_farm != null and path_farm.has_method("try_place_path"):
+		var path_cell: Vector2i = path_farm.get_facing_path_cell(global_position, _get_direction_vector())
+		if tool_manager.is_using_hotbar_item() and Inventory.get_selected_item_id() == DIRT_PATH_ITEM_ID:
+			if Inventory.has_item(DIRT_PATH_ITEM_ID, 1) and bool(path_farm.try_place_path(path_cell)):
+				Inventory.remove_item(DIRT_PATH_ITEM_ID, 1)
+			return
+		var held_tool := tool_manager.get_current_tool_type()
+		if (held_tool == ToolManager.ToolType.PICKAXE or held_tool == ToolManager.ToolType.HOE) and FarmState.has_player_path(path_cell):
+			if not Inventory.can_add_item(DIRT_PATH_ITEM_ID, 1):
+				UIManager.show_toast("背包已满", {}, "info")
+				return
+			if bool(path_farm.try_remove_path(path_cell)):
+				Inventory.add_item(DIRT_PATH_ITEM_ID, 1)
+			return
+
 	# 农场：按格子选“脚下那格的前一格”（BUG：四个方向只锄出 3 格）
 	var farm := _find_farm_scene()
 	var facing_coord := Vector2i(-1, -1)
@@ -336,6 +364,31 @@ func _use_tool_on_target() -> void:
 
 	# 如果没有找到土壤，尝试使用工具（如钓鱼）
 	tool_manager.use_tool(null)
+
+## 面向点上还能挖的矿石（Ore 的 Area2D 或它的 SolidBody）。
+func _find_facing_ore() -> Ore:
+	var query := PhysicsPointQueryParameters2D.new()
+	query.position = global_position + _get_direction_vector() * interaction_range
+	query.collide_with_areas = true
+	query.collide_with_bodies = true
+	for result in get_world_2d().direct_space_state.intersect_point(query):
+		var collider: Object = result.collider
+		var ore := collider as Ore
+		if ore == null and collider is Node and (collider as Node).get_parent() is Ore:
+			ore = (collider as Node).get_parent() as Ore
+		if ore != null and ore.can_mine():
+			return ore
+	return null
+
+func _use_tool_on_ore(ore: Ore) -> void:
+	if tool_manager.get_current_tool_type() != ToolManager.ToolType.PICKAXE:
+		UIManager.show_toast("需要镐子才能挖矿石", {}, "info")
+		return
+	if tool_manager.use_tool(ore):
+		return
+	var pickaxe = tool_manager.tools.get(ToolManager.ToolType.PICKAXE)
+	if pickaxe != null and not pickaxe.is_mining and StaminaManager.current_stamina < pickaxe.energy_cost:
+		UIManager.show_toast("体力不足", {}, "info")
 
 ## BUG-21: villagers are solid, but when they crowd the player (three of them share
 ## the plaza target by the fountain) WASD looked dead. Like Stardew, pushing into a
@@ -427,7 +480,7 @@ func _play_use_feedback() -> void:
 ## shop, menus) and with reduce_motion.
 const BREATH_PERIOD := 2.2
 const BREATH_AMOUNT := 0.025
-const SPRITE_BASE_SCALE := Vector2(1, 1)  # Villager3 sheet is already 64px (16×4)
+const SPRITE_BASE_SCALE := Vector2(1, 1)  # player_sheet cells are already 80×132
 const SPRITE_FEET_Y := 32.0  # frame bottom, in texture pixels below the sprite centre
 var _breath_time := 0.0
 var _breathing := false

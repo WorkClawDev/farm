@@ -58,6 +58,12 @@ var _watering_can_max_water: int = WATERING_CAN_MAX_WATER
 var _watering_can_water: int = WATERING_CAN_MAX_WATER
 ## advance_day 刚处理过的活作物数。-1 表示还没有过夜结算在等着被取走。
 var _overnight_crop_count: int = -1
+## 农场上的矿石，用节点名当稳定 id（OreNorth、OreSouth）。
+## 挖碎了就一直挖碎：切场景和读档都不再出现。只受伤时另记剩余血量。矿洞不写这里。
+var _farm_ores: Dictionary = {}
+## 玩家自铺土路（pave1b）。键是农场 64px 世界格 Vector2i，值恒为 true。
+## 背景里画的固定路不在这里。
+var _player_paths: Dictionary = {}
 
 
 func _ready() -> void:
@@ -77,6 +83,8 @@ func reset() -> void:
 	_watering_can_water = -1
 	set_watering_can_water(WATERING_CAN_MAX_WATER)
 	_overnight_crop_count = -1
+	_farm_ores.clear()
+	_player_paths.clear()
 	farm_reset.emit()
 
 
@@ -534,6 +542,75 @@ func consume_overnight_crop_count() -> int:
 	return count
 
 
+func note_farm_ore_depleted(ore_id: String) -> void:
+	var key := str(ore_id).strip_edges()
+	if key.is_empty():
+		return
+	_farm_ores[key] = {
+		"depleted": true,
+		"current_health": 0,
+	}
+
+
+func note_farm_ore_health(ore_id: String, current_health: int, max_health: int) -> void:
+	var key := str(ore_id).strip_edges()
+	if key.is_empty() or is_farm_ore_depleted(key):
+		return
+	if current_health <= 0:
+		note_farm_ore_depleted(key)
+		return
+	if max_health <= 0 or current_health >= max_health:
+		_farm_ores.erase(key)
+		return
+	_farm_ores[key] = {
+		"depleted": false,
+		"current_health": current_health,
+		"max_health": max_health,
+	}
+
+
+func is_farm_ore_depleted(ore_id: String) -> bool:
+	var state = _farm_ores.get(str(ore_id), {})
+	return state is Dictionary and bool(state.get("depleted", false))
+
+
+## 受伤未挖碎时返回剩余血量。没记录或已经挖碎返回 -1。
+func get_farm_ore_health(ore_id: String) -> int:
+	if is_farm_ore_depleted(ore_id):
+		return -1
+	var state = _farm_ores.get(str(ore_id), {})
+	if not state is Dictionary:
+		return -1
+	var hp := int(state.get("current_health", -1))
+	if hp <= 0:
+		return -1
+	return hp
+
+
+## 记一格玩家铺的路。已经有了返回 false。
+func add_player_path(cell: Vector2i) -> bool:
+	if _player_paths.has(cell):
+		return false
+	_player_paths[cell] = true
+	return true
+
+
+## 只拆玩家铺的路。没有这格返回 false。
+func remove_player_path(cell: Vector2i) -> bool:
+	return _player_paths.erase(cell)
+
+
+func has_player_path(cell: Vector2i) -> bool:
+	return _player_paths.has(cell)
+
+
+func get_player_paths() -> Array[Vector2i]:
+	var out: Array[Vector2i] = []
+	for cell in _player_paths.keys():
+		out.append(cell)
+	return out
+
+
 func get_save_state() -> Dictionary:
 	var cells: Array = []
 	for y in range(GRID_HEIGHT):
@@ -545,6 +622,8 @@ func get_save_state() -> Dictionary:
 		"cells": cells,
 		"watering_can_water": _watering_can_water,
 		"watering_can_max_water": _watering_can_max_water,
+		"farm_ores": _farm_ores.duplicate(true),
+		"player_paths": _player_paths_save_array(),
 	}
 
 
@@ -566,8 +645,53 @@ func load_save_state(data: Dictionary) -> bool:
 	_watering_can_water = -1
 	set_watering_can_water(int(data.get("watering_can_water", _watering_can_max_water)))
 	_overnight_crop_count = -1
+	# 旧档没有 farm_ores：矿石都还在。
+	_restore_farm_ores(data)
+	# 旧档没有 player_paths：当成一格路都没铺。
+	_restore_player_paths(data)
 	farm_reset.emit()
 	return true
+
+
+## 存成 [[x, y], ...]，JSON 存档里也能原样读回。
+func _player_paths_save_array() -> Array:
+	var out: Array = []
+	for cell: Vector2i in _player_paths.keys():
+		out.append([cell.x, cell.y])
+	return out
+
+
+func _restore_player_paths(data: Dictionary) -> void:
+	_player_paths.clear()
+	var saved = data.get("player_paths", [])
+	if not saved is Array:
+		return
+	for raw in saved:
+		if raw is Array and raw.size() >= 2:
+			_player_paths[Vector2i(int(raw[0]), int(raw[1]))] = true
+		elif raw is Dictionary and raw.has("x") and raw.has("y"):
+			_player_paths[Vector2i(int(raw["x"]), int(raw["y"]))] = true
+
+
+func _restore_farm_ores(data: Dictionary) -> void:
+	_farm_ores.clear()
+	var saved = data.get("farm_ores", {})
+	if not saved is Dictionary:
+		return
+	for raw_id in saved.keys():
+		var raw = saved[raw_id]
+		if not raw is Dictionary:
+			continue
+		var key := str(raw_id).strip_edges()
+		if key.is_empty():
+			continue
+		if bool(raw.get("depleted", false)):
+			note_farm_ore_depleted(key)
+			continue
+		var hp := int(raw.get("current_health", -1))
+		var mx := int(raw.get("max_health", 0))
+		if hp > 0 and mx > hp:
+			note_farm_ore_health(key, hp, mx)
 
 
 func _advance_crop(crop: Dictionary) -> void:

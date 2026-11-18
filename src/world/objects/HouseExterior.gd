@@ -20,23 +20,23 @@ const PRIVATE_HOUSE_DOOR := Vector2(-18, 256)
 ## footprint is 0.91 wide and centred 18.5 atlas px left of the region centre.
 const PRIVATE_FOOTPRINT_WIDTH_RATIO := 0.91
 const PRIVATE_FOOTPRINT_CENTER_X := -18.5
-## Region-local atlas pixels of the B06 roof and upper walls. The foundation
-## rectangle only covers the bottom strip, so without this outline the player
-## walks through the peak, eaves and side walls. The bottom edge stops where
-## the porch begins (the door steps stay open). The right edge stays at x=472
-## so the east "beyond the artwork" probe still misses.
+## Region-local atlas pixels of the B06 walls. The foundation rectangle only
+## covers the bottom strip, so without this outline the player walks through
+## the side walls. The bottom edge stops where the porch begins (the door steps
+## stay open). The right edge stays at x=472 so the east "beyond the artwork"
+## probe still misses.
+## The north edge is the back-wall ground line, not the roof peak: walking down
+## from the north, the feet stop at PRIVATE_BACK_WALL_Y, still north of the
+## foundation anchor, so Y-sort draws the roof over the player's lower body
+## (Stardew-style "behind the house"). Tracing the peak/eaves kept the feet on
+## the roof tip, so the whole 132px player sheet stood above the house.
+const PRIVATE_BACK_WALL_Y := 160.0
 static func _private_roof_outline() -> PackedVector2Array:
 	return PackedVector2Array([
-		Vector2(228, 0),
-		Vector2(112, 112),
-		Vector2(0, 124),
+		Vector2(0, PRIVATE_BACK_WALL_Y),
 		Vector2(0, 448),
 		Vector2(472, 448),
-		Vector2(472, 120),
-		Vector2(424, 116),
-		Vector2(360, 112),
-		Vector2(272, 16),
-		Vector2(244, 0),
+		Vector2(472, PRIVATE_BACK_WALL_Y),
 	])
 
 const HOUSE_SIZES := {

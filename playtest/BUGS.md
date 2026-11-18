@@ -1068,3 +1068,45 @@
 - 出货 toast「✓ 已出货 ×1（预计 +10 金）」在「今晚的出货」下方约10px，不再压标题 PASS（ui3_ship_b1~3）。小注 P3：toast 横跨左右面板缝，盖住右栏首行「防风草种子 ×1」上沿。
 - 退出框 Esc 取消后焦点回「继续」PASS，↓ 到保存（ui3_after_esc / ui3_after_down）。小注 P3：焦点离开后「继续」仍保持绿色填充（残留 hover）。
 - 门垫 v2 锈棕、1px 描边、无光晕 PASS（ui3_mat_close）；站上去人物画在门垫上方 PASS（ui3_onmat_close）；「↓ 出门」提示、↓ 出门正常（ui3_mv2 / ui3_exited）。地板仍为纯米色无木纹（P3 美术）。
+
+## 2026-11-13 02:55 (UTC-8) charswap ① 玩家换装验收（--freeze-time）— FAIL（y-sort 遮挡）
+- PASS：开局比例与落地（cs1_start）；四向走路帧和朝向、停下保持朝向（cs1_walk_*）；长距离右走全程可见（cs1b_right_1~6）；屋前人画在门廊上（cs1_house_front）；墙、树桩、栅栏内外都挡人，贴着滑行不卡（cs1_wall / cs1_tree_col / cs1_fence_slide_left / cs1b_fence_out_slide）；进屋、站门垫（人在上层）、出门（cs1_onmat_valid / cs1_exited_valid）；日志无 SCRIPT ERROR。
+- FAIL P2【屋后遮挡】步骤：从农舍北侧往下走，直到被后墙挡住。期望：屋顶盖住人的下半身。实际：人整个画在屋顶尖上（cs1b_house_back_blocked / _l4 / _r4）。
+- FAIL P2【桩前遮挡】步骤：站到树桩（或大石块）正南、贴着它。期望：人画在树桩前面。实际：树桩盖住人的腰腹（cs1b_stump_front2）。站桩北侧时被遮挡是正常的（cs1_tree_behind_stump）。
+- 推测：新 sheet 帧高 132、offset (0,-62) 以后，玩家的排序点或道具的排序点没有对齐到脚底。
+- 备注：退出时有约 15.7MB 贴图泄漏，属于旧问题，P3。
+
+## 2026-11-15 17:23 (UTC-8) ysortfix（Sand 直改）+ charswap ① 复测（--freeze-time）— PASS
+- 屋后中、左、右：屋顶盖住下半身，中间只露头，两侧屋檐低所以多露一截腿（ys_house_back_c / _l2 / _r）PASS。
+- 屋前：人画在门廊栏杆上（ys_house_front_b / _c）PASS。
+- 侧檐：东侧贴墙上下走，没有闪烁或跳层（ys_house_side_r*）PASS。西侧那条被西南角的圆灌木堵成死路，只能退出来绕（ys_house_side_l_d），属于碰撞布局，不是 y-sort 问题，记 P3。
+- 矿石 OreNorth：站北侧被石头盖住腿，站南侧人在前（ys_ore_north / ys_ore_south）PASS。贴着石头不按键时没有出现「挖掘」提示，按 Space 时会不会出没测，待查。
+- 树桩：站北侧被盖住、站南侧人在前（ys_stump_north / ys_stump_south2）PASS。桩南紧挨一块石头，所以重叠的面积小。
+- 回归：四向走路、栅栏和墙碰撞、进屋出门都 PASS（ys_walk_* / ys_col_* / ys_in / ys_exit）。日志无 SCRIPT ERROR。
+- 备注：这台机器的截图裁切改成 crop=1280:720:320:219。
+
+## 2026-11-15 17:35 (UTC-8) BUG：农场 OreNorth 挖不了（玩法错误，从初始快照起就这样，不是 ysortfix 引入的）
+- 步骤：--new-game --freeze-time，走到农舍东边的 OreNorth 旁边，先拿锄头按约 3 次 Space，再按 4 换镐子按约 13 次。
+- 预期：镐子能挖，有进度或「要用…」提示，挖完石头消失、背包进矿石或石头。
+- 实际：没有任何 toast，体力一直 100/100，石头还在，背包没多东西，日志也没有 Pickaxe 相关输出（ore_mine_after.png / ore_mine_hit*.png / ore_mine_inv.png）。实机输入延迟大，单看实机不能完全排除「没对准」。
+- 代码只读核对：Player.gd `_use_tool_on_target` 在农场里只处理 FarmPlot 和 Soil，最后调用 `tool_manager.use_tool(null)`，而 ToolManager 里的 PICKAXE 要 target 不为 null 才动作，所以 Ore 根本不会被打到。只有 Mine.gd 接了 Ore 的挖掘。
+- 「挖掘」提示：Ore.tscn 的 InteractionHint 默认 visible=false，全仓库没有代码把它设成显示，所以提示从来不会出现，跟这次换图层无关。
+- 附带：人物几次站到了石头图上面，SolidBody 碰撞可能偏小或偏了，挖的问题修好后一起看。
+
+## 2026-11-15 18:38 (UTC-8) 换装第二批 cs_npc（玛丽、莉莉）复测（--new-game --freeze-time）：PASS，另记 2 个 P3
+- 玛丽：贴图是单帧，没拉伸、没裁切、没底色，和玩家差不多高。看到了左、正面、背面三个朝向，对话时会转身面向玩家。对话「医生・玛丽 / 你好！身体健康吗？」正常（cs2_mary_col2 / cs2_mary_talk）。PASS
+- 玛丽遮挡：玩家站南边人在前，站北边被她盖住腿（cs2_mary_south / cs2_mary_north2）。PASS
+- 玛丽碰撞：从东侧往左走，挡在脚下，只和裙边重叠一点（cs2_mary_col3）。从南侧边缘能擦过去，24×16 脚框属正常。PASS
+- 莉莉：单帧，比例和玛丽一致，会走动和转向。Space 打开「种子商店」，余额 500 金，有防风草、土豆、青豆种子和两种肥料，Esc 能关，任务推进到「与农夫交谈」（cs2_lily / cs2_lily_talk）。PASS
+- 回归：汤姆和另外两个旧村民显示正常，都是单帧，没有整张贴图（cs2_others_a / _b）。日志里没有 SCRIPT ERROR。
+- P3：莉莉头顶的「商店」标签压在发饰上，靠近时 Space 提示也会叠上去，说明这次标签上移对她没生效（cs2_lily.png）。玛丽和其他村民本来就没有名字标签，不算回归。
+- P3/预期：旧村民是 16～20px 的 Q 版，玛丽、莉莉和玩家约 45px，比例和画风差很多，第三批换装后应该会好。
+- 附带：从农场去村子的出口不好找，人会先撞到右边的栅栏（老问题）。
+
+## 2026-11-15 19:17 (UTC-8) 换装第三批 cs_lpc（汤姆、镇长、乔）复测（--new-game --freeze-time）：PASS
+- 三人都是单帧显示，和玩家差不多高，没有整张贴图露出、拉伸、裁切或底色（cs3_group）。三人都会走动、转向，汤姆和乔四个方向都看到了，镇长看到南、西两个方向。PASS
+- 对话：乔是「农夫·乔 / 你好，年轻人！」（cs3_joe_talk）；镇长是「镇长·威廉 / 哦！你一定是新来的农场主！」，后面有选项（cs3_mayor_talk）；汤姆按 Space 打开工具升级，和原来设计一致（cs3_tom_talk_ui）。PASS
+- 遮挡：汤姆、镇长、乔，玩家站南边人都在前；汤姆、镇长，站北边会被盖住（cs3_tom_north_2 / cs3_tom_south / cs3_mayor_north / cs3_mayor_south_2 / cs3_joe_south）。乔的北侧没拍到清楚的图。PASS
+- 碰撞：错开 y 时人和 NPC 横向能重叠，符合只在脚下有碰撞框；没拍到干净的正侧面撞上去的图，记为基本通过。
+- 莉莉：「商店」标签现在在发饰上方，留了几个像素的空，Space 提示在标签上面，也不压（cs3_lily_label / cs3_lily_label_near_3）。上次的 P3 已修好。
+- 玛丽没有回归（cs3_mary）。日志里没有 SCRIPT ERROR。

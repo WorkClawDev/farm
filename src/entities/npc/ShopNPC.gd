@@ -70,6 +70,8 @@ func _add_shop_beacon() -> void:
 	label.z_as_relative = false
 	label.z_index = 100
 	add_child(label)
+	# Grid-sheet actors place this after it exists; 8x1 shops stay at -64.
+	_apply_tall_actor_layout()
 
 func _get_shop_id() -> String:
 	match shop_type:

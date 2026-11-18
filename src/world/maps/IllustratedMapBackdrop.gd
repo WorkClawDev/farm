@@ -3,7 +3,7 @@ class_name IllustratedMapBackdrop
 
 ## Outdoor backdrop for Village / Forest / Beach.
 ## Stage C: Kenney Tiny Town (+ Roguelike water on the farm atlas) stamped at 64px.
-## Mine / house keep a light vector fill (interiors out of Stage C scope).
+## Mine keeps a light vector fill. House inner floor uses wood_floor.png.
 
 @export_enum("village", "forest", "beach", "mine", "house") var map_style: String = "village"
 
@@ -30,8 +30,11 @@ const TEX_SAND_A := preload("res://assets/tiles/kenney/beach_x4/shore_sand_a.png
 const TEX_SAND_B := preload("res://assets/tiles/kenney/beach_x4/shore_sand_b.png")
 const TEX_SEA_A := preload("res://assets/tiles/kenney/beach_x4/shore_sea_a.png")
 const TEX_SEA_B := preload("res://assets/tiles/kenney/beach_x4/shore_sea_b.png")
+const TEX_WOOD_FLOOR := preload("res://assets/sprites/tiles/wood_floor.png")
 
 var _sheet_cache: Dictionary = {}
+var _wood_floor_main: AtlasTexture
+var _wood_floor_alt: AtlasTexture
 
 
 func _ready() -> void:
@@ -195,6 +198,21 @@ func _draw_mine_fallback() -> void:
 	draw_rect(Rect2(-200, -120, 1400, 900), Color("#3a414d"))
 
 
+func _house_wood_tiles() -> Array:
+	if _wood_floor_main == null:
+		_wood_floor_main = AtlasTexture.new()
+		_wood_floor_main.atlas = TEX_WOOD_FLOOR
+		_wood_floor_main.region = Rect2(0, 0, 64, 64)
+		_wood_floor_main.filter_clip = true
+		_wood_floor_alt = AtlasTexture.new()
+		_wood_floor_alt.atlas = TEX_WOOD_FLOOR
+		_wood_floor_alt.region = Rect2(64, 0, 64, 64)
+		_wood_floor_alt.filter_clip = true
+	return [_wood_floor_main, _wood_floor_alt]
+
+
 func _draw_house_fallback() -> void:
+	# Outer ring stays the wall tone. Inner cells are the wood sheet (nearest on this node).
 	draw_rect(OUTER_RECT, Color("#c4a882"))
-	draw_rect(Rect2(80, 80, 960, 640), Color("#e6d2b0"))
+	var tiles: Array = _house_wood_tiles()
+	_fill_tiles(tiles[0], Rect2(80, 80, 960, 640), tiles[1])

@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://src/entities/npc/ShopNPC.gd" id="1_shopnpc"]
 [ext_resource type="Script" path="res://src/entities/npc/NPCSchedule.gd" id="2_schedule"]
-[ext_resource type="Texture2D" path="res://assets/sprites/characters/ninja_adventure/npc_sheets/shopkeeper_lily_sheet.png" id="3_sprite"]
+[ext_resource type="Texture2D" path="res://assets/private/topdown_farm/characters_iceburgdragon/shopkeeper_lily_sheet.png" id="3_sprite"]
 [ext_resource type="Texture2D" path="res://assets/sprites/ui/coin.png" id="4_indicator"]
 
 [node name="ShopNPC" type="CharacterBody2D"]
@@ -17,11 +17,12 @@ shop_id = "general_store"
 position = Vector2(0, 4)
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-position = Vector2(0, -16)
+position = Vector2(0, 0)
 scale = Vector2(1, 1)
 texture = ExtResource("3_sprite")
-hframes = 8
-vframes = 1
+hframes = 4
+vframes = 4
+offset = Vector2(0, -62)
 
 [node name="InteractionArea" type="Area2D" parent="."]
 collision_layer = 0

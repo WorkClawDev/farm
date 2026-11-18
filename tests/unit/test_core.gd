@@ -23,6 +23,7 @@ func _ready() -> void:
 	run_gift_system_tests()
 	run_quest_system_tests()
 	run_player_visual_tests()
+	run_npc_sheet_tests()
 	run_map_editor_resource_tests()
 	run_season_regrow_shop_tests()
 	run_debug_launch_parse_tests()
@@ -40,11 +41,18 @@ func _ready() -> void:
 	run_tool_number_hotkey_tests()
 	run_house_camera_follow_tests()
 	run_debris_ysort_tests()
+	run_house_back_ysort_tests()
 	run_shop_find_guide_tests()
 	run_quest_tracker_feature_tests()
 	run_loopfeedback_tests()
 	run_hoe_station_priority_tests()
 	run_ui_polish_tests()
+	run_house_wood_floor_tests()
+	run_dirt_path_item_tests()
+	run_player_path_state_tests()
+	run_dirt_path_mask_tests()
+	run_map_road_tests()
+	run_cliff_north_wall_tests()
 	
 	print("==================================================")
 	print("RESULTS: %d/%d passed" % [passed_tests, total_tests])
@@ -415,13 +423,175 @@ func run_player_visual_tests():
 	if player_sprite:
 		var frame_width: int = int(player_sprite.texture.get_width() / player_sprite.hframes)
 		var frame_height: int = int(player_sprite.texture.get_height() / player_sprite.vframes)
-		assert_true(frame_width == 64, "Player sprite frame width should be 64 (16px art ×4)")
-		assert_true(frame_height == 64, "Player sprite frame height should be 64 (16px art ×4)")
-		assert_true(player_sprite.scale == Vector2(1, 1), "Player sprite scale should be 1x (sheet already 64px)")
+		assert_true(frame_width == 80, "Player sprite frame width should be 80")
+		assert_true(frame_height == 132, "Player sprite frame height should be 132")
+		assert_true(player_sprite.hframes == 4 and player_sprite.vframes == 4, "Player sheet is 4 columns by 4 rows")
+		assert_true(player_sprite.scale == Vector2(1, 1), "Player sprite scale should stay 1x")
+		assert_true(player_sprite.offset == Vector2(0, -62), "Player sprite offset should put the feet at the origin")
+		assert_true(
+			str(player_sprite.texture.resource_path).ends_with("characters_iceburgdragon/player_sheet.png"),
+			"Player texture should be the iceburgdragon sheet"
+		)
+
+	var body := player.get_node_or_null("CollisionShape2D") as CollisionShape2D
+	var body_shape := body.shape as RectangleShape2D if body != null else null
+	assert_true(
+		body_shape != null and body_shape.size == Vector2(24, 16) and body.position == Vector2(0, -8),
+		"Player foot collision should be a 24x16 box at (0, -8)"
+	)
+	var interact := player.get_node_or_null("InteractionArea/CollisionShape2D") as CollisionShape2D
+	var interact_shape := interact.shape as CircleShape2D if interact != null else null
+	assert_true(
+		interact_shape != null and is_equal_approx(interact_shape.radius, 72.0),
+		"InteractionArea radius should stay 72"
+	)
+	assert_true(Player.sheet_frame(Player.Direction.DOWN, 0) == 0, "Idle down is row 0 column 0")
+	assert_true(Player.sheet_frame(Player.Direction.UP, 0) == 4, "Idle up is row 1 column 0")
+	assert_true(Player.sheet_frame(Player.Direction.LEFT, 0) == 8, "Idle left is row 2 column 0")
+	assert_true(Player.sheet_frame(Player.Direction.RIGHT, 0) == 12, "Idle right is row 3 column 0")
+	assert_true(Player.sheet_frame(Player.Direction.RIGHT, 3) == 15, "Walk frame is dir_row * 4 + column")
+	assert_true(is_equal_approx(Player.WALK_FPS, 8.0), "Walk cycle should be 8 fps")
+
+	player.sprite = player_sprite
+	player.current_direction = Player.Direction.DOWN
+	player.is_walking = true
+	player._walk_accum = 0.0
+	player._walk_frame = 0
+	player._physics_delta = 0.0
+	player._update_animation()
+	assert_true(player_sprite.frame == 0 and not player_sprite.flip_h, "Walking starts on column 0 without flip")
+	player._physics_delta = 1.0 / Player.WALK_FPS
+	player._update_animation()
+	assert_true(player_sprite.frame == 1, "One 8fps step advances to column 1")
+	player.current_direction = Player.Direction.LEFT
+	player._physics_delta = 0.0
+	player._update_animation()
+	assert_true(player_sprite.frame == 9, "Facing left keeps the current walk column")
+	player.is_walking = false
+	player._physics_delta = 1.0
+	player._update_animation()
+	assert_true(player_sprite.frame == 8 and not player_sprite.flip_h, "Standing uses column 0 of the facing row")
 
 	player.free()
 	print("  Player visuals: All tests completed")
 
+
+func run_npc_sheet_tests() -> void:
+	print("\n[NPC Sheet Tests]")
+	var packed := load("res://src/entities/npc/NPC.tscn") as PackedScene
+	assert_true(packed != null, "NPC scene should load")
+	if packed == null:
+		return
+
+	var lily := _spawn_sheet_npc(packed, "shopkeeper_lily")
+	var mary := _spawn_sheet_npc(packed, "doctor_mary")
+	var mayor := _spawn_sheet_npc(packed, "mayor")
+	var joe := _spawn_sheet_npc(packed, "farmer_joe")
+	var tom := _spawn_sheet_npc(packed, "blacksmith_tom")
+	_assert_grid_sheet_npc(lily, "shopkeeper_lily_sheet.png", "Lily")
+	_assert_grid_sheet_npc(mary, "doctor_mary_sheet.png", "Mary")
+	_assert_lpc_sheet_npc(mayor, "mayor_sheet.png", "Mayor")
+	_assert_lpc_sheet_npc(joe, "farmer_joe_sheet.png", "Joe")
+	_assert_lpc_sheet_npc(tom, "blacksmith_tom_sheet.png", "Tom")
+	_assert_legacy_strip_npc(packed)
+	_assert_lily_shop_overhead()
+
+	lily.free()
+	mary.free()
+	mayor.free()
+	joe.free()
+	tom.free()
+	print("  NPC sheets: All tests completed")
+
+func _spawn_sheet_npc(packed: PackedScene, npc_id: String) -> NPC:
+	var npc := packed.instantiate() as NPC
+	npc.npc_id = npc_id
+	add_child(npc)
+	return npc
+
+func _assert_grid_sheet_npc(npc: NPC, sheet_name: String, label: String) -> void:
+	var sprite := npc.get_node("Sprite2D") as Sprite2D
+	assert_true(sprite.hframes == 4 and sprite.vframes == 4, "%s sheet is 4 columns by 4 rows" % label)
+	assert_true(
+		str(sprite.texture.resource_path).ends_with("characters_iceburgdragon/" + sheet_name),
+		"%s texture is the iceburgdragon sheet" % label
+	)
+	assert_true(sprite.offset == Vector2(0, -62) and sprite.scale == Vector2.ONE, "%s offset and scale match the player" % label)
+	npc.is_walking = false
+	assert_true(npc._get_sprite_frame(NPC.Direction.UP) == 4, "%s up frame is 4" % label)
+	assert_true(npc._get_sprite_frame(NPC.Direction.LEFT) == 8, "%s left frame is 8" % label)
+	assert_true(npc._get_sprite_frame(NPC.Direction.RIGHT) == 12, "%s right frame is 12" % label)
+	npc.is_walking = true
+	npc._walk_anim_t = 0.0
+	assert_true(npc._get_sprite_frame(NPC.Direction.DOWN) == 0, "%s walk starts on column 0" % label)
+	npc._walk_anim_t = 1.0 / 8.0
+	assert_true(npc._get_sprite_frame(NPC.Direction.RIGHT) == 13, "%s walk advances one column at 8 fps" % label)
+	var body := npc.get_node("CollisionShape2D") as CollisionShape2D
+	var shape := body.shape as RectangleShape2D
+	assert_true(
+		shape != null and shape.size == Vector2(24, 16) and body.position == Vector2(0, -8),
+		"%s foot collision is 24x16 at (0, -8)" % label
+	)
+	var prompt := npc.get_node("InteractPrompt") as Node2D
+	assert_true(is_equal_approx(prompt.position.y, -134.0), "%s interact prompt sits above the 132px head" % label)
+
+
+func _assert_lpc_sheet_npc(npc: NPC, sheet_name: String, label: String) -> void:
+	var sprite := npc.get_node("Sprite2D") as Sprite2D
+	assert_true(sprite.hframes == 4 and sprite.vframes == 4, "%s sheet is 4 columns by 4 rows" % label)
+	assert_true(
+		str(sprite.texture.resource_path).ends_with("characters/lpc/" + sheet_name),
+		"%s texture is the lpc sheet" % label
+	)
+	var body := npc.get_node("CollisionShape2D") as CollisionShape2D
+	var shape := body.shape as RectangleShape2D
+	assert_true(
+		shape != null and shape.size == Vector2(24, 16) and body.position == Vector2(0, -8),
+		"%s foot collision is 24x16 at (0, -8)" % label
+	)
+
+func _assert_legacy_strip_npc(packed: PackedScene) -> void:
+	var legacy := _spawn_sheet_npc(packed, "fisherman_old_jack")
+	var legacy_sprite := legacy.get_node("Sprite2D") as Sprite2D
+	var legacy_path := ""
+	if legacy_sprite.texture:
+		legacy_path = str(legacy_sprite.texture.resource_path)
+	if legacy_path.ends_with("ninja_adventure/npc_sheets/fisherman_old_jack_sheet.png"):
+		assert_true(legacy_sprite.hframes == 8 and legacy_sprite.vframes == 1, "Old 8x1 NPC keeps hframes 8")
+		var legacy_body := legacy.get_node("CollisionShape2D") as CollisionShape2D
+		var legacy_shape := legacy_body.shape as RectangleShape2D
+		assert_true(
+			legacy_shape != null and legacy_shape.size == Vector2(24, 24) and legacy_body.position == Vector2(0, 4),
+			"Old 8x1 NPC keeps the scene foot box"
+		)
+	legacy.free()
+
+func _assert_lily_shop_overhead() -> void:
+	var packed := load("res://src/entities/npc/ShopNPC.tscn") as PackedScene
+	assert_true(packed != null, "ShopNPC scene should load")
+	if packed == null:
+		return
+	var shop := packed.instantiate() as ShopNPC
+	shop.npc_id = "shopkeeper_lily"
+	var prompt_script = load("res://src/ui/components/InteractPrompt.gd")
+	var prompt = prompt_script.new()
+	prompt.name = "InteractPrompt"
+	prompt.position = Vector2(0, -38)
+	shop.add_child(prompt)
+	add_child(shop)
+	var sprite := shop.get_node("Sprite2D") as Sprite2D
+	var head_top := sprite.position.y + sprite.get_rect().position.y
+	var beacon := shop.get_node_or_null("ShopBeacon") as Label
+	assert_true(beacon != null and beacon.text == "商店", "Lily has a shop label")
+	if beacon:
+		assert_true(
+			beacon.size.y >= 22.0 and beacon.position.y + beacon.size.y <= head_top + 0.01,
+			"Lily shop label sits above the 132px head"
+		)
+		var live_prompt := shop.get_node("InteractPrompt") as Node2D
+		assert_true(live_prompt.position.y <= beacon.position.y, "Lily interact prompt sits above the shop label")
+		assert_true(live_prompt.position.y <= head_top + 0.01, "Lily interact prompt sits above the 132px head")
+	shop.free()
 
 func run_map_editor_resource_tests():
 	print("\n[Map Editor Resource Tests]")
@@ -2522,9 +2692,51 @@ func run_house_camera_follow_tests() -> void:
 
 	var corner := Vector2(260, 240)
 	var corner_offset := Farm.house_camera_follow_offset(corner, region, limits, screen)
-	assert_true(corner_offset == Vector2(-380, -120), "Northwest clamp is undone so the camera stays on the player")
+	var corner_raw := corner - screen * 0.5
+	var corner_desired := Vector2(
+		clampf(corner_raw.x, limits.position.x, limits.end.x - screen.x),
+		clampf(corner_raw.y, limits.position.y, limits.end.y - screen.y)
+	)
+	var corner_top := corner_desired + corner_offset
+	assert_true(
+		corner_top.x >= 0.0 and corner_top.y >= 0.0 and corner_top.x + screen.x <= limits.end.x and corner_top.y + screen.y <= limits.end.y,
+		"Northwest view stays inside the map limits"
+	)
 	var door_offset := Farm.house_camera_follow_offset(door, region, limits, screen)
-	assert_true(door_offset == Vector2(0, -74), "Door standing spot is pulled down off the top limit")
+	var door_raw := door - screen * 0.5
+	var door_desired := Vector2(
+		clampf(door_raw.x, limits.position.x, limits.end.x - screen.x),
+		clampf(door_raw.y, limits.position.y, limits.end.y - screen.y)
+	)
+	var door_top := door_desired + door_offset
+	assert_true(
+		door_top.x >= 0.0 and door_top.y >= 0.0 and door_top.x + screen.x <= limits.end.x and door_top.y + screen.y <= limits.end.y,
+		"Door view stays inside the map limits"
+	)
+	var west := Vector2(40, 1100)
+	var west_offset := Farm.house_camera_follow_offset(west, region, limits, screen)
+	var west_raw := west - screen * 0.5
+	var west_desired := Vector2(
+		clampf(west_raw.x, limits.position.x, limits.end.x - screen.x),
+		clampf(west_raw.y, limits.position.y, limits.end.y - screen.y)
+	)
+	var west_top := west_desired + west_offset
+	assert_true(
+		west_top.x >= 0.0 and west_top.y >= 0.0 and west_top.x + screen.x <= limits.end.x and west_top.y + screen.y <= limits.end.y,
+		"West edge view stays inside the map limits"
+	)
+	var north := Vector2(1600, 60)
+	var north_offset := Farm.house_camera_follow_offset(north, region, limits, screen)
+	var north_raw := north - screen * 0.5
+	var north_desired := Vector2(
+		clampf(north_raw.x, limits.position.x, limits.end.x - screen.x),
+		clampf(north_raw.y, limits.position.y, limits.end.y - screen.y)
+	)
+	var north_top := north_desired + north_offset
+	assert_true(
+		north_top.x >= 0.0 and north_top.y >= 0.0 and north_top.x + screen.x <= limits.end.x and north_top.y + screen.y <= limits.end.y,
+		"North edge view stays inside the map limits"
+	)
 	var clear := Vector2(900, 450)
 	assert_true(
 		region.has_point(clear) and Farm.house_camera_follow_offset(clear, region, limits, screen) == Vector2.ZERO,
@@ -2543,6 +2755,34 @@ func run_house_camera_follow_tests() -> void:
 	print("  House camera follow: All tests completed")
 
 
+
+
+## Charswap y-sort fix: the farmhouse wall outline stops the player's feet on
+## the back-wall ground line, north of the foundation anchor, so the roof
+## covers the lower body while the head still shows above the peak.
+func run_house_back_ysort_tests() -> void:
+	print("\n[House Back Y-Sort]")
+	var house := (load("res://src/world/objects/HouseExterior.tscn") as PackedScene).instantiate() as HouseExterior
+	add_child(house)
+	var roof := house.get_node_or_null("RoofCollision") as CollisionPolygon2D
+	var sprite := house.get_node_or_null("Sprite2D") as Sprite2D
+	if roof == null or sprite == null or sprite.texture == null:
+		print("  (private farmhouse art missing, skipped)")
+		house.free()
+		return
+	var back_y := INF
+	for point in roof.polygon:
+		back_y = minf(back_y, point.y)
+	var peak_y := sprite.position.y - house.get_display_size().y * 0.5
+	# Player feet rest on the wall (hitbox bottom = node origin). Visible sheet
+	# height is about 124px above the feet (cell 132, frame bottom +4, padding).
+	var player_height := 124.0
+	assert_true(not Farm.actor_draws_in_front_of_house(back_y, 0.0), "屋后被墙挡住时脚在地基北侧，屋子画在人前")
+	assert_true(back_y > peak_y + 32.0, "屋后停步点在屋脊以南，屋顶能盖住下半身")
+	assert_true(back_y - player_height < peak_y, "屋后停步时头还露在屋脊上方")
+	assert_true(Farm.actor_draws_in_front_of_house(8.0, 0.0), "站在地基南侧（门前）人画在屋前")
+	house.free()
+	print("  House back y-sort: All tests completed")
 
 
 func run_debris_ysort_tests() -> void:
@@ -3197,6 +3437,217 @@ func run_ui_polish_tests() -> void:
 	print("  UI Polish: All tests completed")
 
 
+func run_house_wood_floor_tests() -> void:
+	print("\n[House Wood Floor]")
+	var backdrop := IllustratedMapBackdrop.new()
+	backdrop.setup("house")
+	var tiles: Array = backdrop._house_wood_tiles()
+	var main := tiles[0] as AtlasTexture if not tiles.is_empty() else null
+	var alt := tiles[1] as AtlasTexture if tiles.size() > 1 else null
+	var sheet := main.atlas if main != null else null
+	assert_true(
+		backdrop.map_style == "house"
+			and main != null and alt != null and sheet != null
+			and str(sheet.resource_path).ends_with("wood_floor.png")
+			and sheet.get_width() == 128 and sheet.get_height() == 64
+			and main.region == Rect2(0, 0, 64, 64)
+			and alt.region == Rect2(64, 0, 64, 64)
+			and alt.atlas == sheet,
+		"house 背景加载 wood_floor.png 纹理且成功"
+	)
+	backdrop.free()
+
+
+func run_dirt_path_item_tests() -> void:
+	print("\n[Dirt Path Item]")
+	var item = ItemDatabase.get_item("dirt_path")
+	assert_true(item != null, "dirt_path item exists")
+	var icon_path := str(ItemDatabase.get_icon_path("dirt_path"))
+	assert_true(load(icon_path) != null, "dirt_path icon loads from %s" % icon_path)
+	var shop = load("res://src/core/economy/ShopSystem.gd").new()
+	add_child(shop)
+	var saved_time := TimeManager.current_time
+	TimeManager.current_time = 10.0
+	var opened = shop.open_shop("seed_shop")
+	var ids: Array = []
+	for entry in shop.get_shop_items("seed_shop"):
+		ids.append(str(entry.get("item_id", "")))
+	var price = shop.calculate_buy_price("dirt_path", 1)
+	assert_true(opened and ids.has("dirt_path"), "seed shop lists dirt_path")
+	assert_true(price == 5, "dirt_path costs 5 gold")
+	shop.close_shop()
+	TimeManager.current_time = saved_time
+	remove_child(shop)
+	shop.free()
+	print("  Dirt path item: All tests completed")
+
+
+func run_player_path_state_tests() -> void:
+	print("\n[Player Path State]")
+	FarmState.reset()
+	var a := Vector2i(3, 12)
+	var b := Vector2i(-1, 4)
+	assert_true(FarmState.get_player_paths().is_empty(), "player paths start empty after reset")
+	assert_true(FarmState.add_player_path(a) and FarmState.has_player_path(a), "add_player_path then has_player_path")
+	assert_true(not FarmState.add_player_path(a), "adding the same path cell twice is refused")
+	FarmState.add_player_path(b)
+	assert_true(FarmState.remove_player_path(b) and not FarmState.has_player_path(b), "remove_player_path clears the cell")
+	assert_true(not FarmState.remove_player_path(b), "removing a missing path cell returns false")
+	var saved := FarmState.get_save_state()
+	var json_saved = JSON.parse_string(JSON.stringify(saved))
+	FarmState.reset()
+	var loaded := json_saved is Dictionary and FarmState.load_save_state(json_saved)
+	assert_true(
+		loaded and FarmState.has_player_path(a) and FarmState.get_player_paths().size() == 1,
+		"player paths survive save_state JSON round-trip"
+	)
+	var old_save := saved.duplicate(true)
+	old_save.erase("player_paths")
+	var old_loaded := FarmState.load_save_state(old_save)
+	assert_true(old_loaded and FarmState.get_player_paths().is_empty(), "old save without player_paths loads with no paths")
+	FarmState.add_player_path(a)
+	FarmState.reset()
+	assert_true(FarmState.get_player_paths().is_empty(), "reset clears player paths")
+	print("  Player path state: All tests completed")
+
+
+
+func run_dirt_path_mask_tests() -> void:
+	print("\n[Dirt Path Mask]")
+	var farm_script = load("res://src/world/maps/Farm.gd")
+	var even := Vector2i(0, 0)
+	var odd := Vector2i(1, 0)
+	_assert_path_mask(farm_script, 0, even, 0, Rect2(256, 64, 64, 64), "isolated cell uses path_end_s")
+	_assert_path_mask(farm_script, 1, even, 0, Rect2(128, 64, 64, 64), "north end uses path_end_n")
+	_assert_path_mask(farm_script, 2, even, 0, Rect2(192, 64, 64, 64), "east end uses path_end_e")
+	_assert_path_mask(farm_script, 4, even, 0, Rect2(256, 64, 64, 64), "south end uses path_end_s")
+	_assert_path_mask(farm_script, 8, even, 0, Rect2(320, 64, 64, 64), "west end uses path_end_w")
+	_assert_path_mask(farm_script, 10, even, 0, Rect2(256, 0, 64, 64), "horizontal road uses path_h")
+	_assert_path_mask(farm_script, 10, odd, 0, Rect2(320, 0, 64, 64), "horizontal road odd cell uses path_h_b")
+	_assert_path_mask(farm_script, 5, even, 0, Rect2(0, 64, 64, 64), "vertical road uses path_v")
+	_assert_path_mask(farm_script, 5, odd, 0, Rect2(64, 64, 64, 64), "vertical road odd cell uses path_v_b")
+	_assert_path_mask(farm_script, 3, even, 0, Rect2(192, 128, 64, 64), "NE bend uses path_bend_ne")
+	_assert_path_mask(farm_script, 6, even, 0, Rect2(0, 128, 64, 64), "ES bend uses path_bend_es")
+	_assert_path_mask(farm_script, 9, even, 0, Rect2(128, 128, 64, 64), "WN bend uses path_bend_wn")
+	_assert_path_mask(farm_script, 12, even, 0, Rect2(64, 128, 64, 64), "SW bend uses path_bend_sw")
+	_assert_path_mask(farm_script, 11, even, 0, Rect2(256, 128, 64, 64), "NEW junction uses path_t_n")
+	_assert_path_mask(farm_script, 7, even, 0, Rect2(320, 128, 64, 64), "NES junction uses path_t_e")
+	_assert_path_mask(farm_script, 14, even, 0, Rect2(0, 192, 64, 64), "ESW junction uses path_t_s")
+	_assert_path_mask(farm_script, 13, even, 0, Rect2(64, 192, 64, 64), "NSW junction uses path_t_w")
+	_assert_path_mask(farm_script, 15, even, 0, Rect2(192, 0, 64, 64), "cross uses path_cross")
+	_assert_path_mask(farm_script, 6, even, 8, Rect2(256, 256, 64, 64), "ES bend with SE path uses path_outer_nw")
+	_assert_path_mask(farm_script, 14, even, 8, Rect2(128, 192, 64, 64), "ESW with a south diagonal uses path_edge_n")
+	_assert_path_mask(farm_script, 14, odd, 8, Rect2(0, 256, 64, 64), "ESW edge variant uses path_edge_n_b")
+	_assert_path_mask(farm_script, 15, even, 15, Rect2(0, 0, 64, 64), "four diagonals use path_dirt_a")
+	_assert_path_mask(farm_script, 15, odd, 15, Rect2(64, 0, 64, 64), "four diagonals odd cell uses path_dirt_b")
+	_assert_path_mask(farm_script, 15, even, 14, Rect2(128, 320, 64, 64), "one missing NW diagonal uses path_inner_nw")
+	print("  Dirt path mask: All tests completed")
+
+
+func run_map_road_tests() -> void:
+	print("\n[Map Roads]")
+	var snapshot: Dictionary = FarmState.get_save_state()
+	FarmState.reset()
+	var farm: Farm = Farm.new()
+	FarmState.farm_reset.connect(farm._rebuild_player_paths)
+	farm._setup_player_paths()
+	assert_true(Farm.MAP_ROADS.size() == 27, "MAP_ROADS has 27 cells")
+	var leaked := false
+	for road in Farm.MAP_ROADS:
+		if FarmState.has_player_path(road):
+			leaked = true
+	assert_true(not leaked, "map roads are not stored as player paths")
+	assert_true(farm._path_sprites.size() == 27, "startup draws one sprite per map road")
+	var cell_13_4 := Vector2i(13, 4)
+	var cell_13_5 := Vector2i(13, 5)
+	assert_true(farm.is_path_cell(cell_13_4) and farm.is_path_cell(cell_13_5), "MAP_ROADS cells count as paths")
+	assert_true(not farm.is_player_path(cell_13_4), "(13,4) is a map road, not a player path")
+	var tile_13_5: Rect2 = farm._pick_path_tile(cell_13_5)
+	assert_true(
+		tile_13_5 == Farm.path_region_for_mask(11, cell_13_5, 0),
+		"(13,5) mask includes north neighbor (13,4) (got %s)" % tile_13_5
+	)
+	var sprite_13 = farm._path_sprites.get(cell_13_5)
+	var region_13 := Rect2()
+	if sprite_13 is Sprite2D:
+		region_13 = (sprite_13 as Sprite2D).region_rect
+	assert_true(sprite_13 is Sprite2D and region_13 == tile_13_5, "(13,5) sprite uses the north-neighbor tile")
+	assert_true(not farm.try_place_path(cell_13_5), "try_place_path refuses a map road cell")
+	assert_true(not farm.try_remove_path(cell_13_5), "try_remove_path refuses a map road cell")
+	assert_true(
+		farm._path_sprites.has(cell_13_5) and is_instance_valid(farm._path_sprites[cell_13_5]),
+		"map road sprite stays when removal is refused"
+	)
+	var cell_23_5 := Vector2i(23, 5)
+	var cell_24_5 := Vector2i(24, 5)
+	var region_23 := _map_road_sprite_region(farm, cell_23_5)
+	assert_true(
+		region_23 == Farm.path_region_for_mask(8, cell_23_5, 0),
+		"(23,5) starts as a west end"
+	)
+	assert_true(farm.try_place_path(cell_24_5), "player path places on (24,5)")
+	var joined: Rect2 = Farm.path_region_for_mask(10, cell_23_5, 0)
+	assert_true(farm._pick_path_tile(cell_23_5) == joined, "(23,5) counts (24,5) as an east neighbor")
+	assert_true(_map_road_sprite_region(farm, cell_23_5) == joined, "(23,5) map road tile refreshes onto the player path")
+	var saved: Dictionary = FarmState.get_save_state()
+	var saved_paths = saved.get("player_paths", [])
+	var map_in_save := false
+	if saved_paths is Array:
+		for road in Farm.MAP_ROADS:
+			for raw in saved_paths:
+				if raw is Array and raw.size() >= 2 and int(raw[0]) == road.x and int(raw[1]) == road.y:
+					map_in_save = true
+	assert_true(
+		saved_paths is Array and not map_in_save and saved_paths.size() == 1,
+		"save player_paths omits MAP_ROADS and keeps only the player cell"
+	)
+	assert_true(farm.try_remove_path(cell_24_5), "player path at (24,5) can be removed")
+	assert_true(not farm._path_sprites.has(cell_24_5), "removed player path sprite is gone")
+	assert_true(
+		farm._path_sprites.has(cell_23_5) and is_instance_valid(farm._path_sprites[cell_23_5]),
+		"map road (23,5) remains after the player path is removed"
+	)
+	assert_true(
+		_map_road_sprite_region(farm, cell_23_5) == Farm.path_region_for_mask(8, cell_23_5, 0),
+		"(23,5) map road tile refreshes back after the player path is removed"
+	)
+	assert_true(not FarmState.has_player_path(cell_23_5), "map road cell stays out of FarmState")
+	assert_true(FarmState.add_player_path(cell_24_5), "stage a player path before farm_reset")
+	FarmState.reset()
+	assert_true(
+		farm._path_sprites.size() == 27 and farm._path_sprites.has(cell_23_5) and not farm._path_sprites.has(cell_24_5),
+		"farm_reset redraws map roads and drops player paths"
+	)
+	var hoed := 0
+	for y in FarmState.GRID_HEIGHT:
+		for x in FarmState.GRID_WIDTH:
+			var coord := Vector2i(x, y)
+			var guard := 0
+			while FarmState.get_debris(coord) != "" and guard < 6:
+				FarmState.strike_debris(coord)
+				guard += 1
+			if FarmState.till(coord):
+				hoed += 1
+	assert_true(hoed == 80, "all 80 plots can be hoed")
+	if FarmState.farm_reset.is_connected(farm._rebuild_player_paths):
+		FarmState.farm_reset.disconnect(farm._rebuild_player_paths)
+	farm.free()
+	FarmState.load_save_state(snapshot)
+	print("  Map roads: All tests completed")
+
+
+func _map_road_sprite_region(farm: Farm, cell: Vector2i) -> Rect2:
+	var sprite = farm._path_sprites.get(cell)
+	if sprite is Sprite2D:
+		return (sprite as Sprite2D).region_rect
+	return Rect2()
+
+
+func _assert_path_mask(farm_script, mask: int, cell: Vector2i, diag: int, expected: Rect2, message: String) -> void:
+	var got: Rect2 = farm_script.path_region_for_mask(mask, cell, diag)
+	assert_true(got == expected, "%s (got %s)" % [message, got])
+
+
 func assert_true(condition: bool, message: String):
 	total_tests += 1
 	if condition:
@@ -3205,3 +3656,66 @@ func assert_true(condition: bool, message: String):
 	else:
 		failed_tests += 1
 		print("  [FAIL] %s" % message)
+
+func run_cliff_north_wall_tests() -> void:
+	print("\n[Cliff North Wall]")
+	var packed_map = load("res://src/world/maps/content/FarmMap.tscn")
+	var map = packed_map.instantiate()
+	var cliffs := map.get_node_or_null("Cliffs") as TileMapLayer
+	var overlay := map.get_node_or_null("TerrainOverlay") as TileMapLayer
+	assert_true(cliffs != null, "Cliffs layer exists")
+	if cliffs == null or cliffs.tile_set == null:
+		map.free()
+		print("  Cliff north wall: aborted")
+		return
+	var row0 := false
+	for cell in cliffs.get_used_cells():
+		if cell.y == 0:
+			row0 = true
+			break
+	assert_true(row0, "Cliffs row 0 has tiles")
+	assert_true(
+		overlay != null and cliffs.z_index == overlay.z_index and not cliffs.y_sort_enabled,
+		"Cliffs shares TerrainOverlay z and does not y-sort"
+	)
+	assert_true(cliffs.tile_set.get_physics_layers_count() >= 1, "Cliff TileSet has physics layer 0")
+	assert_true(
+		cliffs.tile_set.get_physics_layer_collision_layer(0) == 1,
+		"Cliff physics layer 0 is world_solid collision layer 1"
+	)
+	var source := cliffs.tile_set.get_source(0) as TileSetAtlasSource
+	var top_data: TileData = null
+	if source != null:
+		top_data = source.get_tile_data(cliffs.get_cell_atlas_coords(Vector2i(13, 0)), 0)
+	assert_true(
+		top_data != null and top_data.get_collision_polygons_count(0) > 0,
+		"North wall cell (13, 0) has collision"
+	)
+	# Real walk. Foot is 24x16 at (0, -8), so the top of the box is 16px above the origin.
+	# The farmhouse stands on this ray (back wall near y=205) and is not the cliff under test.
+	add_child(map)
+	if cliffs.has_method("update_internals"):
+		cliffs.update_internals()
+	var house := map.get_node_or_null("Objects/PlayerHouseExterior") as CollisionObject2D
+	if house != null:
+		house.collision_layer = 0
+	var player_scene := load("res://src/entities/player/Player.tscn") as PackedScene
+	var player := player_scene.instantiate() as CharacterBody2D
+	map.add_child(player)
+	player.global_position = Vector2(841, 358)
+	player.force_update_transform()
+	PhysicsServer2D.body_set_state(player.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, player.global_transform)
+	var hit := player.move_and_collide(Vector2(0, -400))
+	var stop_y := player.global_position.y
+	assert_true(
+		hit != null and hit.get_collider() == cliffs,
+		"Walking north from (841, 358) first hits the Cliffs layer"
+	)
+	assert_true(
+		stop_y >= 120.0 and stop_y <= 140.0,
+		"Walking north from (841, 358) stops at y 120..140 (stop %.1f)" % stop_y
+	)
+	assert_true(stop_y >= 110.0, "Walking north from (841, 358) stops at y>=110 (stop %.1f)" % stop_y)
+	map.free()
+	print("  Cliff north wall: All tests completed")
+

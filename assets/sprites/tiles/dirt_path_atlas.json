@@ -1,0 +1,633 @@
+{
+  "image": "res://assets/sprites/tiles/dirt_path_atlas.png",
+  "image_alpha": "res://assets/sprites/tiles/dirt_path_atlas_alpha.png",
+  "image_alpha_note": "same grid; grass pixels transparent so the map's own ground (Kenney grass B) shows through. Recommended for the farm. v3: grey-brown dirt, soft 1px rim, irregular edges, grass tufts.",
+  "cell_size": 64,
+  "columns": 6,
+  "rows": 13,
+  "region_formula": "Rect2(col*64, row*64, 64, 64)",
+  "tiles": {
+    "path_dirt_a": [
+      0,
+      0
+    ],
+    "path_dirt_b": [
+      1,
+      0
+    ],
+    "path_dirt_c": [
+      2,
+      0
+    ],
+    "path_cross": [
+      3,
+      0
+    ],
+    "path_h": [
+      4,
+      0
+    ],
+    "path_h_b": [
+      5,
+      0
+    ],
+    "path_v": [
+      0,
+      1
+    ],
+    "path_v_b": [
+      1,
+      1
+    ],
+    "path_end_n": [
+      2,
+      1
+    ],
+    "path_end_e": [
+      3,
+      1
+    ],
+    "path_end_s": [
+      4,
+      1
+    ],
+    "path_end_w": [
+      5,
+      1
+    ],
+    "path_bend_es": [
+      0,
+      2
+    ],
+    "path_bend_sw": [
+      1,
+      2
+    ],
+    "path_bend_wn": [
+      2,
+      2
+    ],
+    "path_bend_ne": [
+      3,
+      2
+    ],
+    "path_t_n": [
+      4,
+      2
+    ],
+    "path_t_e": [
+      5,
+      2
+    ],
+    "path_t_s": [
+      0,
+      3
+    ],
+    "path_t_w": [
+      1,
+      3
+    ],
+    "path_edge_n": [
+      2,
+      3
+    ],
+    "path_edge_e": [
+      3,
+      3
+    ],
+    "path_edge_s": [
+      4,
+      3
+    ],
+    "path_edge_w": [
+      5,
+      3
+    ],
+    "path_edge_n_b": [
+      0,
+      4
+    ],
+    "path_edge_e_b": [
+      1,
+      4
+    ],
+    "path_edge_s_b": [
+      2,
+      4
+    ],
+    "path_edge_w_b": [
+      3,
+      4
+    ],
+    "path_outer_nw": [
+      4,
+      4
+    ],
+    "path_outer_ne": [
+      5,
+      4
+    ],
+    "path_outer_se": [
+      0,
+      5
+    ],
+    "path_outer_sw": [
+      1,
+      5
+    ],
+    "path_inner_nw": [
+      2,
+      5
+    ],
+    "path_inner_ne": [
+      3,
+      5
+    ],
+    "path_inner_se": [
+      4,
+      5
+    ],
+    "path_inner_sw": [
+      5,
+      5
+    ],
+    "path_h_c": [
+      0,
+      6
+    ],
+    "path_v_c": [
+      1,
+      6
+    ],
+    "path_edge_n_c": [
+      2,
+      6
+    ],
+    "path_edge_e_c": [
+      3,
+      6
+    ],
+    "path_edge_s_c": [
+      4,
+      6
+    ],
+    "path_edge_w_c": [
+      5,
+      6
+    ],
+    "path_end_n_b": [
+      0,
+      7
+    ],
+    "path_end_n_c": [
+      1,
+      7
+    ],
+    "path_end_e_b": [
+      2,
+      7
+    ],
+    "path_end_e_c": [
+      3,
+      7
+    ],
+    "path_end_s_b": [
+      4,
+      7
+    ],
+    "path_end_s_c": [
+      5,
+      7
+    ],
+    "path_end_w_b": [
+      0,
+      8
+    ],
+    "path_end_w_c": [
+      1,
+      8
+    ],
+    "path_inner_nw_b": [
+      2,
+      8
+    ],
+    "path_inner_nw_c": [
+      3,
+      8
+    ],
+    "path_inner_ne_b": [
+      4,
+      8
+    ],
+    "path_inner_ne_c": [
+      5,
+      8
+    ],
+    "path_inner_se_b": [
+      0,
+      9
+    ],
+    "path_inner_se_c": [
+      1,
+      9
+    ],
+    "path_inner_sw_b": [
+      2,
+      9
+    ],
+    "path_inner_sw_c": [
+      3,
+      9
+    ],
+    "path_bend_es_b": [
+      4,
+      9
+    ],
+    "path_bend_es_c": [
+      5,
+      9
+    ],
+    "path_bend_sw_b": [
+      0,
+      10
+    ],
+    "path_bend_sw_c": [
+      1,
+      10
+    ],
+    "path_bend_wn_b": [
+      2,
+      10
+    ],
+    "path_bend_wn_c": [
+      3,
+      10
+    ],
+    "path_bend_ne_b": [
+      4,
+      10
+    ],
+    "path_bend_ne_c": [
+      5,
+      10
+    ],
+    "path_outer_nw_b": [
+      0,
+      11
+    ],
+    "path_outer_nw_c": [
+      1,
+      11
+    ],
+    "path_outer_ne_b": [
+      2,
+      11
+    ],
+    "path_outer_ne_c": [
+      3,
+      11
+    ],
+    "path_outer_se_b": [
+      4,
+      11
+    ],
+    "path_outer_se_c": [
+      5,
+      11
+    ],
+    "path_outer_sw_b": [
+      0,
+      12
+    ],
+    "path_outer_sw_c": [
+      1,
+      12
+    ],
+    "path_single": [
+      2,
+      12
+    ]
+  },
+  "mask_bits": {
+    "N": 1,
+    "E": 2,
+    "S": 4,
+    "W": 8,
+    "note": "bit set = that orthogonal neighbour is a path cell; y grows south"
+  },
+  "mask4": {
+    "0": {
+      "dirs": "none",
+      "tiles": [
+        "path_end_s"
+      ]
+    },
+    "1": {
+      "dirs": "N",
+      "tiles": [
+        "path_end_n"
+      ]
+    },
+    "2": {
+      "dirs": "E",
+      "tiles": [
+        "path_end_e"
+      ]
+    },
+    "3": {
+      "dirs": "NE",
+      "tiles": [
+        "path_bend_ne"
+      ]
+    },
+    "4": {
+      "dirs": "S",
+      "tiles": [
+        "path_end_s"
+      ]
+    },
+    "5": {
+      "dirs": "NS",
+      "tiles": [
+        "path_v",
+        "path_v_b"
+      ]
+    },
+    "6": {
+      "dirs": "ES",
+      "tiles": [
+        "path_bend_es"
+      ]
+    },
+    "7": {
+      "dirs": "NES",
+      "tiles": [
+        "path_t_e"
+      ]
+    },
+    "8": {
+      "dirs": "W",
+      "tiles": [
+        "path_end_w"
+      ]
+    },
+    "9": {
+      "dirs": "NW",
+      "tiles": [
+        "path_bend_wn"
+      ]
+    },
+    "10": {
+      "dirs": "EW",
+      "tiles": [
+        "path_h",
+        "path_h_b"
+      ]
+    },
+    "11": {
+      "dirs": "NEW",
+      "tiles": [
+        "path_t_n"
+      ]
+    },
+    "12": {
+      "dirs": "SW",
+      "tiles": [
+        "path_bend_sw"
+      ]
+    },
+    "13": {
+      "dirs": "NSW",
+      "tiles": [
+        "path_t_w"
+      ]
+    },
+    "14": {
+      "dirs": "ESW",
+      "tiles": [
+        "path_t_s"
+      ]
+    },
+    "15": {
+      "dirs": "NESW",
+      "tiles": [
+        "path_cross"
+      ]
+    }
+  },
+  "variant_rule": {
+    "two_variants": "idx = posmod(x + y, 2)  (path_h/path_h_b, path_v/path_v_b, path_edge_X/path_edge_X_b)",
+    "interior": "path_dirt_[a,b,c][posmod(x + 2*y, 3)]"
+  },
+  "refinement": {
+    "all4 (mask 15)": {
+      "diagonals checked": [
+        "nw",
+        "ne",
+        "sw",
+        "se"
+      ],
+      "0 missing": "interior (path_dirt_a/b/c)",
+      "1 missing": "path_inner_<missing>",
+      "2 missing": "interior (path_dirt_a/b/c) - no double-inner tile; one bite or cross both looked worse",
+      "3-4 missing": "path_cross"
+    },
+    "three (mask 7,11,13,14)": {
+      "rule": "if AT LEAST ONE of the two diagonals on the path side is path -> edge tile (variant by parity); if neither -> T tile. (T with one diagonal leaves a grass hole inside the dirt mass; checked visually)",
+      "cases": {
+        "14": {
+          "diagonals": [
+            "se",
+            "sw"
+          ],
+          "edge": [
+            "path_edge_n",
+            "path_edge_n_b"
+          ],
+          "else": "path_t_s"
+        },
+        "13": {
+          "diagonals": [
+            "nw",
+            "sw"
+          ],
+          "edge": [
+            "path_edge_e",
+            "path_edge_e_b"
+          ],
+          "else": "path_t_w"
+        },
+        "11": {
+          "diagonals": [
+            "ne",
+            "nw"
+          ],
+          "edge": [
+            "path_edge_s",
+            "path_edge_s_b"
+          ],
+          "else": "path_t_n"
+        },
+        "7": {
+          "diagonals": [
+            "ne",
+            "se"
+          ],
+          "edge": [
+            "path_edge_w",
+            "path_edge_w_b"
+          ],
+          "else": "path_t_e"
+        }
+      }
+    },
+    "two adjacent (mask 3,6,9,12)": {
+      "rule": "if the diagonal between the two arms is path -> outer corner, else 1-wide bend",
+      "cases": {
+        "6": {
+          "diagonal": "se",
+          "outer": "path_outer_nw",
+          "else": "path_bend_es"
+        },
+        "12": {
+          "diagonal": "sw",
+          "outer": "path_outer_ne",
+          "else": "path_bend_sw"
+        },
+        "9": {
+          "diagonal": "nw",
+          "outer": "path_outer_se",
+          "else": "path_bend_wn"
+        },
+        "3": {
+          "diagonal": "ne",
+          "outer": "path_outer_sw",
+          "else": "path_bend_ne"
+        }
+      }
+    },
+    "others (0,1,2,4,8,5,10)": "mask4 only, diagonals ignored"
+  },
+  "isolated_fallback": "path_end_s (no 4-side-grass tile; only its south side is open (flat bottom), see DIRT_PATH.md)",
+  "update_on_change": "re-pick the changed cell and its 8 neighbours",
+  "provenance": "in-house: hand-pixel Python (/workspace/farm_asset_candidates/path_v3/build_path_v3.py); grass colours sampled from farm_ground_atlas_64.png (grass B, in-house). No third-party art, no attribution needed.",
+  "variants": {
+    "path_h": [
+      "path_h",
+      "path_h_b",
+      "path_h_c"
+    ],
+    "path_v": [
+      "path_v",
+      "path_v_b",
+      "path_v_c"
+    ],
+    "path_edge_n": [
+      "path_edge_n",
+      "path_edge_n_b",
+      "path_edge_n_c"
+    ],
+    "path_edge_e": [
+      "path_edge_e",
+      "path_edge_e_b",
+      "path_edge_e_c"
+    ],
+    "path_edge_s": [
+      "path_edge_s",
+      "path_edge_s_b",
+      "path_edge_s_c"
+    ],
+    "path_edge_w": [
+      "path_edge_w",
+      "path_edge_w_b",
+      "path_edge_w_c"
+    ],
+    "path_end_n": [
+      "path_end_n",
+      "path_end_n_b",
+      "path_end_n_c"
+    ],
+    "path_end_e": [
+      "path_end_e",
+      "path_end_e_b",
+      "path_end_e_c"
+    ],
+    "path_end_s": [
+      "path_end_s",
+      "path_end_s_b",
+      "path_end_s_c"
+    ],
+    "path_end_w": [
+      "path_end_w",
+      "path_end_w_b",
+      "path_end_w_c"
+    ],
+    "path_inner_nw": [
+      "path_inner_nw",
+      "path_inner_nw_b",
+      "path_inner_nw_c"
+    ],
+    "path_inner_ne": [
+      "path_inner_ne",
+      "path_inner_ne_b",
+      "path_inner_ne_c"
+    ],
+    "path_inner_se": [
+      "path_inner_se",
+      "path_inner_se_b",
+      "path_inner_se_c"
+    ],
+    "path_inner_sw": [
+      "path_inner_sw",
+      "path_inner_sw_b",
+      "path_inner_sw_c"
+    ],
+    "path_bend_es": [
+      "path_bend_es",
+      "path_bend_es_b",
+      "path_bend_es_c"
+    ],
+    "path_bend_sw": [
+      "path_bend_sw",
+      "path_bend_sw_b",
+      "path_bend_sw_c"
+    ],
+    "path_bend_wn": [
+      "path_bend_wn",
+      "path_bend_wn_b",
+      "path_bend_wn_c"
+    ],
+    "path_bend_ne": [
+      "path_bend_ne",
+      "path_bend_ne_b",
+      "path_bend_ne_c"
+    ],
+    "path_outer_nw": [
+      "path_outer_nw",
+      "path_outer_nw_b",
+      "path_outer_nw_c"
+    ],
+    "path_outer_ne": [
+      "path_outer_ne",
+      "path_outer_ne_b",
+      "path_outer_ne_c"
+    ],
+    "path_outer_se": [
+      "path_outer_se",
+      "path_outer_se_b",
+      "path_outer_se_c"
+    ],
+    "path_outer_sw": [
+      "path_outer_sw",
+      "path_outer_sw_b",
+      "path_outer_sw_c"
+    ]
+  },
+  "variant_rule_v3": {
+    "optional": true,
+    "rule": "name = variants[base][posmod(hash(x, y), variants[base].size())]; hash any stable int hash of the world cell",
+    "note": "Backwards compatible: Farm.gd v2 logic ignores 'variants' and still picks base / _b by parity; rows 0-5 are unchanged names at unchanged cells. Rows 6+ are extra cells only reached through 'variants' or 'path_single'.",
+    "path_single": "optional isolated-cell tile (mask 0, all four sides grass). v2 fallback path_end_s still exists."
+  },
+  "version": "v3"
+}

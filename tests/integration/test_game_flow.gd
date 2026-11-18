@@ -58,6 +58,9 @@ func _ready() -> void:
 	await _exercise_actor_collisions()
 	await _exercise_golden_path()
 	await _exercise_watering_can()
+	await _exercise_farm_ore_mining()
+	await _exercise_farm_ore_hint_sides()
+	await _exercise_farm_ore_persistence()
 	await _exercise_tool_vs_hotbar_dispatch()
 	await _exercise_tool_number_keys()
 	await _exercise_eat_food()
@@ -125,9 +128,10 @@ func _exercise_scene(scene_name: String, scene_path: String) -> void:
 	if scene_path == "res://src/world/maps/Village.tscn":
 		var sample_npc := instance.get_node_or_null("NPCs/MayorThomas")
 		var mayor_sprite := sample_npc.get_node_or_null("Sprite2D") as Sprite2D if sample_npc else null
-		_record("村民使用 Ninja 精灵表（无矢量插画）", sample_npc != null and sample_npc.get_node_or_null("VillagerIllustration") == null
-			and mayor_sprite != null and mayor_sprite.visible and mayor_sprite.hframes >= 8
-			and mayor_sprite.texture != null and mayor_sprite.texture.get_width() == 512)
+		_record("村民使用 LPC 精灵表（无矢量插画）", sample_npc != null and sample_npc.get_node_or_null("VillagerIllustration") == null
+			and mayor_sprite != null and mayor_sprite.visible and mayor_sprite.hframes == 4 and mayor_sprite.vframes == 4
+			and mayor_sprite.texture != null and mayor_sprite.texture.get_width() == 320
+			and str(mayor_sprite.texture.resource_path).ends_with("characters/lpc/mayor_sheet.png"))
 	elif scene_path == "res://src/world/maps/Forest.tscn":
 		var forage_points := instance.get_node_or_null("ForagePoints")
 		var sample_forage := (
@@ -169,6 +173,13 @@ func _exercise_scene(scene_name: String, scene_path: String) -> void:
 					and farm_map.y_sort_enabled
 					and south_of_foundation
 			)
+			var ore_north := instance.find_child("OreNorth", true, false) as CanvasItem
+			_record(
+				"农舍旁的矿石和玩家同层按脚底 Y 排序（站南侧人在前）",
+				ore_north != null
+					and not ore_north.z_as_relative
+					and ore_north.z_index == farm_player.z_index
+			)
 			_record(
 				"站在农舍北侧时墙画在玩家前面",
 				house_for_camera != null
@@ -182,10 +193,35 @@ func _exercise_scene(scene_name: String, scene_path: String) -> void:
 				farm_player.global_position = Vector2(520, 220)
 				await get_tree().process_frame
 				await get_tree().process_frame
+				var view_center := farm_camera.get_screen_center_position()
+				var view_px := farm_camera.get_viewport().get_visible_rect().size
+				var view_half := Vector2(view_px.x / farm_camera.zoom.x, view_px.y / farm_camera.zoom.y) * 0.5
+				var map_bounds := farm_map.get_global_world_rect()
+				var view_left := view_center.x - view_half.x
+				var view_top := view_center.y - view_half.y
+				var view_right := view_center.x + view_half.x
+				var view_bottom := view_center.y + view_half.y
 				_record(
-					"农舍附近镜头跟着玩家，地图限制仍是地图边界",
-					farm_camera.get_screen_center_position().distance_to(farm_player.global_position) < 12.0
+					"站在农舍西北时可视矩形不超出地图，镜头限制仍是地图边界",
+					view_left >= 0.0
+						and view_top >= 0.0
+						and view_right <= map_bounds.end.x
+						and view_bottom <= map_bounds.end.y
 						and farm_map.camera_limits_match(farm_camera)
+				)
+				_record(
+					"站在农舍西北时玩家在画面内且离每条边至少 32px",
+					farm_player.global_position.x >= view_left + 32.0
+						and farm_player.global_position.y >= view_top + 32.0
+						and farm_player.global_position.x <= view_right - 32.0
+						and farm_player.global_position.y <= view_bottom - 32.0
+				)
+				farm_player.global_position = Vector2(1600, 1100)
+				await get_tree().process_frame
+				await get_tree().process_frame
+				_record(
+					"地图中间镜头中心跟住玩家",
+					farm_camera.get_screen_center_position().distance_to(farm_player.global_position) < 12.0
 				)
 				farm_player.global_position = Vector2(2500, 1800)
 				await get_tree().process_frame
@@ -291,7 +327,7 @@ func _exercise_scene(scene_name: String, scene_path: String) -> void:
 				var shelf_has_fiber := shopkeeper.shop_ui.find_child("ShopItem_fiber_seeds", true, false) != null
 				_record(
 					"种子商店当季货架可显示，且没有纤维种子",
-					shopkeeper.shop_ui.item_list.item_count == 5 and not shelf_has_fiber
+					shopkeeper.shop_ui.item_list.item_count == 6 and not shelf_has_fiber
 				)
 				shopkeeper.shop_ui._on_close_button_pressed()
 			_record("关闭商店后恢复玩家控制", GameManager.current_state == GameManager.GameState.PLAYING)
@@ -518,7 +554,10 @@ func _exercise_collision(instance: Node, scene_path: String) -> void:
 					house_collision != null and house_collision.get_collider() == house
 				)
 			player.global_position = house_center + Vector2(125, 130)
-			var outside_house_collision := player.move_and_collide(Vector2(0, -200))
+			# 终点放在北壁前面。壁碰撞止于 y≈116，脚框顶在原点上方 16px，
+			# 原点 y=148 时脚顶在 132，这一段不挨崖壁。
+			var outside_motion := Vector2(0, 148.0 - player.global_position.y)
+			var outside_house_collision := player.move_and_collide(outside_motion)
 			_record(
 				"Farm house collision does not extend beyond the artwork",
 				outside_house_collision == null
@@ -803,6 +842,283 @@ func _spawn_farm() -> Node:
 	await get_tree().process_frame
 	await get_tree().physics_frame
 	return farm
+
+
+func _exercise_farm_ore_mining() -> void:
+	print("------------------------------------------------------------")
+	print("ORE-1 农场矿石：镐子能挖（扣体力、血条、掉落进背包），别的工具提示，靠近显示「挖掘」")
+	TimeManager.reset()
+	Inventory.reset_with_starter_items()
+	FarmState.reset()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	var ore := farm.find_child("OreNorth", true, false) as Ore
+	_record("农场有 OreNorth 矿石和玩家", player != null and ore != null)
+	if player == null or ore == null:
+		farm.queue_free()
+		await get_tree().process_frame
+		return
+	player.nearby_npcs.clear()
+	player.npc_in_range = null
+	player.building_in_range = null
+	var hint := ore.get_node_or_null("InteractionHint") as Label
+	_record("「挖掘」提示默认隐藏", hint != null and not hint.visible)
+	# 站在矿石南侧、面朝北（脚在实体碰撞下方，面向点落在矿石感应区里）。
+	player.global_position = ore.global_position + Vector2(0, 44)
+	player.current_direction = Player.Direction.UP
+	PhysicsServer2D.body_set_state(player.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, player.global_transform)
+	for _i in 3:
+		await get_tree().physics_frame
+	_record(
+		"走到矿石旁显示「挖掘」，且层级高于玩家",
+		hint != null and hint.visible and hint.z_as_relative and ore.z_index + hint.z_index > player.z_index
+	)
+	_record("面向矿石能找到它", player._find_facing_ore() == ore)
+
+	var item_id := str(ore.get_ore_info().get("id", ""))
+	var count_before := Inventory.get_item_count(item_id)
+	var hp_before := ore.current_health
+	_clear_toasts()
+	player.tool_manager.equip_tool(ToolManager.ToolType.HOE)
+	var stamina_before := StaminaManager.current_stamina
+	player._use_tool_on_target()
+	_record(
+		"拿锄头对着矿石：提示需要镐子，矿石和体力不变",
+		_toast_contains("需要镐子") and ore.current_health == hp_before and StaminaManager.current_stamina == stamina_before
+	)
+
+	player.tool_manager.equip_tool(ToolManager.ToolType.PICKAXE)
+	var pickaxe = player.tool_manager.tools.get(ToolManager.ToolType.PICKAXE)
+	player._use_tool_on_target()
+	_record(
+		"镐子挖一下：矿石掉血、显示血条、扣体力",
+		ore.current_health < hp_before
+			and ore.health_bar != null and ore.health_bar.visible
+			and StaminaManager.current_stamina < stamina_before
+	)
+	for _i in 30:
+		if ore.is_depleted():
+			break
+		if pickaxe != null:
+			pickaxe.is_mining = false  # 跳过 0.3s 挥镐冷却
+		StaminaManager.set_stamina(StaminaManager.max_stamina)
+		player._use_tool_on_target()
+	await get_tree().physics_frame
+	_record("镐子能把农场矿石挖碎", ore.is_depleted())
+	_record("挖碎后矿石掉落进背包", Inventory.get_item_count(item_id) > count_before)
+	_record(
+		"挖碎后提示隐藏、实体碰撞关闭",
+		hint != null and not hint.visible
+			and ore.solid_collision != null and ore.solid_collision.disabled
+	)
+	_record("挖碎后面前不再判定为矿石", player._find_facing_ore() == null)
+	_clear_toasts()
+	farm.queue_free()
+	await get_tree().process_frame
+
+
+## 玩家真的走到矿石跟前（被 SolidBody 挡住的位置）时，四个方向都要显示「挖掘」。
+## 回归：从南边走上来时提示不出现（脚在实体碰撞下方 +42 左右）。
+func _exercise_farm_ore_hint_sides() -> void:
+	print("------------------------------------------------------------")
+	print("ORE-2 农场矿石「挖掘」提示：东南西北走到挡住的位置都显示，走开隐藏")
+	FarmState.reset()
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	_record("提示用例有玩家", player != null)
+	if player == null:
+		farm.queue_free()
+		await get_tree().process_frame
+		return
+	var all_sides := {"南": Vector2.DOWN, "北": Vector2.UP, "东": Vector2.RIGHT, "西": Vector2.LEFT}
+	# OreSouth (1400,700) 的北侧和东侧落在 VillageExit 触发区 (1380..1460, 528..688) 里，
+	# 站过去就切到村庄，只测南、西两侧。
+	var ore_sides := {"OreNorth": ["南", "北", "东", "西"], "OreSouth": ["南", "西"]}
+	for ore_name in ore_sides:
+		var ore := farm.find_child(ore_name, true, false) as Ore
+		var hint := ore.get_node_or_null("InteractionHint") as Label if ore != null else null
+		_record("%s 有「挖掘」提示" % ore_name, hint != null)
+		if hint == null:
+			continue
+		for side_name in ore_sides[ore_name]:
+			var side: Vector2 = all_sides[side_name]
+			# OreNorth 北、东的 96px 起点嵌在崖壁里：北 (1080,84) 在北壁（碰撞止于 y≈116），
+			# 东 (1176,180) 在第 18 列 outer_sw（x 1152–1216，行 0–3）。
+			# 贴墙空隙里脚框能站住的起点：北 (1080,136) 脚顶 y=120；东 (1136,180) 脚右缘 x=1148。
+			var approach := ore.global_position + side * 96.0
+			if ore_name == "OreNorth" and side_name == "北":
+				approach = Vector2(1080, 136)
+			elif ore_name == "OreNorth" and side_name == "东":
+				approach = Vector2(1136, 180)
+			player.global_position = approach
+			PhysicsServer2D.body_set_state(player.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, player.global_transform)
+			await get_tree().physics_frame
+			# OreNorth 正南被它脚下的装饰灌木（bush_1080_200）先挡住，停在 +42；其余停在矿石 SolidBody 上。
+			var solid_body := ore.get_node_or_null("SolidBody")
+			var blocker: Object = null
+			for _i in 40:
+				var hit := player.move_and_collide(-side * 4.0)
+				if hit != null:
+					blocker = hit.get_collider()
+					break
+			for _i in 3:
+				await get_tree().physics_frame
+			var stop := player.global_position - ore.global_position
+			var reached := blocker is StaticBody2D and hint.visible
+			# 北、东贴着崖壁走，碰到的必须是这块矿的 SolidBody，不能是别的 StaticBody2D。
+			if ore_name == "OreNorth" and (side_name == "北" or side_name == "东"):
+				reached = reached and blocker == solid_body
+			_record(
+				"%s 从%s边走到挡住处（%.0f, %.0f）显示「挖掘」" % [ore_name, side_name, stop.x, stop.y],
+				reached
+			)
+			# 100px：出了提示范围（南 72、其余 60），又不会走进 OreSouth 南边的出口触发区。
+			# OreNorth 在 (1080,180)。往北 100px 嵌进北壁（第 0–1 行，碰撞止于 y≈116）。
+			# 往东 100px 嵌进第 18 列 outer_sw 收口（x 1152–1216，行 0–3，设计如此）。
+			# 这两向靠近之后改往南、往西离开感应区，断言仍是提示隐藏。
+			var away := side
+			var away_name: String = side_name
+			if ore_name == "OreNorth" and side_name == "北":
+				away = Vector2.DOWN
+				away_name = "南"
+			elif ore_name == "OreNorth" and side_name == "东":
+				away = Vector2.LEFT
+				away_name = "西"
+			player.global_position = ore.global_position + away * 100.0
+			PhysicsServer2D.body_set_state(player.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, player.global_transform)
+			for _i in 3:
+				await get_tree().physics_frame
+			var hide_label := "%s 往%s走开后提示隐藏" % [ore_name, side_name]
+			if away_name != side_name:
+				hide_label = "%s 从%s边靠近后往%s走开，提示隐藏" % [ore_name, side_name, away_name]
+			_record(hide_label, not hint.visible)
+	farm.queue_free()
+	await get_tree().process_frame
+
+
+func _strike_farm_ore(player: Player, ore: Ore) -> void:
+	player.nearby_npcs.clear()
+	player.npc_in_range = null
+	player.building_in_range = null
+	player.global_position = ore.global_position + Vector2(0, 44)
+	player.current_direction = Player.Direction.UP
+	PhysicsServer2D.body_set_state(player.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, player.global_transform)
+	for _i in 3:
+		await get_tree().physics_frame
+	player.tool_manager.equip_tool(ToolManager.ToolType.PICKAXE)
+	var pickaxe = player.tool_manager.tools.get(ToolManager.ToolType.PICKAXE)
+	if pickaxe != null:
+		pickaxe.is_mining = false
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	player._use_tool_on_target()
+
+
+## 挖碎的农场矿石记在 FarmState 里。离开再回来（以及读档）都不再生成。
+func _exercise_farm_ore_persistence() -> void:
+	print("------------------------------------------------------------")
+	print("农场矿石：挖碎 OreNorth 后切到村庄再回农场不再出现，OreSouth 还在")
+	var saved_spawn := GameManager.current_spawn_point
+	GameManager.current_spawn_point = "farm_start"
+	TimeManager.reset()
+	Inventory.reset_with_starter_items()
+	FarmState.reset()
+	StaminaManager.set_stamina(StaminaManager.max_stamina)
+	var farm = await _spawn_farm()
+	var player := farm.find_child("Player", true, false) as Player
+	var north := farm.find_child("OreNorth", true, false) as Ore
+	var south := farm.find_child("OreSouth", true, false) as Ore
+	_record("持久化前 OreNorth 和 OreSouth 都在", player != null and north != null and south != null)
+	if player == null or north == null or south == null:
+		farm.queue_free()
+		await get_tree().process_frame
+		FarmState.reset()
+		GameManager.current_spawn_point = saved_spawn
+		return
+	var north_pos := north.global_position
+	await _strike_farm_ore(player, south)
+	var south_hp := south.current_health
+	_record("OreSouth 被敲掉血但还在", south_hp > 0 and south_hp < south.max_health)
+	for _i in 30:
+		if north.is_depleted():
+			break
+		await _strike_farm_ore(player, north)
+	_record("OreNorth 已挖碎", north.is_depleted())
+	_record("挖碎当下就记入农场状态", FarmState.is_farm_ore_depleted("OreNorth") and not FarmState.is_farm_ore_depleted("OreSouth"))
+
+	farm.queue_free()
+	await get_tree().process_frame
+	_record("离场后 OreSouth 的剩余血量也记上了", FarmState.get_farm_ore_health("OreSouth") == south_hp)
+	var village := (load("res://src/world/maps/Village.tscn") as PackedScene).instantiate()
+	add_child(village)
+	await get_tree().process_frame
+	await get_tree().physics_frame
+	_record("中途进了村庄", village.is_inside_tree() and village.name == "Village")
+	village.queue_free()
+	await get_tree().process_frame
+	farm = await _spawn_farm()
+	var north_back := farm.find_child("OreNorth", true, false)
+	var south_back := farm.find_child("OreSouth", true, false) as Ore
+	var south_solid := south_back.get_node_or_null("SolidBody/CollisionShape2D") as CollisionShape2D if south_back != null else null
+	_record("切到村庄再切回农场，OreNorth 不存在（碰撞、提示、血条一并去掉）", north_back == null)
+	_record(
+		"未挖的 OreSouth 仍在",
+		south_back != null
+			and south_back.can_mine()
+			and south_back.get_node_or_null("InteractionHint") != null
+			and south_back.get_node_or_null("HealthBar") != null
+			and south_solid != null
+			and not south_solid.disabled
+	)
+	_record("OreSouth 受伤的血量还在", south_back != null and south_back.current_health == south_hp)
+	var ore_left_behind := false
+	var query := PhysicsPointQueryParameters2D.new()
+	query.position = north_pos
+	query.collide_with_areas = true
+	query.collide_with_bodies = true
+	for result in farm.get_world_2d().direct_space_state.intersect_point(query):
+		var collider: Object = result.collider
+		if collider is Ore:
+			ore_left_behind = true
+		elif collider is Node and (collider as Node).get_parent() is Ore:
+			ore_left_behind = true
+	_record("OreNorth 原来的位置没有矿石碰撞", not ore_left_behind)
+
+	var snapshot := FarmState.get_save_state()
+	var saved_ores: Dictionary = snapshot.get("farm_ores", {})
+	_record(
+		"挖掉的矿石写进存档",
+		bool(saved_ores.get("OreNorth", {}).get("depleted", false))
+			and int(saved_ores.get("OreSouth", {}).get("current_health", -1)) == south_hp
+	)
+	farm.queue_free()
+	await get_tree().process_frame
+	FarmState.reset()
+	var round_trip := _json_round_trip(snapshot)
+	_record(
+		"读档恢复挖掉的矿",
+		FarmState.load_save_state(round_trip)
+			and FarmState.is_farm_ore_depleted("OreNorth")
+			and FarmState.get_farm_ore_health("OreSouth") == south_hp
+	)
+	farm = await _spawn_farm()
+	var loaded_south := farm.find_child("OreSouth", true, false) as Ore
+	_record("读档后再进农场 OreNorth 仍不在", farm.find_child("OreNorth", true, false) == null)
+	_record("读档后再进农场 OreSouth 仍在", loaded_south != null and loaded_south.current_health == south_hp)
+	farm.queue_free()
+	await get_tree().process_frame
+	var legacy := round_trip.duplicate(true)
+	legacy.erase("farm_ores")
+	FarmState.reset()
+	_record(
+		"旧档没有矿石字段时不记成挖掉",
+		FarmState.load_save_state(legacy)
+			and not FarmState.is_farm_ore_depleted("OreNorth")
+			and FarmState.get_farm_ore_health("OreSouth") == -1
+	)
+	FarmState.reset()
+	Inventory.reset_with_starter_items()
+	GameManager.current_spawn_point = saved_spawn
 
 
 func _exercise_watering_can() -> void:
