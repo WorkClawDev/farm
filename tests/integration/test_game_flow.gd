@@ -193,10 +193,35 @@ func _exercise_scene(scene_name: String, scene_path: String) -> void:
 				farm_player.global_position = Vector2(520, 220)
 				await get_tree().process_frame
 				await get_tree().process_frame
+				var view_center := farm_camera.get_screen_center_position()
+				var view_px := farm_camera.get_viewport().get_visible_rect().size
+				var view_half := Vector2(view_px.x / farm_camera.zoom.x, view_px.y / farm_camera.zoom.y) * 0.5
+				var map_bounds := farm_map.get_global_world_rect()
+				var view_left := view_center.x - view_half.x
+				var view_top := view_center.y - view_half.y
+				var view_right := view_center.x + view_half.x
+				var view_bottom := view_center.y + view_half.y
 				_record(
-					"农舍附近镜头跟着玩家，地图限制仍是地图边界",
-					farm_camera.get_screen_center_position().distance_to(farm_player.global_position) < 12.0
+					"站在农舍西北时可视矩形不超出地图，镜头限制仍是地图边界",
+					view_left >= 0.0
+						and view_top >= 0.0
+						and view_right <= map_bounds.end.x
+						and view_bottom <= map_bounds.end.y
 						and farm_map.camera_limits_match(farm_camera)
+				)
+				_record(
+					"站在农舍西北时玩家在画面内且离每条边至少 32px",
+					farm_player.global_position.x >= view_left + 32.0
+						and farm_player.global_position.y >= view_top + 32.0
+						and farm_player.global_position.x <= view_right - 32.0
+						and farm_player.global_position.y <= view_bottom - 32.0
+				)
+				farm_player.global_position = Vector2(1600, 1100)
+				await get_tree().process_frame
+				await get_tree().process_frame
+				_record(
+					"地图中间镜头中心跟住玩家",
+					farm_camera.get_screen_center_position().distance_to(farm_player.global_position) < 12.0
 				)
 				farm_player.global_position = Vector2(2500, 1800)
 				await get_tree().process_frame

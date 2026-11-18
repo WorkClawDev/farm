@@ -2691,9 +2691,51 @@ func run_house_camera_follow_tests() -> void:
 
 	var corner := Vector2(260, 240)
 	var corner_offset := Farm.house_camera_follow_offset(corner, region, limits, screen)
-	assert_true(corner_offset == Vector2(-380, -120), "Northwest clamp is undone so the camera stays on the player")
+	var corner_raw := corner - screen * 0.5
+	var corner_desired := Vector2(
+		clampf(corner_raw.x, limits.position.x, limits.end.x - screen.x),
+		clampf(corner_raw.y, limits.position.y, limits.end.y - screen.y)
+	)
+	var corner_top := corner_desired + corner_offset
+	assert_true(
+		corner_top.x >= 0.0 and corner_top.y >= 0.0 and corner_top.x + screen.x <= limits.end.x and corner_top.y + screen.y <= limits.end.y,
+		"Northwest view stays inside the map limits"
+	)
 	var door_offset := Farm.house_camera_follow_offset(door, region, limits, screen)
-	assert_true(door_offset == Vector2(0, -74), "Door standing spot is pulled down off the top limit")
+	var door_raw := door - screen * 0.5
+	var door_desired := Vector2(
+		clampf(door_raw.x, limits.position.x, limits.end.x - screen.x),
+		clampf(door_raw.y, limits.position.y, limits.end.y - screen.y)
+	)
+	var door_top := door_desired + door_offset
+	assert_true(
+		door_top.x >= 0.0 and door_top.y >= 0.0 and door_top.x + screen.x <= limits.end.x and door_top.y + screen.y <= limits.end.y,
+		"Door view stays inside the map limits"
+	)
+	var west := Vector2(40, 1100)
+	var west_offset := Farm.house_camera_follow_offset(west, region, limits, screen)
+	var west_raw := west - screen * 0.5
+	var west_desired := Vector2(
+		clampf(west_raw.x, limits.position.x, limits.end.x - screen.x),
+		clampf(west_raw.y, limits.position.y, limits.end.y - screen.y)
+	)
+	var west_top := west_desired + west_offset
+	assert_true(
+		west_top.x >= 0.0 and west_top.y >= 0.0 and west_top.x + screen.x <= limits.end.x and west_top.y + screen.y <= limits.end.y,
+		"West edge view stays inside the map limits"
+	)
+	var north := Vector2(1600, 60)
+	var north_offset := Farm.house_camera_follow_offset(north, region, limits, screen)
+	var north_raw := north - screen * 0.5
+	var north_desired := Vector2(
+		clampf(north_raw.x, limits.position.x, limits.end.x - screen.x),
+		clampf(north_raw.y, limits.position.y, limits.end.y - screen.y)
+	)
+	var north_top := north_desired + north_offset
+	assert_true(
+		north_top.x >= 0.0 and north_top.y >= 0.0 and north_top.x + screen.x <= limits.end.x and north_top.y + screen.y <= limits.end.y,
+		"North edge view stays inside the map limits"
+	)
 	var clear := Vector2(900, 450)
 	assert_true(
 		region.has_point(clear) and Farm.house_camera_follow_offset(clear, region, limits, screen) == Vector2.ZERO,

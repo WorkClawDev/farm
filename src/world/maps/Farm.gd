@@ -604,9 +604,11 @@ static func house_camera_follow_region(door: Vector2, visual_center: Vector2, di
 	return Rect2(Vector2.ZERO, Vector2(maxf(east, 1.0), maxf(south, 1.0)))
 
 
-## Godot adds Camera2D.offset to the top-left after the limit clamp, so this
-## delta recentres the player without changing limit_*. screen_size is the
-## visible world size (viewport / zoom).
+## Visible top-left is the limit clamp plus this offset. It must stay inside
+## [limits.position, limits.end - screen_size]. screen_size is the visible
+## world size (viewport / zoom). A non-zero offset used to undo the clamp and
+## showed blue past x=0 / y=0, so this returns zero. An axis where the map is
+## smaller than the screen keeps the centred clamp.
 static func house_camera_follow_offset(player_pos: Vector2, follow_region: Rect2, limits: Rect2, screen_size: Vector2) -> Vector2:
 	if screen_size.x <= 1.0 or screen_size.y <= 1.0:
 		return Vector2.ZERO
@@ -622,7 +624,17 @@ static func house_camera_follow_offset(player_pos: Vector2, follow_region: Rect2
 		clamped.y = limits.position.y + (limits.size.y - screen_size.y) * 0.5
 	else:
 		clamped.y = clampf(desired.y, limits.position.y, limits.end.y - screen_size.y)
-	return desired - clamped
+	# Clamp the visible top-left again. It already equals clamped, so the offset is zero.
+	var visible := desired
+	if limits.size.x > screen_size.x:
+		visible.x = clampf(visible.x, limits.position.x, limits.end.x - screen_size.x)
+	else:
+		visible.x = clamped.x
+	if limits.size.y > screen_size.y:
+		visible.y = clampf(visible.y, limits.position.y, limits.end.y - screen_size.y)
+	else:
+		visible.y = clamped.y
+	return visible - clamped
 
 
 ## Greater Y draws in front. The house root sits on the foundation bottom.
