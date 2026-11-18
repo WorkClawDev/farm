@@ -118,12 +118,14 @@ func refresh() -> void:
 	var cell := FarmState.get_cell(grid_coord)
 	match int(cell.get("state", FarmState.UNTILLED)):
 		FarmState.UNTILLED:
-			_ground.color = Color(0.38, 0.60, 0.27, 0.12)
+			_ground.visible = false
 			_outline.visible = false
 		FarmState.TILLED:
+			_ground.visible = true
 			_ground.color = COLOR_TILLED
 			_outline.visible = true
 		FarmState.WATERED:
+			_ground.visible = true
 			_ground.color = COLOR_WATERED
 			_outline.visible = true
 
