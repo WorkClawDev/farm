@@ -411,3 +411,12 @@ func _issue(
 ) -> MapValidationIssue:
 	var path := get_path_to(node) if node != self else NodePath(".")
 	return MapValidationIssue.new(code, severity, message, path)
+
+
+func _ready() -> void:
+	# Editor keeps authored (0, 0). Runtime scatter stays in memory.
+	if Engine.is_editor_hint():
+		return
+	if map_id != &"pastoral_valley":
+		return
+	FarmTilesetBuilder.scatter_grass(get_layer(&"ground") as TileMapLayer)

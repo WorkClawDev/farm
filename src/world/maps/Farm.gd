@@ -112,6 +112,7 @@ func _setup_map() -> void:
 		elif issue.severity == MapValidationIssue.Severity.WARNING:
 			push_warning("[FarmMap:%s] %s" % [issue.code, issue.message])
 	print("[Farm] Authored map loaded: ", map_root.map_id, " (", map_root.size_in_tiles, ")")
+	FarmTilesetBuilder.scatter_grass(tile_map)
 	_setup_actor_layer()
 	_align_house_draw_order()
 	_extend_sky_for_house_follow()

@@ -345,6 +345,26 @@ fi
 
 echo ""
 echo -e "${CYAN}========================================${NC}"
+echo -e "${CYAN}  Grass scatter tests${NC}"
+echo -e "${CYAN}========================================${NC}"
+
+GRASS_TEST_LOG="/tmp/godot_grass_$$.log"
+run_godot "$GRASS_TEST_LOG" --headless --quit --path "$PROJECT_DIR" --scene tests/unit/test_grass.tscn
+
+GRASS_SCRIPT_ERRORS=$(grep -cE "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call" "$GRASS_TEST_LOG" 2>/dev/null || true)
+if [ "${GRASS_SCRIPT_ERRORS:-0}" -gt 0 ]; then
+    err "Grass scatter tests emitted ${GRASS_SCRIPT_ERRORS} script errors"
+    grep -E "SCRIPT ERROR|Compile Error|Parse Error|Nonexistent function|Invalid call" "$GRASS_TEST_LOG" | sed 's/^/    /' | head -20
+elif grep -q "ALL TESTS PASSED" "$GRASS_TEST_LOG"; then
+    GRASS_PASSED=$(sed -n 's/.*RESULTS: \([0-9][0-9]*\)\/.*/\1/p' "$GRASS_TEST_LOG" | head -1)
+    ok "Grass scatter tests passed (${GRASS_PASSED}/${GRASS_PASSED})"
+else
+    err "Grass scatter tests failed"
+    grep -E "\[FAIL\]|FAILED:" "$GRASS_TEST_LOG" | sed 's/^/    /' | head -20
+fi
+
+echo ""
+echo -e "${CYAN}========================================${NC}"
 echo -e "${CYAN}  Game flow integration test${NC}"
 echo -e "${CYAN}========================================${NC}"
 
@@ -469,11 +489,11 @@ echo -e "${BLUE}========================================${NC}"
 if [ "$FAIL" -eq 0 ]; then
     echo -e "${GREEN}  All checks passed (${PASS}/${PASS})${NC}"
     echo -e "${BLUE}========================================${NC}"
-    rm -f "$RUN_LOG" "$UNIT_TEST_LOG" "$FLOW_TEST_LOG" "$UI_TEST_LOG" "$MAP_TEST_LOG" "$AGENT_MAP_LOG" "$EDITOR_MAP_LOG" "$SITEMAP_LOG"
+    rm -f "$RUN_LOG" "$UNIT_TEST_LOG" "$GRASS_TEST_LOG" "$FLOW_TEST_LOG" "$UI_TEST_LOG" "$MAP_TEST_LOG" "$AGENT_MAP_LOG" "$EDITOR_MAP_LOG" "$SITEMAP_LOG"
     exit 0
 else
     echo -e "${RED}  ${FAIL} checks failed${NC}"
     echo -e "${BLUE}========================================${NC}"
-    rm -f "$RUN_LOG" "$UNIT_TEST_LOG" "$FLOW_TEST_LOG" "$UI_TEST_LOG" "$MAP_TEST_LOG" "$AGENT_MAP_LOG" "$EDITOR_MAP_LOG" "$SITEMAP_LOG"
+    rm -f "$RUN_LOG" "$UNIT_TEST_LOG" "$GRASS_TEST_LOG" "$FLOW_TEST_LOG" "$UI_TEST_LOG" "$MAP_TEST_LOG" "$AGENT_MAP_LOG" "$EDITOR_MAP_LOG" "$SITEMAP_LOG"
     exit 1
 fi

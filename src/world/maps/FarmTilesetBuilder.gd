@@ -9,9 +9,18 @@ const TILESET_NAME := "farm_tiles"
 const ATLAS_PATH := "res://assets/tiles/kenney/farm_ground_atlas_64.png"  # Stage C: Kenney Tiny Town + Roguelike water
 const TextureLoader := preload("res://src/core/utils/RuntimeTextureLoader.gd")
 const TILE_SIZE := Vector2i(64, 64)
-const COLUMNS := 26
+const COLUMNS := 34
 const ROWS := 1
-const ATLAS_TILE_COUNT := 26
+const ATLAS_TILE_COUNT := 34
+const GRASS_SCATTER_SEED := 1274126177
+const GRASS_ATLAS_V1 := 26  # v1..v8 = columns 26..33; v0 stays (0, 0)
+const GRASS_ATLAS_V2 := 27
+const GRASS_ATLAS_V3 := 28
+const GRASS_ATLAS_V4 := 29
+const GRASS_ATLAS_V5 := 30
+const GRASS_ATLAS_V6 := 31
+const GRASS_ATLAS_V7 := 32
+const GRASS_ATLAS_V8 := 33
 
 const PATH_HORIZONTAL := 3
 const PATH_VERTICAL := 4
@@ -211,3 +220,73 @@ static func get_tile_name(tile_id: int) -> String:
 		if int(props.get("tile_id", -1)) == tile_id:
 			return str(props.get("name", "未知"))
 	return "未知"
+
+
+static func is_grass(coords: Vector2i) -> bool:
+	if coords.y != 0:
+		return false
+	if coords.x == 0 or coords.x == 1:
+		return true
+	return coords.x >= GRASS_ATLAS_V1 and coords.x <= GRASS_ATLAS_V1 + 7
+
+
+static func _hash32(x: int, y: int) -> int:
+	var h: int = (x * 374761393 + y * 668265263) ^ (x * y * GRASS_SCATTER_SEED)
+	h &= 0xFFFFFFFF
+	h = (h ^ (h >> 13) ^ ((h << 7) & 0xFFFFFFFF)) & 0xFFFFFFFF
+	return h
+
+
+static func _raw_variant(x: int, y: int) -> int:
+	var r: int = _hash32(x, y) % 100
+	if r < 35:
+		return 0
+	if r < 51:
+		return 1
+	if r < 63:
+		return 2
+	if r < 75:
+		return 3
+	if r < 83:
+		return 4
+	if r < 90:
+		return 5
+	if r < 94:
+		return 6
+	if r < 98:
+		return 7
+	return 8
+
+
+static func grass_variant_at(cell: Vector2i) -> int:
+	var v := _raw_variant(cell.x, cell.y)
+	if v == 0:
+		return 0
+	# Cheap deterministic avoid: if west or north raw clump matches, pick another 1..8.
+	var left := _raw_variant(cell.x - 1, cell.y)
+	var up := _raw_variant(cell.x, cell.y - 1)
+	if v != left and v != up:
+		return v
+	var h: int = (_hash32(cell.x, cell.y) * 1664525 + 1013904223) & 0xFFFFFFFF
+	var alt: int = 1 + int(h % 8)  # 1..8
+	if alt == v:
+		alt = 1 + (alt % 8)
+	return alt
+
+
+static func grass_atlas_at(cell: Vector2i) -> Vector2i:
+	var v := grass_variant_at(cell)
+	if v == 0:
+		return Vector2i(0, 0)
+	return Vector2i(GRASS_ATLAS_V1 + v - 1, 0)
+
+
+static func scatter_grass(layer: TileMapLayer) -> void:
+	if layer == null:
+		return
+	for cell in layer.get_used_cells():
+		if layer.get_cell_source_id(cell) != 0:
+			continue
+		if layer.get_cell_atlas_coords(cell) != Vector2i(0, 0):
+			continue
+		layer.set_cell(cell, 0, grass_atlas_at(cell))
